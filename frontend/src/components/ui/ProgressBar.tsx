@@ -1,8 +1,8 @@
 import { cn } from '@/utils/cn'
 
 /**
- * Barra de progreso delgada (txt §5.5): franja cyan `#06B6D4`
- * bajo el topbar durante las cargas. Estado indeterminado.
+ * Barra de progreso de carga (paleta LOADING: #3B82F6, txt §1).
+ * Franja fina bajo el topbar durante las cargas de ruta. Indeterminada.
  */
 export default function ProgressBar({ active, className }: { active: boolean; className?: string }) {
   return (
@@ -14,7 +14,7 @@ export default function ProgressBar({ active, className }: { active: boolean; cl
         className,
       )}
     >
-      <div className="h-full w-1/3 animate-progress rounded-full bg-accent" />
+      <div className="h-full w-1/3 animate-progress rounded-full bg-loading" />
     </div>
   )
 }

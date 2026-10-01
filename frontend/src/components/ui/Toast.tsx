@@ -29,11 +29,11 @@ export interface ToastApi {
 
 type ToastIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>
 
-const STYLES: Record<ToastVariant, { border: string; icon: ToastIcon }> = {
-  success: { border: 'border-success text-success', icon: CheckCircle2 },
-  error: { border: 'border-error text-error', icon: XCircle },
-  warning: { border: 'border-warning text-warning', icon: AlertTriangle },
-  info: { border: 'border-info text-info', icon: Info },
+const STYLES: Record<ToastVariant, { style: string; icon: ToastIcon }> = {
+  success: { style: 'border-success bg-success-bg text-success-fg', icon: CheckCircle2 },
+  error: { style: 'border-error bg-error-bg text-error-fg', icon: XCircle },
+  warning: { style: 'border-warning bg-warning-bg text-warning-fg', icon: AlertTriangle },
+  info: { style: 'border-info bg-info-bg text-info-fg', icon: Info },
 }
 
 const ToastContext = createContext<ToastApi | null>(null)
@@ -92,21 +92,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed bottom-6 right-6 z-[100] flex w-[min(24rem,calc(100vw-3rem))] flex-col gap-3"
       >
         {toasts.map((toast) => {
-          const { border, icon: Icon } = STYLES[toast.variant]
+          const { style, icon: Icon } = STYLES[toast.variant]
           return (
             <div
               key={toast.id}
               role="status"
               className={cn(
-                'animate-fade-in pointer-events-auto rounded-md border-l-4 bg-white p-4 shadow-medium',
-                border,
+                'animate-fade-in pointer-events-auto rounded-md border p-4 shadow-medium',
+                style,
               )}
             >
               <div className="flex items-start gap-3">
                 <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-body-sm font-semibold text-gray-900">{toast.title}</p>
-                  {toast.message && <p className="mt-0.5 text-caption text-gray-600">{toast.message}</p>}
+                  <p className="text-body-sm font-semibold">{toast.title}</p>
+                  {toast.message && <p className="mt-0.5 text-caption">{toast.message}</p>}
                 </div>
                 <button
                   type="button"

@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
-import { AlertTriangle, Inbox } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Inbox } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 /**
@@ -16,10 +16,11 @@ interface SpinnerProps {
 }
 
 /**
- * Spinner circular (txt §8: color azul `#3B82F6` → `text-primary-light`).
- * El color sigue a `currentColor`: pasar `className="text-primary-light"`.
+ * Spinner circular (txt §8: color LOADING #3B82F6, 24px).
+ * El color sigue a `currentColor` (para que el de botones cargando
+ * coincida con su texto); pasar `className="text-loading"` para el azul.
  */
-export function Spinner({ size = 20, className }: SpinnerProps) {
+export function Spinner({ size = 24, className }: SpinnerProps) {
   return (
     <span
       role="status"
@@ -50,16 +51,16 @@ interface StateProps {
   icon?: StateIcon
 }
 
-/** Estado vacío (txt §8): icono gris-400 + título + descripción. */
+/** Estado vacío (txt §8): icono gris-400 de 64px + título + descripción. */
 export function EmptyState({
-  title = 'Sin resultados',
+  title = 'Sin datos',
   description,
   action,
   icon: Icon = Inbox,
 }: StateProps) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <Icon aria-hidden="true" className="mb-4 h-12 w-12 text-empty" />
+      <Icon aria-hidden="true" className="mb-4 h-16 w-16 text-empty" />
       <h3 className="text-h4 text-gray-600">{title}</h3>
       {description && <p className="mt-1 max-w-md text-body-sm text-gray-400">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
@@ -67,7 +68,7 @@ export function EmptyState({
   )
 }
 
-/** Estado de error (txt §8): icono/título en rojo + acción de reintento. */
+/** Estado de error (txt §8): icono 64px rojo + título #991B1B + reintento. */
 export function ErrorState({
   title = 'Error al cargar',
   description,
@@ -76,8 +77,25 @@ export function ErrorState({
 }: StateProps) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <Icon aria-hidden="true" className="mb-4 h-12 w-12 text-error" />
-      <h3 className="text-h4 text-error">{title}</h3>
+      <Icon aria-hidden="true" className="mb-4 h-16 w-16 text-error" />
+      <h3 className="text-h4 text-error-fg">{title}</h3>
+      {description && <p className="mt-1 max-w-md text-body-sm text-gray-500">{description}</p>}
+      {action && <div className="mt-6">{action}</div>}
+    </div>
+  )
+}
+
+/** Estado de éxito (txt §8): icono verde 64px + título #065F46 + acción. */
+export function SuccessState({
+  title = 'Operación exitosa',
+  description,
+  action,
+  icon: Icon = CheckCircle2,
+}: StateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <Icon aria-hidden="true" className="mb-4 h-16 w-16 text-success" />
+      <h3 className="text-h4 text-success-fg">{title}</h3>
       {description && <p className="mt-1 max-w-md text-body-sm text-gray-500">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
