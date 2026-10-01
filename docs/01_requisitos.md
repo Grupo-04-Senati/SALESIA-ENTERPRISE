@@ -1,131 +1,158 @@
-# Salesia Enterprise — Documento de Requisitos
+# SalesIA Enterprise — Documento de Requisitos
+
+> **Fuente normativa:** *SalesIA Enterprise — Plan Integral de Desarrollo, Versión 1.0*.
+> Este documento desarrolla el entregable de la **FASE 01 – Análisis y levantamiento**:
+> *"Requisitos, alcance, actores, reglas de negocio y casos de uso."*
 
 | Campo | Valor |
 |---|---|
-| **Proyecto** | Salesia Enterprise |
-| **Fase** | 01 — Análisis y levantamiento |
-| **Versión** | 1.0 |
-| **Estado** | Aprobado |
+| **Documento** | Requisitos y casos de uso — SalesIA Enterprise |
+| **Fase** | FASE 01 — Análisis y levantamiento |
+| **Versión** | 1.1 (revisada contra el Plan Integral v1.0) |
+| **Documento fuente** | Plan Integral de Desarrollo – SalesIA Enterprise v1.0 |
+| **Base académica** | Semana 07 — Estadística aplicada (*Fundamentos y Algoritmia para Inteligencia Artificial*) |
+| **Arquitectura** | React + TypeScript · Python/FastAPI · PostgreSQL |
+| **Estado** | En revisión |
 | **Equipo** | Grupo 4 — SENATI |
 | **Fecha** | 01 de octubre de 2026 |
 
 ---
 
-## 1. Problema
+## 0. Relación con el documento fuente y base académica
 
-Las pequeñas y medianas empresas (PyMES) de comercio y retail gestionan sus ventas de forma manual o con hojas de cálculo aisladas. Esto provoca:
+| Contenido Semana 07 | Aplicación en SalesIA |
+|---|---|
+| Estadística aplicada en IA | Módulo Analytics y motor de análisis comercial |
+| Variables estadísticas | Variables de ventas, clientes, productos e inventario |
+| Media aritmética | Ticket promedio, venta promedio y métricas por producto/vendedor |
+| Mediana | Venta central y análisis de concentración de valores |
+| Python para cálculos | Backend / motor estadístico con Python |
+| Teorema de Bayes | Análisis de probabilidades comerciales |
+| Variables aleatorias | Cantidades de productos, montos de venta y variables cuantitativas |
 
-- **Pérdida de visibilidad del negocio:** no se sabe en tiempo real qué se vende, a qué precio ni a quién.
-- **Descontrol de inventario:** faltantes, sobrestock y mermas se detectan tarde, cuando ya hay pérdida económica.
-- **Decisiones por intuición:** los dueños deciden qué comprar, cómo pricear o a qué cliente fidelizar basándose en "lo que parece funcionar", sin evidencia.
-- **Datos dispersos:** la información de clientes, ventas, pagos e inventario vive en libretas, Excel y WhatsApp, imposibilitando cualquier análisis.
+**Principio rector del proyecto:**
 
-**Problema central:**
+> La arquitectura está planteada para que **las ventas generen los datos** y el módulo Analytics los convierta en
+> estadísticas, gráficos e insights, **en lugar de crear una calculadora estadística independiente**.
 
-> Las PyMES de comercio no cuentan con un sistema integrado que unifique la operación comercial (cliente → pedido → venta → pago → inventario) y, al mismo tiempo, convierta esos datos en **información estadística accionable** para la toma de decisiones.
+**Evolución a Semana 08 (fuera del alcance de esta fase):** varianza, desviación estándar, distribuciones y
+probabilidades, hipótesis estadística, p-valor y esperanza matemática.
 
 ---
 
-## 2. Solución propuesta
+## 1. Problema
 
-**Salesia Enterprise** es una plataforma web de gestión empresarial con una capa de **Analytics estadístico** integrada. Captura la operación diaria del negocio y la transforma en indicadores, comparativas y modelos probabilísticos que responden preguntas reales del dueño:
+Las empresas necesitan registrar sus operaciones comerciales y convertir los datos de ventas en información útil
+para el análisis. **Un sistema que solo registra ventas no aprovecha completamente los datos generados.**
 
-- *¿Cuál es el ticket promedio de venta?*
-- *¿Qué producto me deja más margen?*
-- *¿Cuánto stock necesito para el próximo mes?*
-- *¿Qué tan probable es que un cliente compre de nuevo?*
-- *Si el cliente pidió X, ¿qué tan probable es que también compre Y?*
+Problemas concretos detectados en el levantamiento:
 
-### 2.1 Objetivos
+- **Registro sin analítica:** los sistemas tradicionales guardan ventas, pero no responden *qué* significa lo vendido.
+- **Datos dispersos:** clientes, ventas, pagos e inventario viven en hojas de cálculo aisladas e incompatibles entre sí.
+- **Decisiones por intuición:** no hay evidencia numérica para decidir qué stock reponer, qué producto impulsar o a qué cliente fidelizar.
+- **Sin trazabilidad:** no se quién anuló una venta, quién ajustó el stock ni cuándo.
+- **Contenido acadérico sin aplicación:** la estadística de la Semana 07 se estudia en Python aislado, sin integrarse en un sistema real.
 
-**Objetivo general**
+**Problema central:**
 
-> Diseñar e implementar una plataforma web que centralice la operación comercial de una PyME (clientes, pedidos, ventas, pagos e inventario) y ofrezca un módulo de análisis estadístico para apoyar la toma de decisiones.
+> SalesIA propone **integrar gestión operativa y analítica dentro de una misma plataforma**: la operación comercial
+> genera los datos en PostgreSQL, Python los analiza y React los presenta como indicadores, gráficos e insights
+> accionables.
 
-**Objetivos específicos**
+---
 
-| # | Objetivo |
-|---|---|
-| OE-01 | Registrar y administrar clientes, productos y categorías. |
-| OE-02 | Automatizar el flujo de pedido → venta → pago con cálculo automático de totales e impuestos. |
-| OE-03 | Controlar el inventario con movimientos trazables (entrada, salida, ajuste, merma). |
-| OE-04 | Calcular métricas estadísticas descriptivas (media, mediana, moda, percentiles, varianza, desviación) sobre ventas e inventario. |
-| OE-05 | Comparar series de datos (periodos, categorías, productos) de forma visual. |
-| OE-06 | Modelar probabilidades, variables aleatorias y razonamiento Bayesiano sobre eventos del negocio. |
-| OE-07 | Generar reportes e insights automáticos exportables. |
-| OE-08 | Controlar el acceso por roles con trazabilidad de acciones (auditoría). |
+## 2. Objetivos
+
+### 2.1 Objetivo general
+
+> Diseñar y desarrollar un sistema web empresarial de gestión de ventas con arquitectura escalable, capaz de
+> registrar operaciones comerciales y aplicar análisis estadístico sobre los datos mediante React, Python y PostgreSQL.
+
+### 2.2 Objetivos específicos
+
+| # | Objetivo específico | RF asociado |
+|---|---|---|
+| OE-01 | Gestionar clientes, productos, vendedores, ventas, pedidos y pagos. | RF-03, RF-04, RF-05, RF-06, RF-07 |
+| OE-02 | Centralizar la información comercial en PostgreSQL. | RNF-03 |
+| OE-03 | Implementar una API empresarial con Python/FastAPI. | RNF-05, RNF-08 |
+| OE-04 | Construir una interfaz web modular con React y TypeScript. | RNF-01, RNF-06 |
+| OE-05 | Aplicar media, mediana, variables estadísticas, probabilidades y Teorema de Bayes. | RF-11 a RF-17 |
+| OE-06 | Visualizar resultados mediante gráficos estadísticos. | RF-18 |
+| OE-07 | Construir una página Analytics con KPIs e insights. | RF-09, RF-19 |
+| OE-08 | Generar reportes y conservar el historial de análisis. | RF-20, RF-21 |
+| OE-09 | Implementar seguridad, auditoría, validaciones y pruebas. | RF-22, RNF-02, RNF-09 |
 
 ---
 
 ## 3. Alcance
 
-### 3.1 Dentro del alcance (In-Scope)
+### 3.1 Alcance por área
 
-| Módulo | Funcionalidades |
+| Área | Alcance inicial |
 |---|---|
-| **Autenticación y acceso** | Login, registro de usuarios, roles (Admin, Gerente, Vendedor, Almacenero), restablecimiento de contraseña. |
-| **Clientes** | CRUD, historial de compras, segmentación básica. |
-| **Productos y categorías** | CRUD, precio de venta/costo, SKU, stock mínimo, estado activo/inactivo. |
-| **Ventas y pedidos** | Creación de pedido, carrito, cálculo de totales, descuentos, impuestos, anulación. |
-| **Pagos** | Registro de pagos (efectivo, tarjeta, transferencia, yape/plin), estado del cobro, caja. |
-| **Inventario** | Stock actual, movimientos (entrada/salida/ajuste/merma), alertas de stock mínimo. |
-| **Analytics estadístico** | Media, mediana, moda, percentiles, varianza, desviación estándar; comparativas; histogramas y dispersión. |
-| **Probabilidad** | Probabilidad simple y condicional, eventos independientes/dependientes. |
-| **Variables aleatorias** | Distribuciones (discreta y continua), esperanza matemática, varianza. |
-| **Bayes** | Teorema de Bayes aplicado a eventos del negocio (ej. probabilidad de recompra dado que el cliente compró categoría X). |
-| **Reportes e insights** | Tablero KPI, reportes exportables, recomendaciones automáticas. |
-| **Auditoría** | Registro de quién hizo qué cambio y cuándo. |
+| **Ventas** | Registro, consulta, detalle, estados y seguimiento |
+| **Clientes** | Ficha, historial y comportamiento comercial |
+| **Productos** | Catálogo, categorías, precios y estado |
+| **Inventario** | Stock y movimientos |
+| **Vendedores** | Gestión y métricas comerciales |
+| **Analytics** | KPIs, gráficos, media, mediana y análisis estadístico |
+| **Probabilidad** | Módulo de probabilidad y Bayes |
+| **Insights** | Reglas analíticas basadas en resultados |
+| **Reportes** | Reportes estadísticos y comerciales |
+| **Seguridad** | Roles, permisos, autenticación y auditoría |
 
-### 3.2 Fuera del alcance (Out-of-Scope) — Fase 01
+### 3.2 Fuera del alcance (Out-of-Scope) en FASE 01
 
-- Pasarela de pagos en línea (se registra el pago manualmente).
-- Facturación electrónica SUNAT / emisión de comprobantes.
-- Módulo de compras a proveedores y órdenes de compra.
-- Módulo de recursos humanos y planilla (solo existe `employee` como dato base).
-- App móvil nativa.
-- Multi-idioma y multi-moneda (español / PEN por defecto).
-- Integración con marketplaces (Mercado Libre, Shopee, etc.).
-- Pronóstico de demanda con Machine Learning (solo estadística clásica).
+- Pasarela de pagos en línea (el pago se registra manualmente).
+- Facturación electrónica / emisión de comprobantes.
+- Compras y órdenes de compra a proveedores.
+- Planilla y recursos humanos (solo `employees` como dato base).
+- App móvil nativa, multi-idioma y multi-moneda.
+- Integración con marketplaces.
+- Contenido de Semana 08: hipótesis, p-valor, modelos predictivos (etapa posterior).
 
 ### 3.3 Supuestos
 
-1. El negocio tiene al menos 3 meses de datos históricos cargables para que el Analytics tenga material.
-2. Existe un usuario administrador inicial creado en la instalación.
-3. El despliegue es on-premise o cloud única instancia, sin alta disponibilidad requerida en v1.
-4. Los precios están en soles (PEN) con IGV incluido o desglosado configurable.
+1. Existe histórico de ventas cargable para que el Analytics tenga material de análisis.
+2. Se crea un usuario administrador inicial en la instalación.
+3. Despliegue de instancia única, sin alta disponibilidad requerida en v1.
+4. Montos en soles (PEN); IGV y descuentos son parámetros configurables.
 
 ### 3.4 Restricciones
 
 - Interfaz 100% en español.
-- Compatible con navegadores actuales (Chrome, Edge, Firefox — últimos 2 versiones).
-- Tiempo de respuesta API < 500 ms en operaciones CRUD bajo carga normal.
-- Debe correr en contenedores Docker con un solo comando.
+- Navegadores actuales (Chrome, Edge, Firefox — últimas 2 versiones), escritorio y tablet.
+- Configuración por variables de entorno (RNF-10).
+- El desarrollo avanza **fase por fase**: cada fase cierra con sus entregables, criterios de aceptación y evidencias antes de pasar a la siguiente.
 
 ---
 
-## 4. Usuarios y roles
+## 4. Actores y roles
 
-| Código | Rol | Perfil | Objetivo principal |
-|---|---|---|---|
-| `ADMIN` | Administrador | Dueño o gerente general | Tener el control total: usuarios, configuración y visión global del negocio. |
-| `GERENTE` | Gerente | Gerente de tienda/sucursal | Ver KPIs, reportes y decisiones de compra/precios. |
-| `VENDEDOR` | Vendedor | Atención al mostrador | Registrar clientes y ventas rápidamente sin errores. |
-| `ALMACEN` | Almacenero | Encargado de almacén | Mantener el stock correcto y registrar entradas/salidas. |
+| Rol | Responsabilidades | Perfil |
+|---|---|---|
+| **Administrador** | Configura el sistema, usuarios, roles y parámetros. | Dueño / responsable técnico |
+| **Gerente** | Consulta indicadores, Analytics, reportes y resultados comerciales. | Gerencia / dirección |
+| **Vendedor** | Registra clientes, pedidos y ventas autorizadas. | Atención al mostrador |
+| **Analista** | Ejecuta análisis estadísticos y genera insights/reportes. | Analítica / datos |
+| **Almacén** | Gestiona stock y movimientos de inventario. | Encargado de almacén |
 
-### 4.1 Matriz de permisos (RACI simplificado)
+### 4.1 Matriz de permisos
 
-| Recurso / Acción | ADMIN | GERENTE | VENDEDOR | ALMACEN |
-|---|:---:|:---:|:---:|:---:|
-| Usuarios y roles | CRUD | — | — | — |
-| Clientes | CRUD | CRUD | CR / U | — |
-| Productos y categorías | CRUD | CRUD | R | R |
-| Ventas / pedidos | CRUD | CRUD | CRU | R |
-| Anular venta | CRUD | U | — | — |
-| Pagos | CRUD | CRUD | CR | — |
-| Inventario (movimientos) | CRUD | R | R | CRUD |
-| Analytics / estadística | R | R | R | R |
-| Reportes e insights | CRUD | CRUD | R | R |
-| Auditoría | R | R | — | — |
+| Recurso / Acción | Administrador | Gerente | Vendedor | Analista | Almacén |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Usuarios, roles y parámetros | CRUD | — | — | — | — |
+| Clientes | CRUD | CRUD | CRU | R | — |
+| Productos y categorías | CRUD | CRUD | R | R | R |
+| Vendedores / empleados | CRUD | R | — | R | — |
+| Ventas y pedidos | CRUD | CRUD | CRU | R | R |
+| Anular venta | CRUD | U | — | — | — |
+| Pagos | CRUD | CRUD | CR | — | — |
+| Inventario y movimientos | CRUD | R | R | R | CRUD |
+| Datasets analíticos | CRUD | CRUD | R | CRUD | R |
+| Estadística / probabilidad / Bayes | R | R | R | CRUD | R |
+| Insights y reportes | CRUD | CRUD | R | CRUD | R |
+| Auditoría | R | R | — | — | — |
 
 > **R** = Read · **C** = Create · **U** = Update · **D** = Delete
 
@@ -133,43 +160,63 @@ Las pequeñas y medianas empresas (PyMES) de comercio y retail gestionan sus ven
 
 ## 5. Procesos del negocio
 
-### 5.1 Proceso principal: `cliente → pedido → venta → pago → inventario`
+### 5.1 Flujo empresarial de ventas (cadena oficial del plan)
 
 ```mermaid
 flowchart TD
-    A[Cliente llega / se registra] --> B[Consulta catálogo de productos]
-    B --> C[Arma el pedido / carrito]
+    A[CLIENTE] --> B[PEDIDO]
+    B --> C[VENTA]
+    C --> D[PAGO]
+    D --> E[ACTUALIZACIÓN DE INVENTARIO]
+    E --> F[(POSTGRESQL)]
+    F --> G[DATASET ANALÍTICO]
+    G --> H["MEDIA / MEDIANA / VARIABLES /<br/>PROBABILIDAD / BAYES"]
+    H --> I[GRÁFICOS]
+    I --> J[INSIGHTS]
+    J --> K[DASHBOARD / REPORTES]
+```
+
+### 5.2 Detalle operativo del flujo
+
+```mermaid
+flowchart TD
+    A[Cliente llega / se registra] --> B[Consulta catálogo]
+    B --> C[Arma el pedido]
     C --> D{¿Stock disponible?}
-    D -- No --> C2[Sugerir alternativa o reservar] --> C
+    D -- No --> C2[Sugerir alternativa o esperar reposición] --> C
     D -- Sí --> E[Confirma el pedido]
-    E --> F[Calcula totales: subtotal, descuento, IGV, total]
-    F --> G[Se convierte en VENTA]
+    E --> F[Calcula subtotal, descuentos,<br/>impuestos y total según reglas configuradas]
+    F --> G[Se emite la VENTA]
     G --> H[Registra PAGO]
     H --> I{¿Pago completo?}
     I -- Parcial --> J[Venta con saldo pendiente] --> K[Cobro posterior]
     I -- Total --> K2[Venta cobrada]
-    K --> L[Descuenta inventario]
+    J --> L[Actualizar inventario]
     K2 --> L
-    L --> M[Movimiento de salida en almacén]
-    M --> N[Actualiza stock y KPIs]
-    N --> O[Analytics e insights se actualizan]
-    O --> P[Reportes disponibles]
+    L --> M[Movimiento de salida con trazabilidad]
+    M --> N[(POSTGRESQL)]
+    N --> O[Dataset analítico]
+    O --> P[Motor estadístico]
+    P --> Q[Gráficos e insights]
+    Q --> R[Dashboard y reportes]
 ```
 
-### 5.2 Descripción paso a paso
+### 5.3 Descripción paso a paso
 
 | # | Paso | Actor | Entrada | Salida / Efecto | Regla clave |
 |---|---|---|---|---|---|
-| 1 | **Registro de cliente** | Vendedor | DNI/RUC, nombre, teléfono, email, dirección | Cliente creado (`customer`) | El documento debe ser único. |
-| 2 | **Selección de productos** | Vendedor | Búsqueda por SKU/categoría | Líneas del carrito | Solo productos `activo = true`. |
-| 3 | **Creación del pedido** | Vendedor | Carrito + cliente + fecha | Pedido con estado `PENDIENTE` | No permite exceder el stock. |
-| 4 | **Cálculo de totales** | Sistema | Subtotal por línea | Subtotal, descuento, IGV, `total` | Recálculo automático ante cualquier cambio. |
-| 5 | **Confirmación de venta** | Vendedor/Vendedor | Pedido confirmado | `sale` con estado `COMPLETADA` | Numeración correlativa e inmutable. |
-| 6 | **Registro de pago** | Vendedor/Caja | Monto, medio de pago | `payment` vinculado a la venta | Estado: `PENDIENTE`, `PARCIAL`, `PAGADO`. |
-| 7 | **Descuento de inventario** | Sistema | Detalle de la venta | `inventory_movement` tipo `SALIDA` | Stock nunca negativo. |
-| 8 | **Actualización de KPIs** | Sistema | Nueva venta | Dashboard, reportes, insights | Consistencia eventual < 5 s. |
+| 1 | Registro de cliente | Vendedor | DNI/RUC, nombre, contacto, dirección | Cliente creado | Documento único |
+| 2 | Selección de productos | Vendedor | Búsqueda por SKU/categoría | Líneas del carrito | Solo productos `ACTIVO` |
+| 3 | Creación del pedido | Vendedor | Carrito + cliente + fecha | Pedido `PENDIENTE` | No exceder stock |
+| 4 | Cálculo de totales | Sistema | Subtotal por línea | Subtotal, descuento, impuesto, total | Recálculo en servidor |
+| 5 | Emisión de venta | Vendedor | Pedido confirmado | `sale` numerada | Numeración correlativa inmutable |
+| 6 | Registro de pago | Vendedor / Caja | Monto y medio de pago | `payment` vinculado | `PENDIENTE` / `PARCIAL` / `PAGADO` |
+| 7 | Actualización de inventario | Sistema | Detalle de la venta | `inventory_movement` = `SALIDA` | Stock nunca negativo |
+| 8 | Dataset analítico | Sistema | Datos en PostgreSQL | Dataset analítico | Base de todo el motor |
+| 9 | Cálculo estadístico | Analista / Gerente | Dataset + métrica | Media, mediana, variables, probabilidad, Bayes | Se registra cada análisis y resultado (RF-21) |
+| 10 | Gráficos, insights y reportes | Sistema / Analista | Resultados | KPIs, insights explicables, reportes | Cada insight muestra su evidencia numérica |
 
-### 5.3 Diagrama de estados de la venta
+### 5.4 Diagrama de estados de la venta
 
 ```mermaid
 stateDiagram-v2
@@ -178,417 +225,606 @@ stateDiagram-v2
     PENDIENTE --> COMPLETADA: pago total
     PENDIENTE --> PARCIAL: pago parcial
     PARCIAL --> COMPLETADA: pago del saldo
-    PENDIENTE --> ANULADA: anular (con motivo)
-    COMPLETADA --> ANULADA: anular (admin/gerente, devuelve stock)
+    PENDIENTE --> ANULADA: anular con motivo
+    COMPLETADA --> ANULADA: anular (Admin/Gerente) → devuelve stock
     ANULADA --> [*]
     COMPLETADA --> [*]
 ```
 
-### 5.4 Proceso de inventario
+### 5.5 Proceso de inventario
 
 ```mermaid
 flowchart LR
-    E[Entrada: compra / devolución] --> S[Stock +]
-    S --> M[Movimiento registrado<br/>con responsable y fecha]
+    E[Entrada] --> S[Stock +]
+    S --> M[Movimiento con responsable,<br/>fecha y motivo]
     M --> ST[Stock actual]
     ST --> X[Salida: venta / merma]
     X --> A[Ajuste por inventario físico]
     A --> ST
     ST --> AL{Stock ≤ mínimo?}
-    AL -- Sí --> ALERTA[Alerta de reposición + insight]
+    AL -- Sí --> ALERTA[Alerta + insight]
     AL -- No --> OK[Sin alerta]
 ```
 
 **Tipos de movimiento de inventario:**
 
-| Tipo | Signo | Origen | Requiere responsable |
+| Tipo | Signo | Origen | Responsable |
 |---|---|---|---|
-| `ENTRADA` | + | Compra a proveedor | Almacenero |
+| `ENTRADA` | + | Compra / recepción | Almacén |
 | `SALIDA` | − | Venta confirmada | Sistema (automático) |
 | `DEVOLUCION` | + | Devolución de cliente | Vendedor |
-| `MERMA` | − | Daño, vencimiento, robo | Almacenero |
-| `AJUSTE` | ± | Inventario físico | Admin / Gerente |
+| `MERMA` | − | Daño, vencimiento, robo | Almacén |
+| `AJUSTE` | ± | Inventario físico | Administrador / Gerente |
 
-### 5.5 Proceso de análisis (Analytics)
+### 5.6 Proceso de análisis (motor estadístico)
 
 ```mermaid
 flowchart LR
-    V[Datos de ventas, pagos,<br/>inventario, clientes] --> D[Dataset / observaciones]
-    D --> E1[Estadística descriptiva<br/>media, mediana, moda, percentiles]
-    D --> E2[Comparativas<br/>periodos, categorías, productos]
-    D --> E3[Probabilidad<br/>simple y condicional]
-    D --> E4[Variables aleatorias<br/>esperanza y varianza]
-    D --> E5[Bayes<br/>eventos del negocio]
-    E1 --> R[Reportes e insights]
-    E2 --> R
-    E3 --> R
-    E4 --> R
-    E5 --> R
-    R --> K[Dashboard KPI]
-    R --> X[Exportación]
+    V[Operación comercial<br/>clientes, productos,<br/>ventas, pagos, inventario] --> D[(POSTGRESQL)]
+    D --> DS[DATASET ANALÍTICO]
+    DS --> V1[Clasificación de<br/>variables estadísticas]
+    DS --> M1[Media]
+    DS --> M2[Mediana]
+    DS --> M3[Comparación<br/>media vs. mediana]
+    DS --> VA[Variables aleatorias]
+    DS --> PR[Probabilidades]
+    DS --> BY[Teorema de Bayes]
+    M1 --> H[Historial de análisis<br/>statistical_analyses / results]
+    M2 --> H
+    M3 --> H
+    VA --> H
+    PR --> H
+    BY --> H
+    H --> G[GRÁFICOS]
+    G --> I[INSIGHTS con evidencia numérica]
+    I --> K[DASHBOARD / REPORTES]
 ```
 
 ---
 
 ## 6. Datos necesarios para Analytics
 
-### 6.1 Fuentes de datos
+### 6.1 Modelo de datos (21 entidades del plan ↔ archivos del repositorio)
 
-| Fuente | Tabla / Modelo | Campos clave aportados |
+| Entidad | Propósito | Archivo en `backend/app/models/` |
 |---|---|---|
-| Ventas | `sale`, `sale_detail` | fecha, total, cantidad, precio, descuento, estado |
-| Pagos | `payment` | monto, medio de pago, fecha, estado |
-| Inventario | `inventory`, `inventory_movement` | stock, costo, tipo de movimiento, fecha |
-| Clientes | `customer` | fecha de alta, ciudad, segmento, antigüedad |
-| Productos | `product`, `category` | precio, costo, categoría, SKU |
-| Dataset externo | `dataset`, `dataset_variable`, `observation` | datos cargados por el usuario para análisis libre |
+| `users` | Usuarios del sistema | `user.py` |
+| `roles` | Roles y permisos | `role.py` |
+| `companies` | Empresa propietaria de los datos | `company.py` |
+| `customers` | Clientes | `customer.py` |
+| `products` | Productos | `product.py` |
+| `categories` | Categorías | `category.py` |
+| `sales` | Cabecera de venta | `sale.py` |
+| `sale_details` | Detalle de productos vendidos | `sale_detail.py` |
+| `payments` | Pagos | `payment.py` |
+| `inventory` | Existencias | `inventory.py` |
+| `inventory_movements` | Entradas y salidas | `inventory_movement.py` |
+| `employees` | Personal / vendedores | `employee.py` |
+| `datasets` | Conjuntos de datos para análisis | `dataset.py` |
+| `dataset_variables` | Variables estadísticas | `dataset_variable.py` |
+| `observations` | Observaciones/datos analizados | `observation.py` |
+| `statistical_analyses` | Historial de análisis | `statistical_analysis.py` |
+| `statistical_results` | Resultados calculados | `statistical_result.py` |
+| `bayes_analyses` | Resultados de Bayes | `bayes_analysis.py` |
+| `random_variables` | Configuraciones de variables aleatorias | `random_variable.py` |
+| `insights` | Conclusiones generadas por reglas | `insight.py` |
+| `reports` | Reportes | `report.py` |
+| `audit_logs` | Auditoría | `audit_log.py` |
 
-### 6.2 Variables requeridas
+**Relaciones principales:**
 
-**Variables cuantitativas continuas**
+```
+companies
+ ├── users
+ ├── customers
+ ├── products ── categories
+ ├── employees
+ └── sales ── sale_details ── products
+              │
+              └── payments
 
-| Variable | Descripción | Unidad | Origen |
-|---|---|---|---|
-| `monto_venta` | Total de cada venta | PEN | `sale.total` |
-| `ticket_promedio` | Total vendido / nº de ventas | PEN | calculada |
-| `margen_unitario` | Precio de venta − costo | PEN | `product` |
-| `tiempo_entrega` | Días entre pedido y entrega | días | `sale` |
-| `dias_entre_compras` | Frecuencia de recompra | días | `customer` + `sale` |
+sales / customers / products
+        │
+        ▼
+     datasets
+        │
+        ▼
+  dataset_variables
+        │
+        ▼
+   observations
+        │
+        ▼
+ statistical_analyses
+        ├── statistical_results
+        ├── bayes_analyses
+        └── insights
+```
 
-**Variables cuantitativas discretas**
+### 6.2 Fuentes y variables
 
-| Variable | Descripción | Unidad | Origen |
-|---|---|---|---|
-| `cantidad_unidades` | Unidades por línea | uds | `sale_detail.quantity` |
-| `numero_lineas` | Ítems distintos por venta | ítems | `sale_detail` |
-| `stock_actual` | Existencias por producto | uds | `inventory.stock` |
-| `numero_ventas_dia` | Ventas por jornada | ventas | `sale` |
-| `numero_clientes_mes` | Clientes nuevos por mes | clientes | `customer` |
+| Fuente | Campos clave aportados |
+|---|---|
+| `sales` / `sale_details` | fecha, total, cantidad, precio, descuento, estado, **vendedor** |
+| `payments` | monto, método de pago, fecha, estado |
+| `inventory` / `inventory_movements` | stock, costo, tipo de movimiento, fecha |
+| `customers` | fecha de alta, segmento, antigüedad, frecuencia |
+| `products` / `categories` | precio, costo, categoría, SKU |
+| `employees` | vendedor, métricas comerciales |
+| `datasets` / `dataset_variables` / `observations` | datos cargados para análisis libre |
 
-**Variables cualitativas (categóricas)**
+**Variables cuantitativas continuas:** `monto_venta`, `ticket_promedio`, `margen_unitario`, `tiempo_entrega`, `dias_entre_compras`.
 
-| Variable | Valores posibles | Uso analítico |
+**Variables cuantitativas discretas:** `cantidad_unidades`, `numero_lineas`, `stock_actual`, `numero_ventas_dia`, `numero_clientes_mes`.
+
+**Variables cualitativas:** `categoria_producto`, `medio_pago`, `estado_venta`, `segmento_cliente`, `ciudad`, `rol_usuario`, `vendedor`.
+
+**Clasificación de variables estadísticas (RF-14):** toda variable cargada debe declarar si es
+**cualitativa** (nominal/ordinal) o **cuantitativa** (discreta/continua) antes de ser analizada.
+
+### 6.3 Indicadores (KPIs) del Dashboard Analytics
+
+| # | Panel | Indicadores |
 |---|---|---|
-| `categoria_producto` | Bebidas, Snacks, Lácteos, Abarrotes, Limpieza, Otros | Comparativa de venta por categoría |
-| `medio_pago` | Efectivo, Tarjeta, Transferencia, Yape/Plin | Comportamiento de cobro |
-| `estado_venta` | Borrador, Pendiente, Parcial, Completada, Anulada | Tasa de conversión y anulación |
-| `segmento_cliente` | Nuevo, Recurrente, Frecuente, Inactivo | Fidelización |
-| `ciudad` | Distrito/ciudad del cliente | Cobertura geográfica |
-| `rol_usuario` | Admin, Gerente, Vendedor, Almacenero | Rendimiento por rol |
+| KPI-01 | **Resumen** | Ventas, ingresos, transacciones, clientes |
+| KPI-02 | **Ventas** | Ventas por día/mes, ticket promedio, **media y mediana** |
+| KPI-03 | **Productos** | Cantidad vendida, ingresos, participación |
+| KPI-04 | **Clientes** | Compras, frecuencia, ticket |
+| KPI-05 | **Vendedores** | Ventas, ingresos y promedio |
+| KPI-06 | **Variables** | Tipo, distribución y estadísticas |
+| KPI-07 | **Probabilidad** | Eventos, probabilidades y Bayes |
+| KPI-08 | **Insights** | Observaciones generadas a partir de resultados |
 
-### 6.3 Indicadores y métricas derivadas
+**Filtros requeridos:** periodo, sucursal, vendedor y categoría.
 
-| # | Métrica | Fórmula | Periodicidad |
-|---|---|---|---|
-| KPI-01 | Ventas totales | Σ `sale.total` (estado = Completada) | Diaria / Mensual |
-| KPI-02 | Número de ventas | COUNT(`sale`) | Diaria |
-| KPI-03 | Ticket promedio | Ventas totales / Nº de ventas | Diaria |
-| KPI-04 | Margen bruto | Σ(venta − costo) / Σ venta | Mensual |
-| KPI-05 | Rotación de inventario | Costo de ventas / Stock promedio | Mensual |
-| KPI-06 | Productos con stock bajo | COUNT(`stock ≤ mínimo`) | Diaria |
-| KPI-07 | Tasa de anulación | Anuladas / Totales × 100 | Mensual |
-| KPI-08 | Clientes nuevos | COUNT(`customer` con fecha en el periodo) | Mensual |
-| KPI-09 | Recompra | Clientes con ≥2 compras / Total clientes × 100 | Mensual |
-| KPI-10 | Cobranza pendiente | Σ saldo por cobrar | Diaria |
+**Métricas derivadas de control:**
 
-### 6.4 Análisis estadísticos requeridos
-
-| Análisis | Módulo | Pregunta de negocio que resuelve |
+| ID | Métrica | Fórmula |
 |---|---|---|
-| Media | `analytics/mean` | ¿Cuánto vendo en promedio? |
-| Mediana | `analytics/median` | ¿Cuál es la venta "típica" sin que los atípicos me distorsionen? |
-| Moda / percentiles | `analytics/variables` | ¿En qué rango se concentra el 80% de mis ventas? |
-| Varianza y desviación | `analytics/variables` | ¿Qué tan estable es mi ingreso mes a mes? |
-| Comparativa | `analytics/compare` | ¿Vendí más que el mes pasado? ¿Qué categoría creció? |
-| Probabilidad simple | `analytics/probability` | ¿Qué probabilidad hay de que un producto se agote hoy? |
-| Probabilidad condicional | `analytics/probability` | Si compró lácteos, ¿qué tan probable es que compre bebidas? |
-| Variables aleatorias | `analytics/random_variables` | ¿Qué ingreso mensual puedo esperar y con qué riesgo? |
-| Teorema de Bayes | `analytics/bayes` | Dado que el cliente devolvió, ¿qué tan probable es que sea un problema de calidad? |
+| KPI-09 | Rotación de inventario | Costo de ventas / Stock promedio |
+| KPI-10 | Productos con stock bajo | COUNT(`stock ≤ mínimo`) |
+| KPI-11 | Tasa de anulación | Anuladas / Totales × 100 |
+| KPI-12 | Recompra | Clientes con ≥ 2 compras / Total clientes × 100 |
 
-### 6.5 Requisitos de calidad del dato
+### 6.4 Motor estadístico requerido (Semana 07)
+
+| Análisis | Módulo del repositorio | Fórmula / Regla | RF |
+|---|---|---|---|
+| Media aritmética | `analytics/mean` | media = (x₁ + x₂ + … + xₙ) / n | RF-11 |
+| Mediana | `analytics/median` | Ordenar y tomar el valor central; con *n* par, promedio de los dos centrales | RF-12 |
+| Comparación media vs. mediana | `analytics/compare` | Diferencia absoluta y relativa, interpretación de sesgo | RF-13 |
+| Variables estadísticas | `analytics/variables` | Clasificación y frecuencias | RF-14 |
+| Variables aleatorias | `analytics/random_variables` | Definición, distribución y análisis | RF-15 |
+| Probabilidades | `analytics/probability` | P(A), P(A∩B), P(A\|B) | RF-16 |
+| Teorema de Bayes | `analytics/bayes` | P(A\|B) = P(B\|A) × P(A) / P(B) | RF-17 |
+| Gráficos | frontend `analytics` | Visualización de resultados | RF-18 |
+| Insights | `services/insight_service` | Reglas determinísticas con evidencia numérica | RF-19 |
+
+> **Nota:** varianza, desviación estándar, esperanza matemática, hipótesis y p-valor corresponden a la
+> **Semana 08** y están diferidos (§3.2).
+
+### 6.5 Calidad del dato
 
 - **Completitud:** ≥ 95% de campos obligatorios diligenciados.
-- **Unicidad:** documento de identidad, SKU y número de venta únicos.
-- **Validez:** fechas en formato ISO-8601; montos ≥ 0 con 2 decimales.
-- **Consistencia:** el stock resultante siempre = stock inicial + entradas − salidas.
-- **Trazabilidad:** todo movimiento registra `usuario_id`, `fecha` y `motivo`.
-- **Retención:** histórico de ventas no se borra; se marca como anulado (soft delete).
+- **Unicidad:** documento de identidad, SKU, número de venta y nombre de usuario únicos.
+- **Validez:** fechas ISO-8601; montos ≥ 0 con 2 decimales.
+- **Consistencia:** `stock = inicial + Σentradas − Σsalidas`.
+- **Trazabilidad:** todo movimiento registra usuario, fecha y motivo.
+- **No destructividad:** las ventas no se borran; se anulan (soft delete) y quedan en auditoría.
 
 ---
 
-## 7. Casos de uso
+## 7. Requerimientos funcionales
 
-**Leyenda:** *Principal* → actor principal. *Precondición* → estado previo. *Postcondición* → estado final.
+| ID | Requerimiento | Prioridad | Fase |
+|---|---|---|---|
+| RF-01 | Autenticación y control de acceso por roles | Alta | 05 / 13 |
+| RF-02 | Gestión de usuarios | Alta | 05 / 13 |
+| RF-03 | Gestión de clientes | Alta | 07 |
+| RF-04 | Gestión de productos y categorías | Alta | 07 |
+| RF-05 | Gestión de vendedores | Alta | 07 |
+| RF-06 | Registro de ventas y detalle de venta | Alta | 08 |
+| RF-07 | Gestión de pagos y métodos de pago | Alta | 08 |
+| RF-08 | Gestión de inventario y movimientos | Alta | 08 |
+| RF-09 | Dashboard ejecutivo | Alta | 10 |
+| RF-10 | Gestión de datasets analíticos derivados de las operaciones | Alta | 09 |
+| RF-11 | Cálculo de media | Alta | 09 |
+| RF-12 | Cálculo de mediana | Alta | 09 |
+| RF-13 | Comparación media vs. mediana | Alta | 09 |
+| RF-14 | Análisis de variables estadísticas | Alta | 09 |
+| RF-15 | Análisis de variables aleatorias | Media | 09 |
+| RF-16 | Cálculo de probabilidades | Media | 09 |
+| RF-17 | Análisis mediante Teorema de Bayes | Media | 09 |
+| RF-18 | Visualización mediante gráficos | Media | 10 |
+| RF-19 | Generación de insights basados en reglas | Media | 11 |
+| RF-20 | Generación y consulta de reportes | Media | 12 |
+| RF-21 | Historial de análisis | Media | 09 |
+| RF-22 | Registro de auditoría | Alta | 13 |
 
-### 7.1 Módulo de acceso
+### Requerimientos no funcionales
 
-| ID | Caso de uso | Actor principal | Precondición | Flujo básico | Postcondición |
+| ID | Requerimiento | Prioridad |
+|---|---|---|
+| RNF-01 | Arquitectura modular y mantenible | Alta |
+| RNF-02 | Validación de datos en frontend y backend | Alta |
+| RNF-03 | Integridad referencial en PostgreSQL | Alta |
+| RNF-04 | Autenticación segura y autorización por rol | Alta |
+| RNF-05 | API documentada | Media |
+| RNF-06 | Diseño responsive para escritorio y tablet | Media |
+| RNF-07 | Trazabilidad de operaciones críticas | Alta |
+| RNF-08 | Separación de presentación, lógica de negocio y persistencia | Alta |
+| RNF-09 | Pruebas unitarias, integración y aceptación | Alta |
+| RNF-10 | Configuración por variables de entorno | Alta |
+| RNF-11 | Manejo centralizado de errores | Media |
+| RNF-12 | Rendimiento adecuado para consultas analíticas | Media |
+
+---
+
+## 8. Casos de uso
+
+**Leyenda:** Actor principal · Precondición · Flujo básico · Postcondición.
+
+### 8.1 Acceso y administración
+
+| ID | Caso de uso | Actor | Precondición | Flujo básico | Postcondición |
 |---|---|---|---|---|---|
-| CU-01 | Iniciar sesión | Cualquier usuario | Usuario registrado y activo | 1. Ingresa credenciales → 2. Valida → 3. Crea sesión → 4. Redirige según rol | Sesión iniciada, token emitido |
+| CU-01 | Iniciar sesión | Cualquier usuario | Usuario registrado y activo | 1. Credenciales → 2. Validación → 3. Sesión → 4. Redirección por rol | Sesión iniciada |
 | CU-02 | Cerrar sesión | Usuario autenticado | Sesión activa | 1. Solicita salida → 2. Invalida token | Sesión terminada |
-| CU-03 | Gestionar usuarios | ADMIN | Sesión ADMIN | 1. Lista usuarios → 2. Crea/edita/activa/desactiva → 3. Asigna rol | Usuario actualizado |
-| CU-04 | Recuperar contraseña | CualUARIO con email | Email registrado | 1. Solicita → 2. Recibe enlace → 3. Define nueva clave | Clave actualizada |
+| CU-03 | Recuperar contraseña | Usuario con email válido | Email registrado | 1. Solicita → 2. Enlace → 3. Nueva clave | Clave actualizada |
+| CU-04 | Gestionar usuarios | Administrador | Sesión Administrador | 1. Lista → 2. Crea/edita/activa → 3. Asigna rol | Usuario actualizado |
+| CU-05 | Configurar parámetros | Administrador | Sesión Administrador | 1. Abre configuración → 2. Ajusta IGV, descuentos, series → 3. Guarda | Parámetros vigentes |
 
-### 7.2 Módulo comercial
+### 8.2 Comercial
 
-| ID | Caso de uso | Actor principal | Precondición | Flujo básico | Postcondición |
+| ID | Caso de uso | Actor | Precondición | Flujo básico | Postcondición |
 |---|---|---|---|---|---|
-| CU-05 | Registrar cliente | VENDEDOR | Sesión iniciada | 1. Abre formulario → 2. Ingresa datos → 3. Valida documento → 4. Guarda | Cliente creado |
-| CU-06 | Editar cliente | VENDEDOR / GERENTE | Cliente existente | 1. Busca → 2. Modifica → 3. Guarda | Cliente actualizado |
-| CU-07 | Buscar cliente | VENDEDOR | Sesión iniciada | 1. Escribe nombre/DNI → 2. Sistema lista coincidencias | Cliente localizado |
-| CU-08 | Crear producto | ADMIN / GERENTE | Sesión con permiso | 1. Ingresa SKU, nombre, precio, costo, categoría, stock mínimo → 2. Guarda | Producto activo |
-| CU-09 | Registrar pedido | VENDEDOR | Cliente y productos existentes | 1. Selecciona cliente → 2. Agrega líneas → 3. Valida stock → 4. Confirma | Pedido confirmado |
-| CU-10 | Anular pedido | VENDEDOR / ADMIN | Pedido en borrador o pendiente | 1. Selecciona pedido → 2. Ingresa motivo → 3. Confirma | Pedido anulado |
-| CU-11 | Registrar venta | VENDEDOR | Pedido confirmado | 1. Valida stock → 2. Calcula totales → 3. Emite venta numerada | Venta COMPLETADA |
-| CU-12 | Registrar pago | VENDEDOR / ADMIN | Venta existente | 1. Selecciona venta → 2. Ingresa monto y medio → 3. Guarda | Pago registrado, estado actualizado |
-| CU-13 | Anular venta | ADMIN / GERENTE | Venta no anulada | 1. Selecciona → 2. Motivo → 3. Confirma → 4. Devuelve stock | Venta ANULADA + stock repuesto |
+| CU-06 | Registrar cliente | Vendedor | Sesión iniciada | 1. Formulario → 2. Datos → 3. Valida documento → 4. Guarda | Cliente creado |
+| CU-07 | Editar cliente | Vendedor / Gerente | Cliente existente | 1. Busca → 2. Modifica → 3. Guarda | Cliente actualizado |
+| CU-08 | Consultar historial del cliente | Vendedor / Gerente / Analista | Cliente con compras | 1. Selecciona cliente → 2. Lista compras, pagos y frecuencia | Historial visible |
+| CU-09 | Buscar y filtrar clientes | Cualquier rol con acceso | Sesión iniciada | 1. Nombre/DNI/filtro → 2. Resultados | Cliente localizado |
+| CU-10 | Crear producto | Administrador / Gerente | Sesión con permiso | 1. SKU, nombre, precio, costo, categoría, stock mínimo → 2. Guarda | Producto activo |
+| CU-11 | Gestionar categorías | Administrador / Gerente | Sesión con permiso | 1. Lista → 2. Crea/edita → 3. Guarda | Categoría vigente |
+| CU-12 | Gestionar vendedores | Administrador | Sesión Administrador | 1. CRUD de `employees` → 2. Asigna a usuarios → 3. Guarda | Vendedor registrado (RF-05) |
 
-### 7.3 Módulo de inventario
+### 8.3 Ventas, pagos e inventario
 
-| ID | Caso de uso | Actor principal | Precondición | Flujo básico | Postcondición |
+| ID | Caso de uso | Actor | Precondición | Flujo básico | Postcondición |
 |---|---|---|---|---|---|
-| CU-14 | Consultar stock | ALMACEN / ADMIN | Sesión iniciada | 1. Filtra por categoría/estado → 2. Lista productos y stock | Inventario visible |
-| CU-15 | Registrar entrada | ALMACEN | Producto existente | 1. Selecciona producto → 2. Cantidad y motivo → 3. Confirma | Stock incrementado |
-| CU-16 | Registrar salida manual | ALMACEN | Stock suficiente | 1. Selecciona → 2. Cantidad → 3. Motivo → 4. Confirma | Stock descontado |
-| CU-17 | Registrar merma | ALMACEN / ADMIN | Producto existente | 1. Selecciona → 2. Cantidad → 3. Motivo obligatorio | Stock descontado + motivo auditado |
-| CU-18 | Ajuste por inventario | ADMIN / GERENTE | Conteo físico realizado | 1. Ingresa cantidad real → 2. Sistema calcula diferencia → 3. Confirma | Stock igualado al físico |
-| CU-19 | Alerta de stock mínimo | Sistema | Stock ≤ mínimo | 1. Detecta umbral → 2. Genera alerta e insight | Alerta visible en dashboard |
+| CU-13 | Registrar pedido | Vendedor | Cliente y productos existentes | 1. Cliente → 2. Líneas → 3. Valida stock → 4. Confirma | Pedido confirmado |
+| CU-14 | Registrar venta | Vendedor | Pedido confirmado | 1. Valida stock → 2. Calcula subtotal, descuentos, impuestos y total → 3. Emite numerada | Venta COMPLETADA |
+| CU-15 | Anular pedido | Vendedor / Administrador | Pedido en borrador o pendiente | 1. Selecciona → 2. Motivo → 3. Confirma | Pedido anulado |
+| CU-16 | Anular venta | Administrador / Gerente | Venta no anulada | 1. Selecciona → 2. Motivo → 3. Confirma → 4. Devuelve stock | Venta ANULADA + stock repuesto |
+| CU-17 | Registrar pago | Vendedor / Administrador | Venta existente | 1. Venta → 2. Monto y método → 3. Guarda | Pago registrado, estado actualizado |
+| CU-18 | Consultar historial de ventas | Vendedor / Gerente / Analista | Sesión iniciada | 1. Filtros de fecha/estado/vendedor → 2. Lista | Historial visible |
+| CU-19 | Consultar stock | Almacén / Gerente | Sesión iniciada | 1. Filtro categoría/estado → 2. Lista | Inventario visible |
+| CU-20 | Registrar entrada de inventario | Almacén | Producto existente | 1. Producto → 2. Cantidad y motivo → 3. Confirma | Stock incrementado |
+| CU-21 | Registrar salida manual | Almacén | Stock suficiente | 1. Producto → 2. Cantidad → 3. Motivo → 4. Confirma | Stock descontado |
+| CU-22 | Registrar merma | Almacén / Administrador | Producto existente | 1. Producto → 2. Cantidad → 3. Motivo obligatorio | Stock descontado + auditado |
+| CU-23 | Ajuste por inventario físico | Administrador / Gerente | Conteo realizado | 1. Cantidad real → 2. Diferencia calculada → 3. Confirma | Stock igualado |
+| CU-24 | Alerta de stock mínimo | Sistema | Stock ≤ mínimo | 1. Detecta umbral → 2. Genera alerta e insight | Alerta en dashboard |
 
-### 7.4 Módulo de Analytics y reportes
+### 8.4 Analytics, insights y reportes
 
-| ID | Caso de uso | Actor principal | Precondición | Flujo básico | Postcondición |
+| ID | Caso de uso | Actor | Precondición | Flujo básico | Postcondición |
 |---|---|---|---|---|---|
-| CU-20 | Calcular estadística descriptiva | GERENTE / ADMIN | Datos de ventas | 1. Elige métrica y periodo → 2. Sistema calcula → 3. Muestra resultado + gráfico | Resultado mostrado |
-| CU-21 | Comparar periodos o categorías | GERENTE / ADMIN | ≥ 2 series | 1. Selecciona series → 2. Elige métrica → 3. Compara | Comparativa visual |
-| CU-22 | Calcular probabilidad | GERENTE / ADMIN | Datos suficientes | 1. Define eventos → 2. Sistema calcula P(A), P(A\|B) | Probabilidad mostrada |
-| CU-23 | Modelar variable aleatoria | GERENTE / ADMIN | Distribución definida | 1. Elige distribución → 2. Parámetros → 3. Calcula E(X), V(X) | Modelo y gráfico |
-| CU-24 | Análisis Bayesiano | GERENTE / ADMIN | Eventos y probabilidades base | 1. Define previa, verosimilitud y evidencia → 2. Calcula posterior | Posterior + interpretación |
-| CU-25 | Cargar dataset externo | ADMIN / GERENTE | Archivo CSV/Excel válido | 1. Sube archivo → 2. Mapea variables → 3. Valida → 4. Confirma | Dataset disponible |
-| CU-26 | Generar reporte | GERENTE / ADMIN | Datos disponibles | 1. Elige tipo y periodo → 2. Genera → 3. Exporta | Reporte descargable |
-| CU-27 | Ver dashboard | Todos (según rol) | Sesión iniciada | 1. Ingresa → 2. Sistema carga KPIs | KPIs y tendencias visibles |
+| CU-25 | Crear dataset analítico | Analista / Gerente | Datos en PostgreSQL | 1. Elige fuente y periodo → 2. Mapea variables → 3. Declara tipos → 4. Crea | Dataset disponible (RF-10) |
+| CU-26 | Calcular media | Analista / Gerente | Dataset con ≥ 2 observaciones | 1. Dataset → 2. Variable → 3. Calcula → 4. Registra en historial | Media mostrada y almacenada (RF-11, RF-21) |
+| CU-27 | Calcular mediana | Analista / Gerente | Dataset con ≥ 2 observaciones | 1. Dataset → 2. Variable → 3. Ordena y calcula → 4. Registra | Mediana mostrada y almacenada (RF-12) |
+| CU-28 | Comparar media vs. mediana | Analista / Gerente | Ambos valores calculados | 1. Selecciona → 2. Compara → 3. Interpreta sesgo | Comparativa (RF-13) |
+| CU-29 | Analizar variables estadísticas | Analista | Dataset declarado | 1. Clasifica → 2. Frecuencias → 3. Resumen | Variables analizadas (RF-14) |
+| CU-30 | Analizar variable aleatoria | Analista | Variable definida | 1. Definición → 2. Parámetros → 3. Análisis | Variable analizada (RF-15) |
+| CU-31 | Calcular probabilidades | Analista / Gerente | Eventos definidos | 1. Eventos → 2. Calcula P(A), P(A\|B) → 3. Muestra | Probabilidad mostrada (RF-16) |
+| CU-32 | Análisis Bayesiano | Analista / Gerente | P(A), P(B\|A), P(B) ingresados | 1. Datos → 2. Aplica fórmula → 3. Muestra resultado explicable | Posterior calculado y reproducible (RF-17) |
+| CU-33 | Visualizar gráficos | Todos según rol | Resultados existentes | 1. Abre Analytics → 2. Selecciona gráfico → 3. Filtros | Gráfico renderizado (RF-18) |
+| CU-34 | Generar insight | Analista / Sistema | Resultado de análisis | 1. Aplica regla → 2. Genera observación → 3. Adjunta evidencia numérica | Insight con evidencia (RF-19) |
+| CU-35 | Generar reporte | Analista / Gerente | Datos disponibles | 1. Tipo y periodo → 2. Genera → 3. Exporta / imprime | Reporte descargable (RF-20) |
+| CU-36 | Consultar historial de análisis | Analista / Gerente | Análisis previos | 1. Filtra por tipo/fecha → 2. Lista resultados anteriores | Historial consultable (RF-21) |
+| CU-37 | Ver dashboard | Todos según rol | Sesión iniciada | 1. Ingresa → 2. Carga KPIs y filtros | KPIs y tendencias visibles (RF-09) |
 
-### 7.5 Módulo de auditoría
+### 8.5 Auditoría
 
-| ID | Caso de uso | Actor principal | Precondición | Flujo básico | Postcondición |
+| ID | Caso de uso | Actor | Precondición | Flujo básico | Postcondición |
 |---|---|---|---|---|---|
-| CU-28 | Consultar bitácora | ADMIN | Sesión ADMIN | 1. Filtra por fecha/usuario/acción → 2. Lista eventos | Auditoría visible |
+| CU-38 | Consultar bitácora | Administrador | Sesión Administrador | 1. Filtra fecha/usuario/acción → 2. Lista eventos | Auditoría visible (RF-22) |
+
+**Total: 38 casos de uso.**
 
 ---
 
-## 8. Reglas de negocio
+## 9. Reglas de negocio
 
-### 8.1 Clientes y productos
-
-| ID | Regla |
-|---|---|
-| RN-01 | El documento de identidad (DNI/RUC) del cliente debe ser **único** en el sistema. |
-| RN-02 | Un cliente con ventas pendientes de pago **no puede ser eliminado**, solo desactivado. |
-| RN-03 | El SKU del producto debe ser único y auto-generable. |
-| RN-04 | Un producto solo es vendible si `estado = ACTIVO` y `stock > 0`. |
-| RN-05 | `precio_venta` debe ser mayor o igual que `precio_costo` (se permite precio a costo con aprobación de ADMIN). |
-| RN-06 | Todo producto debe pertenecer a **una y solo una** categoría. |
-
-### 8.2 Ventas y pagos
+### 9.1 Clientes, productos y vendedores
 
 | ID | Regla |
 |---|---|
-| RN-10 | La cantidad solicitada **nunca** puede superar el stock disponible. |
-| RN-11 | Los totales se recalculan **siempre** en el servidor; el cliente no envía el total final. |
-| RN-12 | El número de venta es correlativo, único e **inmutable** una vez emitida. |
-| RN-13 | El descuento por línea no puede superar el 100% del subtotal de esa línea. |
-| RN-14 | Solo ADMIN y GERENTE pueden anular una venta ya cobrada. |
+| RN-01 | El documento de identidad (DNI/RUC) del cliente es **único** en el sistema. |
+| RN-02 | Un cliente con ventas pendientes **no se elimina**; se desactiva. |
+| RN-03 | El SKU del producto es único y puede auto-generarse. |
+| RN-04 | Solo es vendible un producto con `estado = ACTIVO` y `stock > 0`. |
+| RN-05 | `precio_venta ≥ precio_costo`; vender a costo requiere aprobación de Administrador. |
+| RN-06 | Cada producto pertenece a **una y solo una** categoría. |
+| RN-07 | Un vendedor (`employees`) debe estar activo para operar ventas. |
+| RN-08 | Las métricas de vendedor se calculan solo sobre ventas no anuladas. |
+
+### 9.2 Ventas y pagos
+
+| ID | Regla |
+|---|---|
+| RN-10 | La cantidad solicitada **nunca** supera el stock disponible. |
+| RN-11 | Subtotal, descuentos, impuestos y total se calculan **siempre en el servidor** según parámetros configurados. |
+| RN-12 | El número de venta es correlativo, único e **inmutable**. |
+| RN-13 | Un descuento por línea no supera el 100% de su subtotal. |
+| RN-14 | Solo Administrador y Gerente anulan ventas cobradas. |
 | RN-15 | Anular una venta devuelve **exactamente** las unidades al inventario. |
-| RN-16 | Un pago no puede exceder el saldo pendiente de la venta. |
-| RN-17 | Una venta queda en estado `PAGADO` solo cuando `Σ pagos = total`. |
-| RN-18 | Toda anulación exige un **motivo** obligatorio de al menos 10 caracteres. |
-| RN-19 | No se pueden registrar ventas con fecha futura. |
+| RN-16 | Un pago no excede el saldo pendiente de la venta. |
+| RN-17 | La venta queda `PAGADO` solo cuando `Σ pagos = total`. |
+| RN-18 | Toda anulación exige un motivo de al menos 10 caracteres. |
+| RN-19 | No se registran ventas con fecha futura. |
 
-### 8.3 Inventario
-
-| ID | Regla |
-|---|---|
-| RN-20 | El stock **nunca** puede quedar negativo. Si no alcanza, la operación se rechaza. |
-| RN-21 | Cada movimiento de inventario debe tener responsable, fecha y motivo. |
-| RN-22 | Las mermas y ajustes solo los realiza ADMIN, GERENTE o ALMACEN. |
-| RN-23 | El stock resultante debe cumplir siempre: `inicial + Σentradas − Σsalidas = actual`. |
-| RN-24 | Al stock ≤ `stock_minimo` se genera automáticamente una alerta y un insight. |
-
-### 8.4 Seguridad y auditoría
+### 9.3 Inventario
 
 | ID | Regla |
 |---|---|
-| RN-30 | Las contraseñas se almacenan con hash (bcrypt/argon2), **nunca** en texto plano. |
-| RN-31 | Tras 5 intentos fallidos, la cuenta se bloquea 15 minutos. |
-| RN-32 | Los tokens de sesión expiran en 8 horas y no son reutilizables. |
-| RN-33 | Un usuario no puede modificar su propio rol ni elevar sus permisos. |
-| RN-34 | Toda operación de escritura en datos sensibles genera registro en `audit_log`. |
-| RN-35 | Un usuario desactivado pierde el acceso **de inmediato** (sin esperar expiración de token). |
+| RN-20 | El stock **nunca** queda negativo; si no alcanza, la operación se rechaza. |
+| RN-21 | Cada movimiento registra responsable, fecha y motivo. |
+| RN-22 | Mermas y ajustes solo los realiza Administrador, Gerente o Almacén. |
+| RN-23 | Se cumple siempre: `stock_inicial + Σentradas − Σsalidas = stock_actual`. |
+| RN-24 | Al alcanzar `stock ≤ stock_minimo` se genera alerta e insight automáticamente. |
 
-### 8.5 Analytics
+### 9.4 Seguridad y auditoría
 
 | ID | Regla |
 |---|---|
-| RN-40 | Todo cálculo estadístico requiere un mínimo de **2 observaciones**; si no, se responde "datos insuficientes". |
-| RN-41 | La mediana y los percentiles se calculan sobre datos **ordenados**; se debe indicar si se usan datos atípicos. |
-| RN-42 | Al mostrar la media se debe mostrar también la desviación estándar para dar contexto. |
-| RN-43 | El teorema de Bayes exige que `P(B) > 0`; caso contrario se rechaza con mensaje claro. |
-| RN-44 | Las ventas con estado `ANULADA` **se excluyen** de todo cálculo estadístico por defecto. |
-| RN-45 | Todo resultado analítico muestra el periodo, el número de observaciones y la fecha de cálculo. |
-| RN-46 | Un dataset externo debe declarar el tipo de cada variable (cualitativa/cuantitativa) antes de analizarse. |
+| RN-30 | Las contraseñas se almacenan con hash (bcrypt/argon2), nunca en texto plano. |
+| RN-31 | Tras 5 intentos fallidos la cuenta se bloquea 15 minutos. |
+| RN-32 | Los tokens expiran en 8 horas y no son reutilizables. |
+| RN-33 | Un usuario no modifica su propio rol ni eleva sus permisos. |
+| RN-34 | Toda escritura sobre datos sensibles genera registro en `audit_logs` (RF-22). |
+| RN-35 | Un usuario desactivado pierde el acceso de inmediato. |
+| RN-36 | Los secretos se gestionan por variables de entorno, nunca en el código (RNF-10). |
+
+### 9.5 Motor estadístico e insights
+
+| ID | Regla |
+|---|---|
+| RN-40 | Todo cálculo exige **≥ 2 observaciones**; si no, responde "datos insuficientes" (nunca `NaN`). |
+| RN-41 | La mediana y los percentiles se calculan sobre datos **ordenados**; con *n* par se promedian los dos centrales. |
+| RN-42 | Al mostrar la media se muestra también la mediana para permitir la comparación (RF-13). |
+| RN-43 | Bayes exige `P(B) > 0`; caso contrario responde error con mensaje en español. |
+| RN-44 | Las ventas `ANULADA` **se excluyen** de todo cálculo estadístico por defecto. |
+| RN-45 | Todo resultado registra **historial** con dataset, variable, valor, fecha y usuario (RF-21). |
+| RN-46 | Un dataset debe declarar el tipo de cada variable (cualitativa/cuantitativa) antes de analizarse (RF-14). |
+| RN-47 | Cada insight debe **mostrar el resultado estadístico que lo origina** con su evidencia numérica (RF-19). |
+| RN-48 | Los insights se generan con reglas **determinísticas**: mismos datos ⇒ mismo insight. |
+| RN-49 | Todo cálculo estadístico es **reproducible**: mismos datos de entrada ⇒ idéntico resultado. |
+
+**Total: 40 reglas de negocio.**
 
 ---
 
-## 9. Criterios de aceptación
+## 10. Criterios de aceptación
 
-### 9.1 Generales
+### 10.1 Criterios maestros del Plan Integral (v1.0)
+
+| # | Criterio | Verificación |
+|---|---|---|
+| CA-M01 | Un usuario autorizado puede iniciar sesión y acceder únicamente a sus módulos. | Prueba de roles |
+| CA-M02 | Una venta puede registrarse con sus detalles y actualizar el inventario. | Flujo de venta |
+| CA-M03 | Los datos de ventas pueden consultarse desde Analytics. | Consulta cruzada |
+| CA-M04 | El sistema calcula correctamente media y mediana. | Pruebas unitarias |
+| CA-M05 | El sistema permite identificar variables estadísticas. | Análisis de variables |
+| CA-M06 | El sistema puede analizar variables aleatorias definidas. | Módulo VA |
+| CA-M07 | El módulo de Bayes devuelve un resultado reproducible con los datos introducidos. | Prueba de Bayes |
+| CA-M08 | Los resultados aparecen en gráficos y KPIs. | Revisión visual |
+| CA-M09 | Los insights muestran el resultado que los origina. | Revisión de evidencia |
+| CA-M10 | Los análisis quedan almacenados y pueden consultarse posteriormente. | Historial |
+| CA-M11 | Las operaciones críticas quedan registradas en auditoría. | Bitácora |
+| CA-M12 | El sistema supera las pruebas definidas antes del despliegue. | Reporte de pruebas |
+
+### 10.2 Criterios de la FASE 01
 
 | ID | Criterio | Verificación |
 |---|---|---|
-| CA-01 | El sistema despliega con `docker compose up` sin pasos manuales adicionales. | Prueba de instalación |
-| CA-02 | Ningún archivo de configuración secreto (`.env`) se incluye en el repositorio. | Revisión de repo |
-| CA-03 | Toda respuesta de error de la API usa el formato `{ codigo, mensaje, detalle }`. | Pruebas de API |
-| CA-04 | Toda API protegida devuelve `401` sin token y `403` con rol insuficiente. | Pruebas de autorización |
-| CA-05 | El 100% de las rutas críticas tiene cobertura de pruebas (unitarias + API + integración). | Reporte de cobertura ≥ 80% |
+| CA-01 | Documento de requisitos aprobado por el Product Owner. | Acta §13 |
+| CA-02 | Alcance y fuera de alcance definidos y firmados. | §3 |
+| CA-03 | Actores y roles identificados con matriz de permisos. | §4 |
+| CA-04 | Proceso `cliente → pedido → venta → pago → inventario` documentado con diagrama. | §5 |
+| CA-05 | Datos para Analytics identificados con su fuente y tipo de variable. | §6 |
+| CA-06 | Casos de uso cubren los 6 RF comerciales (RF-03 a RF-08) y los 8 RF del motor analítico (RF-10 a RF-17). | §7, §8 |
+| CA-07 | Reglas de negocio cubren ventas, inventario, seguridad y motor estadístico. | §9 |
+| CA-08 | Criterios de aceptación verificables y trazables a RF. | §10 |
 
-### 9.2 Funcionales
+### 10.3 Criterios funcionales detallados (formato Dado/Cuando/Entonces)
 
 | ID | Criterio | Dado / Cuando / Entonces |
 |---|---|---|
-| CA-10 | Registro de cliente | **Dado** un DNI duplicado **Cuando** se guarda **Entonces** responde `409` y no crea el registro. |
-| CA-11 | Venta con stock insuficiente | **Dado** un producto con stock 3 **Cuando** se piden 5 **Entonces** se rechaza y el stock no cambia. |
-| CA-12 | Cálculo de totales | **Dado** 2 ítems con descuento **Cuando** se emite la venta **Entonces** `total = Σ(precio×cant) − descuento + IGV` con 2 decimales exactos. |
-| CA-13 | Numeración de venta | **Dado** que existe la venta N.º 100 **Cuando** se emite otra **Entonces** recibe N.º 101, sin repetir ni saltar. |
-| CA-14 | Pago parcial | **Dado** una venta de S/ 200 **Cuando** se paga S/ 100 **Entonces** el estado es `PARCIAL` y el saldo es S/ 100. |
-| CA-15 | Anulación con devolución | **Dado** una venta de 4 unidades **Cuando** se anula **Entonces** el stock sube 4 unidades y queda registro de auditoría. |
-| CA-16 | Stock no negativo | **Dado** stock 0 **Cuando** se intenta una salida **Entonces** se responde `400` con mensaje "stock insuficiente". |
-| CA-17 | Alerta de stock mínimo | **Dado** `stock_minimo = 10` **Cuando** el stock llega a 10 **Entonces** aparece la alerta en el dashboard. |
-| CA-18 | Exclusión de anuladas | **Dado** ventas completadas y anuladas **Cuando** se calcula el ticket promedio **Entonces** las anuladas no entran al cálculo. |
+| CA-10 | Dato duplicado | **Dado** un DNI duplicado **Cuando** se guarda **Entonces** responde `409` y no crea el registro. |
+| CA-11 | Stock insuficiente | **Dado** stock 3 **Cuando** se piden 5 **Entonces** se rechaza y el stock no cambia. |
+| CA-12 | Cálculo de totales | **Dado** 2 ítems con descuento **Cuando** se emite la venta **Entonces** `total = Σ(precio×cantidad) − descuento + impuesto` con 2 decimales exactos. |
+| CA-13 | Numeración | **Dado** la venta N.º 100 **Cuando** se emite otra **Entonces** recibe N.º 101, sin repetir ni saltar. |
+| CA-14 | Pago parcial | **Dado** una venta de S/ 200 **Cuando** se paga S/ 100 **Entonces** el estado es `PARCIAL` y el saldo S/ 100. |
+| CA-15 | Anulación con devolución | **Dado** una venta de 4 unidades **Cuando** se anula **Entonces** el stock sube 4 y queda registro de auditoría. |
+| CA-16 | Stock no negativo | **Dado** stock 0 **Cuando** se intenta una salida **Entonces** responde `400` con "stock insuficiente". |
+| CA-17 | Alerta de stock | **Dado** `stock_minimo = 10` **Cuando** el stock llega a 10 **Entonces** aparece la alerta en el dashboard. |
+| CA-18 | Exclusión de anuladas | **Dado** ventas completadas y anuladas **Cuando** se calcula el ticket promedio **Entonces** las anuladas no entran. |
 
-### 9.3 Analíticas
+### 10.4 Criterios analíticos
 
 | ID | Criterio | Dado / Cuando / Entonces |
 |---|---|---|
 | CA-20 | Media | **Dado** `{10, 20, 30, 40}` **Cuando** se calcula la media **Entonces** devuelve `25.0`. |
 | CA-21 | Mediana par | **Dado** `{10, 20, 30, 40}` **Cuando** se calcula la mediana **Entonces** devuelve `25.0`. |
 | CA-22 | Mediana impar | **Dado** `{7, 3, 9}` **Cuando** se calcula la mediana **Entonces** devuelve `7`. |
-| CA-23 | Datos insuficientes | **Dado** 1 observación **Cuando** se pide cualquier métrica **Entonces** responde "datos insuficientes" y no `NaN`. |
+| CA-23 | Datos insuficientes | **Dado** 1 observación **Cuando** se pide cualquier métrica **Entonces** responde "datos insuficientes". |
 | CA-24 | Probabilidad condicional | **Dado** `P(A∩B)=0.12` y `P(B)=0.4` **Cuando** se calcula `P(A\|B)` **Entonces** devuelve `0.3`. |
 | CA-25 | Bayes válido | **Dado** `P(A)=0.3`, `P(B\|A)=0.8`, `P(B)=0.5` **Cuando** se aplica Bayes **Entonces** `P(A\|B) = 0.48`. |
-| CA-26 | Bayes inválido | **Dado** `P(B)=0` **Cuando** se aplica Bayes **Entonces** responde error `422` con mensaje en español. |
-| CA-27 | Esperanza de VA discreta | **Dado** `X` con `P(1)=0.3`, `P(2)=0.5`, `P(3)=0.2` **Cuando** se calcula `E(X)` **Entonces** devuelve `1.9`. |
-| CA-28 | Comparativa | **Dado** dos meses **Cuando** se comparan **Entonces** muestra diferencia absoluta y porcentual. |
-| CA-29 | Reproducibilidad | **Dado** los mismos datos **Cuando** se repite el cálculo **Entonces** el resultado es idéntico. |
+| CA-26 | Bayes inválido | **Dado** `P(B)=0` **Cuando** se aplica Bayes **Entonces** responde `422` con mensaje en español. |
+| CA-27 | Comparación | **Dado** dos meses **Cuando** se comparan **Entonces** muestra diferencia absoluta y porcentual. |
+| CA-28 | Historial | **Dado** un análisis ejecutado **Cuando** se consulta el historial **Entonces** aparece con dataset, fecha y usuario. |
+| CA-29 | Insight con evidencia | **Dado** un insight generado **Cuando** se abre **Entonces** muestra el resultado estadístico que lo origina. |
+| CA-30 | Reproducibilidad | **Dado** los mismos datos **Cuando** se repite el cálculo **Entonces** el resultado es idéntico. |
 
-### 9.4 No funcionales
+### 10.5 Criterios no funcionales
 
 | ID | Criterio | Meta |
 |---|---|---|
-| CA-30 | Rendimiento API (CRUD) | ≤ 500 ms (p95) |
-| CA-31 | Rendimiento de análisis sobre 100k registros | ≤ 3 s |
-| CA-32 | Disponibilidad | ≥ 99% en horario de operación |
-| CA-33 | Tiempo de carga del dashboard | ≤ 2 s en red local |
-| CA-34 | Compatibilidad | Últimas 2 versiones de Chrome, Edge y Firefox |
-| CA-35 | Accesibilidad | Contraste AA y navegación completa por teclado |
-| CA-36 | Responsive | Uso válido en tablet y móvil desde 360 px |
-| CA-37 | Backups | Respaldo diario automático de PostgreSQL con restauración probada |
-| CA-38 | Idioma | 100% de la interfaz en español |
+| CA-40 | Rendimiento API (CRUD) | ≤ 500 ms (p95) |
+| CA-41 | Consulta analítica sobre 100k registros | ≤ 3 s |
+| CA-42 | Carga del dashboard | ≤ 2 s en red local |
+| CA-43 | Compatibilidad | Últimas 2 versiones de Chrome, Edge y Firefox; escritorio y tablet |
+| CA-44 | Responsive | Válido desde 360 px (RNF-06) |
+| CA-45 | Idioma | 100% de la interfaz en español |
+| CA-46 | Cobertura de pruebas | ≥ 80% (RNF-09) |
+| CA-47 | Secretos | Ningún `.env` en el repositorio (RNF-10) |
+| CA-48 | Errores | Formato único `{ codigo, mensaje, detalle }` (RNF-11) |
 
 ---
 
-## 10. Requerimientos funcionales y no funcionales
+## 11. Contrato API inicial (referencia de la FASE 05)
 
-### 10.1 Requerimientos funcionales
-
-| ID | Requerimiento | Prioridad |
+| Método | Endpoint | Función |
 |---|---|---|
-| RF-01 | Sistema de autenticación con roles y permisos | Alta |
-| RF-02 | Gestión de clientes (CRUD + historial) | Alta |
-| RF-03 | Gestión de productos y categorías | Alta |
-| RF-04 | Registro de pedidos y ventas con cálculo automático | Alta |
-| RF-05 | Registro de pagos y control de saldos | Alta |
-| RF-06 | Control de inventario con movimientos | Alta |
-| RF-07 | Dashboard con KPIs | Alta |
-| RF-08 | Estadística descriptiva (media, mediana, moda, percentiles, varianza) | Alta |
-| RF-09 | Comparativas de series | Media |
-| RF-10 | Módulo de probabilidad | Media |
-| RF-11 | Módulo de variables aleatorias | Media |
-| RF-12 | Módulo Bayesiano | Media |
-| RF-13 | Reportes exportables | Media |
-| RF-14 | Insights y recomendaciones automáticas | Media |
-| RF-15 | Carga de datasets externos (CSV/Excel) | Baja |
-| RF-16 | Bitácora de auditoría | Media |
+| POST | `/auth/login` | Autenticación |
+| GET | `/customers` | Listar clientes |
+| POST | `/customers` | Crear cliente |
+| GET | `/products` | Listar productos |
+| POST | `/sales` | Registrar venta |
+| GET | `/sales` | Consultar ventas |
+| GET | `/dashboard/summary` | Resumen ejecutivo |
+| POST | `/statistics/mean` | Calcular media |
+| POST | `/statistics/median` | Calcular mediana |
+| POST | `/statistics/compare` | Comparar media/mediana |
+| POST | `/probability/bayes` | Calcular Bayes |
+| POST | `/random-variables/analyze` | Analizar variable aleatoria |
+| GET | `/insights` | Consultar insights |
+| GET | `/reports` | Consultar reportes |
 
-### 10.2 Requerimientos no funcionales
+> El contrato completo (DTO/schemas, códigos de error, autenticación y autorización) se documenta en la
+> **FASE 02 – Arquitectura técnica** y se implementa en la **FASE 05**.
 
-| ID | Requerimiento | Prioridad |
+---
+
+## 12. Estrategia de pruebas
+
+| Nivel | Ejemplos | Archivos previstos en el repo |
 |---|---|---|
-| RNF-01 | Arquitectura desacoplada: React + API Python + PostgreSQL | Alta |
-| RNF-02 | API REST con versionado (`/api/v1`) | Alta |
-| RNF-03 | Migraciones de base de datos trazables (Alembic) | Alta |
-| RNF-04 | Despliegue mediante contenedores Docker | Alta |
-| RNF-05 | Logs estructurados con correlación de peticiones | Media |
-| RNF-06 | Cifrado TLS en tránsito y hash de contraseñas | Alta |
-| RNF-07 | Validación de entrada en cliente y servidor | Alta |
-| RNF-08 | Separación por ambientes: `dev`, `test`, `prod` | Media |
-| RNF-09 | Documentación OpenAPI/Swagger generada desde el código | Media |
-| RNF-10 | Cobertura de pruebas ≥ 80% | Media |
+| Unitarias | Media, mediana, Bayes, validadores | `tests/unit/test_mean.py`, `test_median.py`, `test_bayes.py`, `test_probability.py` |
+| Integración | Venta → inventario → persistencia | `tests/integration/test_sales_flow.py`, `test_inventory.py` |
+| API | Status codes, schemas, permisos | `tests/api/test_auth.py`, `test_statistics.py` |
+| Frontend | Formularios, rutas, filtros y estados | Por definir en FASE 06 / 14 |
+| Datos | Constraints, duplicados y valores nulos | Por definir en FASE 04 |
+| Aceptación | Flujo completo de venta y análisis | §10 |
 
 ---
 
-## 11. Estrategia de validación
+## 13. Plan de fases (contexto)
 
-| Nivel | Tipo | Herramienta prevista | Ejemplos |
-|---|---|---|---|
-| 1 | Unitaria | pytest | `test_mean.py`, `test_median.py`, `test_bayes.py`, `test_probability.py` |
-| 2 | API | pytest + HTTPX | `test_auth.py`, `test_statistics.py` |
-| 3 | Integración | pytest | `test_sales_flow.py`, `test_inventory.py` |
-| 4 | Aceptación | Checklist manual | Recorrido del proceso completo 5.1 |
-| 5 | Rendimiento | Locust / k6 | CA-30, CA-31 |
+| Fase | Nombre | Entregable principal |
+|---|---|---|
+| **01** | **Análisis y levantamiento** | **Documento de requisitos y casos de uso** ← *este documento* |
+| 02 | Arquitectura técnica | Arquitectura, módulos, estructura de carpetas, contratos API y decisiones tecnológicas |
+| 03 | UX/UI empresarial | Wireframes, navegación, diseño visual, componentes y dashboard |
+| 04 | Base de datos PostgreSQL | Modelo ER, tablas, restricciones, índices, migraciones y datos semilla |
+| 05 | Backend/API | FastAPI, autenticación, servicios, validaciones, endpoints y documentación |
+| 06 | Frontend React | Layouts, rutas, componentes, formularios y consumo de API |
+| 07 | Clientes y productos | Catálogos, fichas, búsqueda, filtros y relaciones comerciales |
+| 08 | Ventas, pedidos e inventario | Flujo completo de venta, detalle, pagos, stock y trazabilidad |
+| 09 | Motor estadístico – Semana 07 | Variables, media, mediana, variables aleatorias, probabilidad y Bayes |
+| 10 | Dashboard Analytics | KPIs, gráficos, filtros, comparaciones y evolución temporal |
+| 11 | Insights empresariales | Reglas estadísticas, detección de patrones y explicación de resultados |
+| 12 | Reportes | Reportes comerciales/estadísticos, exportación y consultas históricas |
+| 13 | Seguridad y auditoría | Roles, permisos, auditoría, manejo de sesiones y controles |
+| 14 | Pruebas y calidad | Unitarias, integración, API, UI, datos y aceptación |
+| 15 | Despliegue | Build, variables de entorno, PostgreSQL, backend, frontend y monitoreo |
+| 16 | Cierre y documentación | Manual técnico, manual de usuario, evidencias y mantenimiento |
+
+> **Principio de implementación:** el desarrollo se realiza fase por fase. Cada fase debe cerrar con sus
+> entregables, criterios de aceptación y evidencias antes de avanzar a la siguiente.
 
 ---
 
-## 12. Riesgos
+## 14. Trazabilidad requisito → fase
 
-| ID | Riesgo | Probabilidad | Impacto | Mitigación |
+| Requisito | Fase de implementación | Fase de validación |
+|---|---|---|
+| RF-01, RF-02 | 05 / 13 | 14 |
+| RF-03, RF-04, RF-05 | 07 | 14 |
+| RF-06, RF-07, RF-08 | 08 | 14 |
+| RF-09 | 10 | 14 |
+| RF-10 a RF-17, RF-21 | 09 | 14 |
+| RF-18 | 10 | 14 |
+| RF-19 | 11 | 14 |
+| RF-20 | 12 | 14 |
+| RF-22 | 13 | 14 |
+
+---
+
+## 15. Riesgos
+
+| ID | Riesgo | Prob. | Impacto | Mitigación |
 |---|---|---|---|---|
-| R-01 | Datos históricos insuficientes para el Analytics | Alta | Alto | Plantilla de carga masiva + dataset de demostración. |
-| R-02 | Cálculos estadísticos incorrectos | Media | Alto | Suite de pruebas unitarias con valores de referencia. |
-| R-03 | Desconciliación de stock | Media | Alto | Validación en servidor y recálculo por eventos. |
-| R-04 | Pérdida de datos | Baja | Crítico | Backups automáticos + restauración probada. |
-| R-05 | Acceso no autorizado | Media | Alto | RBAC + auditoría + bloqueo por intentos. |
-| R-06 | Alcance descontrolado (*scope creep*) | Alta | Medio | Lista formal de fuera de alcance (§3.2). |
+| R-01 | Histórico de ventas insuficiente para el Analytics | Alta | Alto | Plantilla de carga + dataset de demostración |
+| R-02 | Cálculos estadísticos incorrectos | Media | Alto | Pruebas unitarias con valores de referencia (§10.4) |
+| R-03 | Desconciliación de stock | Media | Alto | Validación en servidor y recálculo por eventos |
+| R-04 | Pérdida de datos | Baja | Crítico | Backups automáticos + restauración probada |
+| R-05 | Acceso no autorizado | Media | Alto | RBAC + auditoría + bloqueo por intentos |
+| R-06 | Desviación respecto al Plan Integral | Media | Alto | Trazabilidad §14 y revisión fase por fase |
+| R-07 | Alcance descontrolado | Alta | Medio | Lista formal de fuera de alcance (§3.2) |
 
 ---
 
-## 13. Glosario
+## 16. Desviaciones detectadas: Plan v1.0 ↔ repositorio
+
+> Registrado durante la revisión de esta fase. Debe resolverse formalmente en la **FASE 02**.
+
+| # | Plan v1.0 | Repositorio actual | Impacto |
+|---|---|---|---|
+| D-01 | `backend/app/statistics/`, `probability/`, `reports/` | Unificado en `backend/app/analytics/` (+ `services/report_service.py`) | Bajo — funcionalmente equivalente; confirmar en FASE 02 |
+| D-02 | `database/migrations/` y `database/seeds/` | `backend/alembic/versions/` (carpeta vacía), sin `seeds/` | Medio — FASE 04 debe decidir ubicación definitiva |
+| D-03 | `frontend/src/components/` | Existe pero **vacío** | Bajo — se llena en FASE 06 |
+| D-04 | RF-05 *Gestión de vendedores* | Solo existe `models/employee.py`; **sin router, schema, service ni módulo frontend** | **Alto — requisito con brecha de implementación** |
+| D-05 | Arquitectura: "las ventas generan los datos" | Cadena de datos confirmada por estructura de modelos analíticos | Sin desviación |
+
+---
+
+## 17. Glosario
 
 | Término | Definición |
 |---|---|
-| **Pedido** | Intención de compra registrada antes de emitir la venta. |
+| **Pedido** | Intención de compra previa a la venta. |
 | **Venta** | Operación confirmada con numeración, líneas y totales. |
 | **Pago** | Movimiento de cobro asociado a una venta. |
 | **Ticket promedio** | Valor medio de cada venta. |
 | **Merma** | Pérdida de inventario por daño, vencimiento o robo. |
 | **KPI** | Indicador clave de desempeño. |
-| **Estadística descriptiva** | Resumen de datos mediante media, mediana, moda y dispersión. |
-| **Probabilidad condicional** | Probabilidad de A sabiendo que ocurrió B: P(A\|B). |
-| **Teorema de Bayes** | Método para actualizar una probabilidad al llegar nueva evidencia. |
-| **Variable aleatoria** | Variable cuyo valor depende del azar, con distribución asociada. |
-| **Dataset** | Conjunto de datos estructurado para análisis. |
-| **Auditoría** | Bitácora inmutable de acciones sobre datos sensibles. |
+| **Media** | Suma de valores dividida entre el número de observaciones. |
+| **Mediana** | Valor central de los datos ordenados; con *n* par, promedio de los dos centrales. |
+| **Variable estadística** | Característica cuantificable de un conjunto de datos (cualitativa o cuantitativa). |
+| **Variable aleatoria** | Variable cuyo resultado depende del azar, con distribución asociada. |
+| **Probabilidad condicional** | P(A\|B): probabilidad de A sabiendo que ocurrió B. |
+| **Teorema de Bayes** | P(A\|B) = P(B\|A) × P(A) / P(B) — actualiza una probabilidad con nueva evidencia. |
+| **Dataset analítico** | Conjunto de datos derivados de la operación, preparado para análisis. |
+| **Insight** | Observación generada por reglas que muestra la evidencia numérica que la origina. |
+| **Auditoría** | Bitácora de acciones críticas sobre datos sensibles. |
 
 ---
 
-## 14. Aprobación de la fase
+## 18. Aprobación de la FASE 01
 
 | Rol | Nombre | Fecha | Estado |
 |---|---|---|---|
-| Líder de proyecto | | | ⬜ Pendiente |
 | Product Owner | | | ⬜ Pendiente |
+| Líder de proyecto | | | ⬜ Pendiente |
 | Revisor técnico | | | ⬜ Pendiente |
 
-**Condición de salida de la Fase 01:** todos los entregables de §1–§9 aprobados y con al menos **10 casos de uso** y **25 reglas de negocio** validados por el Product Owner.
+**Condiciones de salida de la FASE 01:**
+
+1. Entregable *"Requisitos, alcance, actores, reglas de negocio y casos de uso"* aprobado.
+2. §10.1 (12 criterios maestros) y §10.2 (8 criterios de fase) validados.
+3. 38 casos de uso y 40 reglas de negocio revisados por el Product Owner.
+4. Desviaciones de §16 registradas con responsable asignado.
+5. Evidencia: commit de este documento en el repositorio del proyecto.
 
 ---
 
-*Documento generado en el marco de la Fase 01 — Análisis y levantamiento. Salesia Enterprise, Grupo 4 — SENATI.*
+*SalesIA Enterprise — Documento de Requisitos v1.1 · FASE 01 · Grupo 4 — SENATI*
