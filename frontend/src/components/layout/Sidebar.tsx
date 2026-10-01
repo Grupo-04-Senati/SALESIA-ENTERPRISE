@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { NAV_ITEMS, GROUP_LABELS } from '@/utils/constants'
 
 interface SidebarProps {
@@ -21,6 +22,14 @@ const GROUPS = ['operacion', 'analitica', 'sistema'] as const
  * activo en cyan #06B6D4.
  */
 export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    // TODO(Fase 05): limpiar la sesión real (token/usuario) antes de navegar.
+    // En modo demo solo volvemos al login.
+    navigate('/login', { replace: true })
+  }
+
   return (
     <aside
       onMouseEnter={onOpen}
@@ -74,6 +83,16 @@ export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      {/* Cerrar sesión */}
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex w-full items-center gap-3 border-t border-white/10 px-5 py-3 text-body-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <LogOut aria-hidden="true" className="h-5 w-5 shrink-0" />
+        <span>Cerrar sesión</span>
+      </button>
     </aside>
   )
 }
