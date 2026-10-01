@@ -3,6 +3,8 @@ import type { Product, ProductInput } from '@/types/product'
 import type { InventoryMovement, MovementType, Sale, SaleInput } from '@/types/sale'
 import { DEFAULT_TAX_RATE, computeTotals, createSeedState } from './seed'
 import type { SeedState } from './seed'
+import { DEFAULT_RULES } from './rules'
+import type { AutomationRule } from './rules'
 
 /**
  * Almacén de datos en memoria — fuente única de verdad (Fase 03 · modo demo).
@@ -32,9 +34,10 @@ export interface ProcessTrace {
 
 export interface StoreState extends SeedState {
   traces: ProcessTrace[]
+  rules: AutomationRule[]
 }
 
-let state: StoreState = { ...createSeedState(), traces: [] }
+let state: StoreState = { ...createSeedState(), traces: [], rules: DEFAULT_RULES.map((rule) => ({ ...rule })) }
 let traceId = 0
 
 type Listener = () => void
@@ -68,8 +71,66 @@ function logTrace(title: string, steps: TraceStep[]): ProcessTrace {
 
 /** Restaura los datos de demostración (Configuración → restablecer demo). */
 export function resetDemoData(): void {
-  state = { ...createSeedState(), traces: state.traces }
+  state = { ...createSeedState(), traces: state.traces, rules: state.rules }
   commit()
+}
+
+/* ------------------------------------------------------------------
+   Automatizaciones: las reglas se configuran desde el frontend y se
+   aplican en el momento, sin cambiar el código.
+   ------------------------------------------------------------------ */
+
+export function getRules(): AutomationRule[] {
+  return state.rules
+}
+
+/** ¿Está activa una regla automática? */
+export function ruleEnabled(code: string): boolean {
+  return state.rules.find((rule) => rule.code === code)?.enabled ?? false
+}
+
+/** Valor de un parámetro de una regla. */
+export function ruleParam(code: string, key: string): number | boolean | undefined {
+  return state.rules.find((rule) => rule.code === code)?.params.find((param) => param.key === key)?.value
+}
+
+/** Valor numérico de un parámetro con valor por defecto. */
+export function ruleNumber(code: string, key: string, fallback: number): number {
+  const value = ruleParam(code, key)
+  return typeof value === 'number' ? value : fallback
+}
+
+export function setRuleEnabled(code: string, enabled: boolean): void {
+  state = {
+    ...state,
+    rules: state.rules.map((rule) => (rule.code === code ? { ...rule, enabled } : rule)),
+  }
+  commit()
+}
+
+export function setRuleParam(code: string, key: string, value: number | boolean): void {
+  state = {
+    ...state,
+    rules: state.rules.map((rule) =>
+      rule.code === code
+        ? { ...rule, params: rule.params.map((param) => (param.key === key ? { ...param, value } : param)) }
+        : rule,
+    ),
+  }
+  commit()
+}
+
+/** Restaura las reglas a su configuración inicial. */
+export function resetRules(): void {
+  state = { ...state, rules: DEFAULT_RULES.map((rule) => ({ ...rule })) }
+  commit()
+}
+
+/** ¿Un producto está en alerta de stock según la regla configurada? */
+export function isLowStock(product: { current_stock: number; min_stock: number }): boolean {
+  if (!ruleEnabled('ALERTA_STOCK')) return false
+  const factor = ruleNumber('ALERTA_STOCK', 'factor', 100) / 100
+  return product.current_stock <= product.min_stock * factor
 }
 
 const round2 = (value: number): number => Math.round(value * 100) / 100
@@ -85,11 +146,11 @@ const nextId = (items: Array<{ id: number }>): number =>
 
 export async function insertProduct(input: ProductInput): Promise<Product> {
   await delay()
-  if (state.products.some((product) => product.sku === input.sku)) {
-    throw new Error('Ya existe un producto con ese SKU (RN-03).')
+  if (ruleEnabled('RN-03_SKU_UNICO') && state.products.some((product) => product.sku === input.sku)) {
+    throw new Error('Ya existe un producto con ese SKU (RN-03 · regla activa).')
   }
-  if (input.sale_price < input.cost_price) {
-    throw new Error('El precio de venta no puede ser menor al costo (RN-05).')
+  if (ruleEnabled('RN-05_PRECIO_VENTA') && input.sale_price < input.cost_price) {
+    throw new Error('El precio de venta no puede ser menor al costo (RN-05 · regla activa).')
   }
   const category = state.categories.find((entry) => entry.id === input.category_id) ?? state.categories[0]
   const product: Product = {
@@ -107,11 +168,14 @@ export async function insertProduct(input: ProductInput): Promise<Product> {
 
 export async function modifyProduct(id: number, input: ProductInput): Promise<Product> {
   await delay()
-  if (state.products.some((product) => product.id !== id && product.sku === input.sku)) {
-    throw new Error('Ya existe un producto con ese SKU (RN-03).')
+  if (
+    ruleEnabled('RN-03_SKU_UNICO') &&
+    state.products.some((product) => product.id !== id && product.sku === input.sku)
+  ) {
+    throw new Error('Ya existe un producto con ese SKU (RN-03 · regla activa).')
   }
-  if (input.sale_price < input.cost_price) {
-    throw new Error('El precio de venta no puede ser menor al costo (RN-05).')
+  if (ruleEnabled('RN-05_PRECIO_VENTA') && input.sale_price < input.cost_price) {
+    throw new Error('El precio de venta no puede ser menor al costo (RN-05 · regla activa).')
   }
   const existing = state.products.find((product) => product.id === id)
   if (!existing) throw new Error('Producto no encontrado.')
@@ -138,8 +202,11 @@ export async function setProductStatus(id: number, status: Product['status']): P
 
 export async function insertCustomer(input: CustomerInput): Promise<Customer> {
   await delay()
-  if (state.customers.some((customer) => customer.document_number === input.document_number)) {
-    throw new Error('Ya existe un cliente con ese documento (RN-01).')
+  if (
+    ruleEnabled('RN-01_DOCUMENTO_UNICO') &&
+    state.customers.some((customer) => customer.document_number === input.document_number)
+  ) {
+    throw new Error('Ya existe un cliente con ese documento (RN-01 · regla activa).')
   }
   const customer: Customer = {
     id: nextId(state.customers),
@@ -156,8 +223,11 @@ export async function insertCustomer(input: CustomerInput): Promise<Customer> {
 
 export async function modifyCustomer(id: number, input: CustomerInput): Promise<Customer> {
   await delay()
-  if (state.customers.some((customer) => customer.id !== id && customer.document_number === input.document_number)) {
-    throw new Error('Ya existe un cliente con ese documento (RN-01).')
+  if (
+    ruleEnabled('RN-01_DOCUMENTO_UNICO') &&
+    state.customers.some((customer) => customer.id !== id && customer.document_number === input.document_number)
+  ) {
+    throw new Error('Ya existe un cliente con ese documento (RN-01 · regla activa).')
   }
   const existing = state.customers.find((customer) => customer.id === id)
   if (!existing) throw new Error('Cliente no encontrado.')
@@ -215,7 +285,7 @@ function applyStock(productId: number, delta: number): Product {
   const product = state.products.find((entry) => entry.id === productId)
   if (!product) throw new Error('Producto no encontrado.')
   const nextStock = product.current_stock + delta
-  if (nextStock < 0) {
+  if (ruleEnabled('RN-20_STOCK_NEGATIVO') && nextStock < 0) {
     throw new Error(`Stock insuficiente de ${product.name} (disponible: ${product.current_stock}).`)
   }
   const updated: Product = { ...product, current_stock: nextStock }
@@ -235,7 +305,11 @@ export async function insertMovement(input: MovementInput): Promise<{ movement: 
   await delay()
   const quantity = Math.abs(Math.trunc(input.quantity))
   if (quantity <= 0) throw new Error('La cantidad debe ser mayor a cero.')
-  if ((input.type === 'SHRINKAGE' || input.type === 'ADJUSTMENT') && !input.reason.trim()) {
+  if (
+    ruleEnabled('RN-21_MOTIVO_MERMA') &&
+    (input.type === 'SHRINKAGE' || input.type === 'ADJUSTMENT') &&
+    !input.reason.trim()
+  ) {
     throw new Error('Ingresa el motivo del movimiento (obligatorio en merma y ajuste · RN-21).')
   }
   const product = state.products.find((entry) => entry.id === input.product_id)
@@ -252,7 +326,7 @@ export async function insertMovement(input: MovementInput): Promise<{ movement: 
     {
       module: 'analítica',
       label: 'Alertas recalculadas',
-      detail: updated.current_stock <= updated.min_stock ? `${product.name} entró en alerta de stock` : 'Sin nuevas alertas',
+      detail: isLowStock(updated) ? `${product.name} está en alerta de stock` : 'Sin nuevas alertas',
     },
   ])
   commit()
@@ -276,12 +350,14 @@ export async function insertSale(input: SaleInput): Promise<SaleProcessResult> {
   await delay()
   if (input.items.length === 0) throw new Error('Agrega al menos un producto a la venta.')
 
-  // Validación de stock antes de tocar nada (RN-10).
-  for (const item of input.items) {
-    const product = state.products.find((entry) => entry.id === item.product_id)
-    if (!product) throw new Error('Producto no encontrado en el catálogo.')
-    if (item.quantity > product.current_stock) {
-      throw new Error(`Stock insuficiente de ${product.name} (disponible: ${product.current_stock}).`)
+  // Validación de stock antes de tocar nada (RN-10, regla configurable).
+  if (ruleEnabled('RN-10_STOCK_INSUFICIENTE')) {
+    for (const item of input.items) {
+      const product = state.products.find((entry) => entry.id === item.product_id)
+      if (!product) throw new Error('Producto no encontrado en el catálogo.')
+      if (item.quantity > product.current_stock) {
+        throw new Error(`Stock insuficiente de ${product.name} (disponible: ${product.current_stock}).`)
+      }
     }
   }
 
@@ -290,9 +366,13 @@ export async function insertSale(input: SaleInput): Promise<SaleProcessResult> {
   if (!customer) throw new Error('Cliente no válido.')
   if (!seller) throw new Error('Vendedor no válido.')
 
-  const totals = computeTotals(input.items, input.tax_rate ?? DEFAULT_TAX_RATE)
+  // RN-11: tasa de impuesto configurable desde Automatizaciones.
+  const taxRate = ruleEnabled('RN-11_TOTALES')
+    ? ruleNumber('RN-11_TOTALES', 'taxRate', DEFAULT_TAX_RATE * 100) / 100
+    : 0
+  const totals = computeTotals(input.items, taxRate)
   // RN-16: el pago no puede exceder el total.
-  if (input.payment.amount > totals.total) {
+  if (ruleEnabled('RN-16_PAGO_MAXIMO') && input.payment.amount > totals.total) {
     throw new Error('El pago no puede superar el total de la venta.')
   }
 
@@ -329,56 +409,76 @@ export async function insertSale(input: SaleInput): Promise<SaleProcessResult> {
   // 1) La venta entra en el historial.
   state = { ...state, sales: [sale, ...state.sales] }
 
-  // 2) Inventario: baja de stock y kardex por cada línea (RF-08).
+  // 2) Inventario: baja de stock y kardex por cada línea (RF-08, regla configurable).
   const stockSteps: TraceStep[] = []
-  for (const item of items) {
-    const before = state.products.find((entry) => entry.id === item.product_id)!.current_stock
-    const updated = applyStock(item.product_id, -item.quantity)
-    const movement = buildMovement(
-      state.products.find((entry) => entry.id === item.product_id)!,
-      'OUT',
-      item.quantity,
-      `Venta ${sale.sale_number}`,
-      seller.id,
-      updated.current_stock,
-    )
-    state = { ...state, movements: [movement, ...state.movements] }
+  if (ruleEnabled('RF-08_STOCK_AUTOMATICO')) {
+    for (const item of items) {
+      const before = state.products.find((entry) => entry.id === item.product_id)!.current_stock
+      const updated = applyStock(item.product_id, -item.quantity)
+      const movement = buildMovement(
+        state.products.find((entry) => entry.id === item.product_id)!,
+        'OUT',
+        item.quantity,
+        `Venta ${sale.sale_number}`,
+        seller.id,
+        updated.current_stock,
+      )
+      state = { ...state, movements: [movement, ...state.movements] }
+      stockSteps.push({
+        module: 'inventario',
+        label: `${item.name} (${item.sku})`,
+        detail: `stock ${before} → ${updated.current_stock} ${updated.unit} · kardex OUT registrado`,
+      })
+    }
+  } else {
     stockSteps.push({
       module: 'inventario',
-      label: `${item.name} (${item.sku})`,
-      detail: `stock ${before} → ${updated.current_stock} ${updated.unit} · kardex OUT registrado`,
+      label: 'Stock sin descontar',
+      detail: 'La regla "Descontar stock y generar kardex" está desactivada en Automatizaciones.',
     })
   }
 
-  // 3) Cliente: historial y total acumulado.
+  // 3) Cliente: historial y total acumulado (RF-07, regla configurable).
   const updatedCustomer: Customer = {
     ...customer,
     purchase_count: customer.purchase_count + 1,
     total_purchased: round2(customer.total_purchased + sale.total),
   }
-  state = {
-    ...state,
-    customers: state.customers.map((entry) => (entry.id === customer.id ? updatedCustomer : entry)),
+  if (ruleEnabled('RF-07_HISTORIAL_CLIENTE')) {
+    state = {
+      ...state,
+      customers: state.customers.map((entry) => (entry.id === customer.id ? updatedCustomer : entry)),
+    }
   }
 
-  const trace = logTrace(`Venta ${sale.sale_number}`, [
+  const traceSteps: TraceStep[] = [
     {
       module: 'ventas',
       label: 'Venta registrada',
-      detail: `${items.length} línea(s) · total ${money(sale.total)} · estado ${sale.status}`,
+      detail: `${items.length} línea(s) · total ${money(sale.total)} (IGV ${Math.round(taxRate * 100)}%) · estado ${sale.status}`,
     },
     ...stockSteps,
-    {
-      module: 'clientes',
-      label: 'Historial del cliente',
-      detail: `${customer.name}: ${customer.purchase_count} → ${updatedCustomer.purchase_count} compras (${money(updatedCustomer.total_purchased)})`,
-    },
-    {
+    ruleEnabled('RF-07_HISTORIAL_CLIENTE')
+      ? {
+          module: 'clientes',
+          label: 'Historial del cliente',
+          detail: `${customer.name}: ${customer.purchase_count} → ${updatedCustomer.purchase_count} compras (${money(updatedCustomer.total_purchased)})`,
+        }
+      : {
+          module: 'clientes',
+          label: 'Historial sin actualizar',
+          detail: 'La regla "Actualizar historial del cliente" está desactivada en Automatizaciones.',
+        },
+  ]
+  if (ruleEnabled('RF-09_INDICADORES')) {
+    traceSteps.push({
       module: 'analítica',
       label: 'Indicadores recalculados',
       detail: 'Dashboard, Analytics, Insights y Reportes ya reflejan esta venta',
-    },
-  ])
+    })
+  }
+
+  const trace = logTrace(`Venta ${sale.sale_number}`, traceSteps)
 
   commit()
   return { sale, trace }

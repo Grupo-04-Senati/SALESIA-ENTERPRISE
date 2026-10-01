@@ -10,6 +10,7 @@ import {
   Lightbulb,
   FileText,
   Settings,
+  Zap,
 } from 'lucide-react'
 
 /**
@@ -43,6 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Reportes', path: '/reportes', icon: FileText, group: 'analitica' },
   // --- Sistema ---
   { label: 'Configuración', path: '/configuracion', icon: Settings, group: 'sistema' },
+  { label: 'Automatizaciones', path: '/automatizaciones', icon: Zap, group: 'sistema' },
 ]
 
 export const GROUP_LABELS: Record<NavItem['group'], string> = {

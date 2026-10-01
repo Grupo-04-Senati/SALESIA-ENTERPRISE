@@ -15,6 +15,7 @@ import ProbabilityPage from '@/modules/probability/pages/ProbabilityPage'
 import InsightsPage from '@/modules/insights/pages/InsightsPage'
 import ReportsPage from '@/modules/reports/pages/ReportsPage'
 import SettingsPage from '@/modules/settings/pages/SettingsPage'
+import AutomationPage from '@/modules/automation/pages/AutomationPage'
 import { NAV_ITEMS } from '@/utils/constants'
 
 /**
@@ -32,6 +33,7 @@ const MODULE_ROUTES: Record<string, ReactNode> = {
   '/insights': <InsightsPage />,
   '/reportes': <ReportsPage />,
   '/configuracion': <SettingsPage />,
+  '/automatizaciones': <AutomationPage />,
 }
 
 export const router = createBrowserRouter([
