@@ -6,6 +6,7 @@ import PlaceholderPage from './PlaceholderPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
 import CustomersPage from '@/modules/customers/pages/CustomersPage'
+import ProductsPage from '@/modules/products/pages/ProductsPage'
 import { NAV_ITEMS } from '@/utils/constants'
 
 /**
@@ -15,6 +16,7 @@ import { NAV_ITEMS } from '@/utils/constants'
  */
 const MODULE_ROUTES: Record<string, ReactNode> = {
   '/clientes': <CustomersPage />,
+  '/productos': <ProductsPage />,
 }
 
 export const router = createBrowserRouter([
