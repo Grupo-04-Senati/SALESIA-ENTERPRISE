@@ -1,5 +1,6 @@
 import type { AnalysisRecord, BayesInput, BayesResult, VariableClassification } from '@/types/statistics'
 import { compareMeanMedian, mean, median } from '@/modules/analytics/services/statisticsService'
+import { ruleEnabled, ruleNumber } from '@/data/store'
 
 /**
  * Servicio de probabilidad y variables aleatorias (Fase 09 · RF-15…RF-17).
@@ -21,9 +22,17 @@ export function parseValues(raw: string): number[] {
     .filter((value) => !Number.isNaN(value))
 }
 
+/** RN-40: mínimo de observaciones configurable en Automatizaciones. */
+export function minObservations(): number {
+  return ruleEnabled('RN-40_MINIMO_DATOS') ? ruleNumber('RN-40_MINIMO_DATOS', 'minimo', 2) : 1
+}
+
 export function assertEnoughData(values: number[]): void {
-  if (values.length < 2) {
-    throw new Error('Se requieren al menos 2 observaciones (RN-40 · DATOS_INSUFICIENTES).')
+  const minimum = minObservations()
+  if (values.length < minimum) {
+    throw new Error(
+      `Se requieren al menos ${minimum} observación(es) según la configuración de Automatizaciones (RN-40).`,
+    )
   }
 }
 
@@ -39,7 +48,21 @@ export function bayes(input: BayesInput): BayesResult {
     }
   }
   if (evidence === 0) {
-    throw new Error('P(B) = 0: el posterior no está definido (RN-43 · BAYES_POR_CERO).')
+    // RN-43: con la regla activa el posterior no está definido.
+    if (ruleEnabled('RN-43_BAYES_CERO')) {
+      throw new Error('P(B) = 0: el posterior no está definido (RN-43 · regla activa).')
+    }
+    return {
+      posterior: 0,
+      prior: round4(prior),
+      likelihood: round4(likelihood),
+      evidence: 0,
+      joint: round4(likelihood * prior),
+      steps: [
+        'La regla RN-43 está desactivada: se permite calcular con P(B) = 0.',
+        'P(B) = 0 hace que el posterior sea indefinido; el sistema devuelve 0.',
+      ],
+    }
   }
   const joint = round4(likelihood * prior)
   const posterior = round4(joint / evidence)
@@ -65,8 +88,10 @@ export function classifyVariable(name: string, raw: string): VariableClassificat
     .split(/[\s,;]+/)
     .map((part) => part.trim())
     .filter((part) => part !== '')
-  if (parts.length < 2) {
-    throw new Error('Se requieren al menos 2 observaciones (RN-40).')
+  if (parts.length < minObservations()) {
+    throw new Error(
+      `Se requieren al menos ${minObservations()} observaciones según la configuración de Automatizaciones (RN-40).`,
+    )
   }
 
   const numbers = parts.map(Number)
@@ -126,7 +151,10 @@ export function registerAnalysis(record: Omit<AnalysisRecord, 'id' | 'created_at
     id: Math.max(...history.map((item) => item.id), 0) + 1,
     created_at: new Date().toISOString(),
   }
-  history = [entry, ...history]
+  // RF-21: si la regla está desactivada, el cálculo no se guarda.
+  if (ruleEnabled('RF-21_HISTORIAL')) {
+    history = [entry, ...history]
+  }
   return entry
 }
 

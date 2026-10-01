@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Lightbulb, ListTree, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -9,7 +10,7 @@ import { formatDateTime } from '@/utils/formatters'
 import { SEVERITY_LABELS } from '@/types/insight'
 import type { InsightSeverity } from '@/types/insight'
 import { useInsights } from '@/hooks/useInsights'
-import { INSIGHT_RULES, filterInsights } from '../services/insightService'
+import { filterInsights, getActiveRules } from '../services/insightService'
 
 /**
  * Insights empresariales (Fase 11 · RF-18…RF-20): reglas determinísticas,
@@ -191,15 +192,28 @@ export default function InsightsPage() {
         </div>
         <p className="text-body-sm text-gray-600">
           Cada insight proviene de una regla fija: con los mismos datos se obtiene siempre el mismo
-          resultado (RF-18).
+          resultado (RF-18). Las reglas de alerta se activan y ajustan desde{' '}
+          <Link to="/automatizaciones" className="font-medium text-primary hover:underline">
+            Automatizaciones
+          </Link>
+          .
         </p>
-        <Table headers={['Código', 'Descripción', 'Severidad base']}>
-          {INSIGHT_RULES.map((rule) => (
+        <Table headers={['Código', 'Descripción', 'Severidad base', 'Configurable']}>
+          {getActiveRules().map((rule) => (
             <TableRow key={rule.code}>
               <TableCell className="font-mono text-caption">{rule.code}</TableCell>
               <TableCell>{rule.description}</TableCell>
               <TableCell>
                 <Badge variant={SEVERITY_BADGE[rule.severity]}>{SEVERITY_LABELS[rule.severity]}</Badge>
+              </TableCell>
+              <TableCell>
+                {rule.automationCode ? (
+                  <Badge variant={rule.enabled ? 'success' : 'neutral'}>
+                    {rule.enabled ? 'Activa' : 'Desactivada'}
+                  </Badge>
+                ) : (
+                  <span className="text-caption text-gray-400">siempre activa</span>
+                )}
               </TableCell>
             </TableRow>
           ))}

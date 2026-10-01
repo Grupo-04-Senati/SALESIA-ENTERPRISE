@@ -17,6 +17,7 @@ import {
 } from '../services/productService'
 import type { Product, ProductInput } from '@/types/product'
 import ProductForm from '../components/ProductForm'
+import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 
 /**
@@ -27,10 +28,10 @@ import { useDataVersion } from '@/data/DataProvider'
 
 const PAGE_SIZE = 10
 
-/** Estado del stock según nivel (txt §5.5: warning = stock bajo, error = sin stock). */
+/** Estado del stock según el umbral de alerta configurado (Automatizaciones). */
 function stockBadge(product: Product): { variant: 'error' | 'warning' | 'success'; label: string } | null {
   if (product.current_stock === 0) return { variant: 'error', label: 'Sin stock' }
-  if (product.current_stock <= product.min_stock) return { variant: 'warning', label: 'Stock bajo' }
+  if (isLowStock(product)) return { variant: 'warning', label: 'Stock bajo' }
   return null
 }
 

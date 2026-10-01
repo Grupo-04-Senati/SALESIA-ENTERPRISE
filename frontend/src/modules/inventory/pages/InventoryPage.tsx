@@ -13,6 +13,7 @@ import { MOVEMENT_LABELS, createMovement, listMovements, listStock } from '../se
 import type { MovementInput, StockRow } from '../services/inventoryService'
 import MovementForm from '../components/MovementForm'
 import ProcessTraceList from '@/components/ProcessTraceList'
+import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 
 /**
@@ -61,7 +62,8 @@ export default function InventoryPage() {
     }
   }, [attempt, version])
 
-  const alerts = useMemo(() => stock.filter((row) => row.current_stock <= row.min_stock), [stock])
+  // El umbral de alerta viene de la regla ALERTA_STOCK (Automatizaciones).
+  const alerts = useMemo(() => stock.filter((row) => isLowStock(row)), [stock])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -120,10 +122,10 @@ export default function InventoryPage() {
           <AlertTriangle aria-hidden="true" className="h-5 w-5 text-warning" />
           <div>
             <p className="text-body-sm font-semibold text-gray-900">
-              {alerts.length} producto{alerts.length === 1 ? '' : 's'} con stock igual o menor al mínimo
+              {alerts.length} producto{alerts.length === 1 ? '' : 's'} en alerta de stock
             </p>
             <p className="text-caption text-gray-500">
-              Revisa las existencias y registra una entrada de reposición.
+              Alerta según el umbral configurado en Automatizaciones (regla ALERTA_STOCK).
             </p>
           </div>
         </div>
@@ -174,7 +176,7 @@ export default function InventoryPage() {
                 <Table headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
                   {visible.map((row) => {
                     const isEmpty = row.current_stock === 0
-                    const isLow = !isEmpty && row.current_stock <= row.min_stock
+                    const isLow = !isEmpty && isLowStock(row)
                     return (
                       <TableRow key={row.product_id}>
                         <TableCell>
