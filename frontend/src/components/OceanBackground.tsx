@@ -9,7 +9,8 @@ import { createRenderer } from '@/ocean/renderer'
  *
  * - El example renderiza sobre `bg-black` dentro de su propio contenedor;
  *   aquí el lienzo se usa como capa de fondo a pantalla completa y la
- *   página conserva su gradiente azul→cyan como respaldo.
+ *   página usa el azul corporativo #1E3A8A (primario) como fondo/respaldo —
+ *   las partículas transparentes dejan ver ese azul detrás.
  * - Si WebGPU no está disponible (o la preparación falla), la capa negra
  *   se oculta y queda visible el gradiente original de la página.
  * - El ciclo de vida es idéntico al original: `createRenderer` al montar,
@@ -42,7 +43,7 @@ export default function OceanBackground() {
   if (failed) return null
 
   return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-black">
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-primary">
       <canvas ref={canvasRef} className="block h-full w-full touch-none" />
     </div>
   )

@@ -13,7 +13,7 @@ const OceanBackground = lazy(() => import('@/components/OceanBackground'))
  */
 export default function AuthLayout() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-primary to-accent">
+    <div className="relative min-h-screen overflow-hidden bg-primary">
       <Suspense fallback={null}>
         <OceanBackground />
       </Suspense>
