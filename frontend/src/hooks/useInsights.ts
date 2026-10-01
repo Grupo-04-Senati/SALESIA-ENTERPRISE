@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Insight } from '@/types/insight'
 import { generateInsights } from '@/modules/insights/services/insightService'
 import type { AnalyticsFilters } from '@/modules/analytics/services/statisticsService'
+import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Hook de datos de insights (Fase 06 — hooks de datos).
@@ -13,6 +14,7 @@ export function useInsights(filters: AnalyticsFilters) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const version = useDataVersion()
 
   const { months, seller, category } = filters
 
@@ -35,7 +37,7 @@ export function useInsights(filters: AnalyticsFilters) {
     return () => {
       cancelled = true
     }
-  }, [months, seller, category, attempt])
+  }, [months, seller, category, attempt, version])
 
   return {
     insights,

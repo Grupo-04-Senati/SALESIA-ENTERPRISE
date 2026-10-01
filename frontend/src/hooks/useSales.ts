@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react'
 import type { Sale, SaleStatus } from '@/types/sale'
 import { listSales } from '@/modules/sales/services/saleService'
 import type { SaleFilters } from '@/modules/sales/services/saleService'
+import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Hook de datos de ventas (Fase 06 — hooks de datos).
- * Encapsula carga, filtros, error y recarga.
- * TODO(Fase 05): el servicio ya habla con la API real.
+ * Encapsula carga, filtros, error y recarga, y se recalcula solo cuando
+ * otro módulo modifica el almacén compartido.
  */
 export function useSales(filters: SaleFilters = {}) {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const version = useDataVersion()
 
   const { search = '', status = '' } = filters
 
@@ -35,7 +37,7 @@ export function useSales(filters: SaleFilters = {}) {
     return () => {
       cancelled = true
     }
-  }, [search, status, attempt])
+  }, [search, status, attempt, version])
 
   return {
     sales,

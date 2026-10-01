@@ -8,6 +8,12 @@ export type SaleStatus = 'pending' | 'paid' | 'partial' | 'cancelled'
 /** Métodos de pago (docs/04_modelo_er.md, tabla payments). */
 export type PaymentMethod = 'cash' | 'card' | 'transfer'
 
+/** Vendedor / empleado (docs/05_api.md §2.5). */
+export interface Seller {
+  id: number
+  name: string
+}
+
 export interface SaleItem {
   product_id: number
   sku?: string
