@@ -1,16 +1,22 @@
 import { createBrowserRouter } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/layouts/AuthLayout'
 import PlaceholderPage from './PlaceholderPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
+import CustomersPage from '@/modules/customers/pages/CustomersPage'
 import { NAV_ITEMS } from '@/utils/constants'
 
 /**
  * Rutas de la aplicación.
- * Los módulos no implementados se sirven con PlaceholderPage;
- * se reemplazarán módulo a módulo en fases posteriores.
+ * Los módulos implementados sustituyen a PlaceholderPage aquí;
+ * los pendientes se irán añadiendo por fase (Fase 07 → Fase 12).
  */
+const MODULE_ROUTES: Record<string, ReactNode> = {
+  '/clientes': <CustomersPage />,
+}
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -24,7 +30,7 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       ...NAV_ITEMS.filter((item) => item.path !== '/').map((item) => ({
         path: item.path.slice(1),
-        element: <PlaceholderPage />,
+        element: MODULE_ROUTES[item.path] ?? <PlaceholderPage />,
       })),
       { path: '*', element: <PlaceholderPage /> },
     ],
