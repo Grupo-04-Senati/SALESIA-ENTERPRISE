@@ -1,6 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { NAV_ITEMS, GROUP_LABELS } from '@/utils/constants'
+import { useAuth } from '@/hooks/useAuth'
 
 interface SidebarProps {
   /** true = visible (translateX(0)); false = oculto (translateX(-100%)). */
@@ -22,19 +23,18 @@ const GROUPS = ['operacion', 'analitica', 'sistema'] as const
  * activo en cyan #06B6D4.
  */
 export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
-  const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const handleLogout = () => {
-    // TODO(Fase 05): limpiar la sesión real (token/usuario) antes de navegar.
-    // En modo demo solo volvemos al login.
-    navigate('/login', { replace: true })
+    // TODO(Fase 05): la sesión real usa el token de /api/v1/auth/logout.
+    logout()
   }
 
   return (
     <aside
       onMouseEnter={onOpen}
       onMouseLeave={onClose}
-      className={`fixed left-0 top-0 z-50 flex h-full w-60 flex-col bg-primary text-white transition-transform duration-300 ease-in-out ${
+      className={`fixed left-0 top-0 z-50 flex h-full w-60 flex-col bg-primary text-white transition-transform duration-300 ease-in-out print:hidden ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >

@@ -2,6 +2,7 @@ import { useLocation, useNavigation } from 'react-router-dom'
 import { Bell, Search } from 'lucide-react'
 import { PATH_TITLES } from '@/utils/constants'
 import ProgressBar from '@/components/ui/ProgressBar'
+import { useAuth } from '@/hooks/useAuth'
 
 /**
  * Topbar: 64px de alto, fondo blanco, borde inferior gris 200.
@@ -11,10 +12,17 @@ import ProgressBar from '@/components/ui/ProgressBar'
 export default function Topbar() {
   const { pathname } = useLocation()
   const navigation = useNavigation()
+  const { user } = useAuth()
   const title = PATH_TITLES[pathname] ?? 'SalesIA Enterprise'
+  const initials =
+    (user?.name ?? 'Usuario')
+      .split(' ')
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'US'
 
   return (
-    <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 lg:px-8">
+    <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 print:hidden lg:px-8">
       {/* Título de la página */}
       <div className="flex items-center gap-2 text-body-sm text-gray-500">
         <span>SalesIA</span>
@@ -50,11 +58,12 @@ export default function Topbar() {
             aria-hidden="true"
             className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-body-sm font-semibold text-white"
           >
-            US
+            {initials}
           </div>
-          <span className="hidden text-body-sm font-medium text-gray-700 lg:block">
-            Usuario
-          </span>
+          <div className="hidden lg:block">
+            <p className="text-body-sm font-medium text-gray-700">{user?.name ?? 'Usuario'}</p>
+            <p className="text-caption text-gray-400">{user?.role ?? 'Invitado'}</p>
+          </div>
         </div>
       </div>
 

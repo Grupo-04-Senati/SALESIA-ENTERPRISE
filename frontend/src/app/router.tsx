@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import MainLayout from '@/components/layout/MainLayout'
 import AuthLayout from '@/layouts/AuthLayout'
 import PlaceholderPage from './PlaceholderPage'
+import NotFoundPage from './NotFoundPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
 import CustomersPage from '@/modules/customers/pages/CustomersPage'
@@ -11,12 +12,15 @@ import SalesPage from '@/modules/sales/pages/SalesPage'
 import InventoryPage from '@/modules/inventory/pages/InventoryPage'
 import AnalyticsPage from '@/modules/analytics/pages/AnalyticsPage'
 import ProbabilityPage from '@/modules/probability/pages/ProbabilityPage'
+import InsightsPage from '@/modules/insights/pages/InsightsPage'
+import ReportsPage from '@/modules/reports/pages/ReportsPage'
+import SettingsPage from '@/modules/settings/pages/SettingsPage'
 import { NAV_ITEMS } from '@/utils/constants'
 
 /**
  * Rutas de la aplicación.
- * Los módulos implementados sustituyen a PlaceholderPage aquí;
- * los pendientes se irán añadiendo por fase (Fase 07 → Fase 12).
+ * Cada módulo implementado (Fase 06 → Fase 12) sustituye a
+ * PlaceholderPage; las rutas desconocidas muestran la página 404.
  */
 const MODULE_ROUTES: Record<string, ReactNode> = {
   '/clientes': <CustomersPage />,
@@ -25,6 +29,9 @@ const MODULE_ROUTES: Record<string, ReactNode> = {
   '/inventario': <InventoryPage />,
   '/analytics': <AnalyticsPage />,
   '/probabilidad': <ProbabilityPage />,
+  '/insights': <InsightsPage />,
+  '/reportes': <ReportsPage />,
+  '/configuracion': <SettingsPage />,
 }
 
 export const router = createBrowserRouter([
@@ -42,7 +49,7 @@ export const router = createBrowserRouter([
         path: item.path.slice(1),
         element: MODULE_ROUTES[item.path] ?? <PlaceholderPage />,
       })),
-      { path: '*', element: <PlaceholderPage /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ])
