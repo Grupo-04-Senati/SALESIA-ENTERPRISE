@@ -1,54 +1,40 @@
-import type { AnalysisRecord, BayesInput, BayesResult, VariableClassification } from '@/types/statistics'
-import { compareMeanMedian, mean, median } from '@/modules/analytics/services/statisticsService'
+import type { AnalysisRecord, BayesInput, BayesResult } from '@/types/statistics'
 import { ruleEnabled, ruleNumber } from '@/data/store'
 
 /**
- * Servicio de probabilidad y variables aleatorias (Fase 09 · RF-15…RF-17).
- * Calcula en el frontend replicando las reglas del backend para que las
- * vistas queden completas antes de la API (Fase 05).
- * TODO(Fase 05): sustituir por `apiFetch` contra
- * /api/v1/probability y /api/v1/statistics (docs/05_api.md §2.9).
+ * Servicio de probabilidad — Semana 07 (Fase 09 · RF-15, RF-17, RF-21).
+ *
+ * Los cálculos son **automáticos**: se aplican sobre los datos del sistema
+ * (src/data/analytics.ts) y aquí quedan las piezas que dependen de la
+ * configuración de Automatizaciones y el historial de análisis.
+ * TODO(Fase 05): sustituir por /api/v1/probability y /statistics
+ * (docs/05_api.md §2.9), conservando las mismas reglas RN-40 y RN-43.
  */
 
 const round4 = (value: number): number => Math.round(value * 10000) / 10000
-
-/** RN-40: se requieren al menos 2 observaciones. */
-export function parseValues(raw: string): number[] {
-  return raw
-    .split(/[\s,;]+/)
-    .map((part) => part.trim())
-    .filter((part) => part !== '')
-    .map(Number)
-    .filter((value) => !Number.isNaN(value))
-}
 
 /** RN-40: mínimo de observaciones configurable en Automatizaciones. */
 export function minObservations(): number {
   return ruleEnabled('RN-40_MINIMO_DATOS') ? ruleNumber('RN-40_MINIMO_DATOS', 'minimo', 2) : 1
 }
 
-export function assertEnoughData(values: number[]): void {
-  const minimum = minObservations()
-  if (values.length < minimum) {
-    throw new Error(
-      `Se requieren al menos ${minimum} observación(es) según la configuración de Automatizaciones (RN-40).`,
-    )
-  }
-}
-
 /**
  * Teorema de Bayes: P(A|B) = P(B|A) · P(A) / P(B).
- * RN-43: si P(B) = 0 el posterior no está definido.
+ * Las probabilidades llegan ya observadas en la operación real.
+ * RN-43: con la regla activa, P(B) = 0 bloquea el cálculo.
  */
 export function bayes(input: BayesInput): BayesResult {
   const { prior, likelihood, evidence } = input
-  for (const [label, value] of [['P(A)', prior], ['P(B|A)', likelihood], ['P(B)', evidence]] as const) {
+  for (const [label, value] of [
+    ['P(A)', prior],
+    ['P(B|A)', likelihood],
+    ['P(B)', evidence],
+  ] as const) {
     if (Number.isNaN(value) || value < 0 || value > 1) {
       throw new Error(`${label} debe ser una probabilidad entre 0 y 1.`)
     }
   }
   if (evidence === 0) {
-    // RN-43: con la regla activa el posterior no está definido.
     if (ruleEnabled('RN-43_BAYES_CERO')) {
       throw new Error('P(B) = 0: el posterior no está definido (RN-43 · regla activa).')
     }
@@ -82,50 +68,6 @@ export function bayes(input: BayesInput): BayesResult {
   }
 }
 
-/** Clasifica una variable como cualitativa o cuantitativa (RF-16). */
-export function classifyVariable(name: string, raw: string): VariableClassification {
-  const parts = raw
-    .split(/[\s,;]+/)
-    .map((part) => part.trim())
-    .filter((part) => part !== '')
-  if (parts.length < minObservations()) {
-    throw new Error(
-      `Se requieren al menos ${minObservations()} observaciones según la configuración de Automatizaciones (RN-40).`,
-    )
-  }
-
-  const numbers = parts.map(Number)
-  const isQuantitative = numbers.every((value) => !Number.isNaN(value))
-
-  if (isQuantitative) {
-    const values = numbers as number[]
-    return {
-      name: name || 'variable',
-      type: 'quantitative',
-      subtype: Number.isInteger(values[0]) ? 'discreta' : 'continua',
-      count: values.length,
-      mean: round4(mean(values)),
-      median: round4(median(values)),
-      min: Math.min(...values),
-      max: Math.max(...values),
-    }
-  }
-
-  const counts = new Map<string, number>()
-  for (const part of parts) {
-    counts.set(part, (counts.get(part) ?? 0) + 1)
-  }
-  return {
-    name: name || 'variable',
-    type: 'qualitative',
-    subtype: 'nominal',
-    count: parts.length,
-    frequencies: [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([value, count]) => ({ value, count, pct: round4((count / parts.length) * 100) })),
-  }
-}
-
 /* ------------------------------------------------------------------
    Historial de análisis (RF-21) — se mantiene en memoria
    ------------------------------------------------------------------ */
@@ -145,30 +87,15 @@ export function listAnalyses(): AnalysisRecord[] {
   return [...history].sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
+/** Registra un cálculo automático (RF-21, desactivable desde Automatizaciones). */
 export function registerAnalysis(record: Omit<AnalysisRecord, 'id' | 'created_at'>): AnalysisRecord {
   const entry: AnalysisRecord = {
     ...record,
     id: Math.max(...history.map((item) => item.id), 0) + 1,
     created_at: new Date().toISOString(),
   }
-  // RF-21: si la regla está desactivada, el cálculo no se guarda.
   if (ruleEnabled('RF-21_HISTORIAL')) {
-    history = [entry, ...history]
+    history = [entry, ...history].slice(0, 60)
   }
   return entry
-}
-
-/** Resumen estadístico de un conjunto de valores. */
-export function describe(values: number[]) {
-  assertEnoughData(values)
-  const compare = compareMeanMedian(values)
-  return {
-    count: values.length,
-    mean: round4(mean(values)),
-    median: round4(median(values)),
-    min: Math.min(...values),
-    max: Math.max(...values),
-    range: round4(Math.max(...values) - Math.min(...values)),
-    compare,
-  }
 }
