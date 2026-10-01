@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import HotZone from './HotZone'
 import Sidebar from './Sidebar'
 import Topbar from '@/layouts/Topbar'
+
+// Fondo «Particles ocean» (vgpu fft-ocean) cargado de forma diferida:
+// no retrasa el primer render del layout (mismo patrón que AuthLayout).
+const OceanBackground = lazy(() => import('@/components/OceanBackground'))
 
 /** Delay de cierre para evitar parpadeos si el cursor pasa rápido (txt). */
 const CLOSE_DELAY_MS = 250
@@ -18,6 +22,8 @@ const CLOSE_DELAY_MS = 250
  * - El contenido principal NO tiene margin-left: ocupa todo el ancho
  *   siempre; el sidebar flota por encima con z-index alto.
  * - Al montar: sidebar oculto (translateX(-100%)).
+ * - Fondo: océano de partículas WebGPU (igual que el login) con el gradiente
+ *   azul → cyan de la página como respaldo si WebGPU no está disponible.
  */
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -47,11 +53,15 @@ export default function MainLayout() {
   useEffect(() => clearCloseTimer, [])
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="relative flex min-h-screen bg-gradient-to-br from-primary to-accent">
+      <Suspense fallback={null}>
+        <OceanBackground />
+      </Suspense>
+
       <HotZone onEnter={openSidebar} />
       <Sidebar open={sidebarOpen} onOpen={openSidebar} onClose={scheduleClose} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="flex-1 px-6 py-8 lg:px-8">
           <div className="mx-auto w-full max-w-[1440px]">
