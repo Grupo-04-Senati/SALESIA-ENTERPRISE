@@ -1,0 +1,300 @@
+import { useEffect, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Calculator, ListChecks } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import Badge from '@/components/ui/Badge'
+import { Input, Textarea } from '@/components/ui/form'
+import { useToast } from '@/components/ui/Toast'
+import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
+import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
+import BayesForm from '../components/BayesForm'
+import {
+  classifyVariable,
+  describe,
+  listAnalyses,
+  parseValues,
+  registerAnalysis,
+} from '../services/probabilityService'
+import type { AnalysisRecord, VariableClassification } from '@/types/statistics'
+
+/**
+ * Módulo de Probabilidad y estadística — Semana 07 (Fase 09 · RF-11…RF-17, RF-21):
+ * calculadora de media/mediana, teorema de Bayes, clasificación de
+ * variables aleatorias e historial reproducible de análisis.
+ * TODO(Fase 05): los cálculos se replicarán en el backend; aquí quedan
+ * listos para que las vistas funcionen desde ya.
+ */
+
+const SAMPLE = '120 98 145 87 160 132 110 175 95 128'
+
+export default function ProbabilityPage() {
+  const toast = useToast()
+
+  const [values, setValues] = useState(SAMPLE)
+  const [summary, setSummary] = useState<ReturnType<typeof describe> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const [variableName, setVariableName] = useState('categoría')
+  const [variableValues, setVariableValues] = useState('Bebidas Abarrotes Bebidas Limpieza Bebidas Abarrotes')
+  const [classification, setClassification] = useState<VariableClassification | null>(null)
+  const [variableError, setVariableError] = useState<string | null>(null)
+
+  const [history, setHistory] = useState<AnalysisRecord[]>([])
+
+  useEffect(() => {
+    setHistory(listAnalyses())
+  }, [])
+
+  const refreshHistory = () => setHistory(listAnalyses())
+
+  const handleCalculate = () => {
+    try {
+      const parsed = parseValues(values)
+      const result = describe(parsed)
+      setSummary(result)
+      setError(null)
+      registerAnalysis({ kind: 'media', label: 'Media · cálculo manual', result: `S/ ${result.mean}` })
+      registerAnalysis({ kind: 'mediana', label: 'Mediana · cálculo manual', result: `S/ ${result.median}` })
+      registerAnalysis({
+        kind: 'comparacion',
+        label: 'Media vs. mediana · cálculo manual',
+        result: `Diferencia S/ ${Math.abs(result.compare.difference)} (${formatPercent(result.compare.differencePct / 100)})`,
+      })
+      refreshHistory()
+      toast.success('Cálculo registrado', 'Media, mediana y comparación añadidas al historial.')
+    } catch (reason: unknown) {
+      setSummary(null)
+      const message = reason instanceof Error ? reason.message : 'No se pudo calcular'
+      setError(message)
+      toast.error('Datos insuficientes', message)
+    }
+  }
+
+  const handleClassify = () => {
+    try {
+      const result = classifyVariable(variableName, variableValues)
+      setClassification(result)
+      setVariableError(null)
+      registerAnalysis({
+        kind: 'variable',
+        label: `Variable · ${result.name}`,
+        result:
+          result.type === 'quantitative'
+            ? `Cuantitativa ${result.subtype} (${result.count} obs.)`
+            : `Cualitativa nominal (${result.frequencies?.length ?? 0} valores)`,
+      })
+      refreshHistory()
+    } catch (reason: unknown) {
+      setClassification(null)
+      setVariableError(reason instanceof Error ? reason.message : 'No se pudo clasificar')
+    }
+  }
+
+  const distribution = summary
+    ? [
+        { rango: 'Mín', valor: summary.min },
+        { rango: 'Media', valor: summary.mean },
+        { rango: 'Mediana', valor: summary.median },
+        { rango: 'Máx', valor: summary.max },
+      ]
+    : []
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1>Probabilidad</h1>
+        <p className="mt-1 text-body-sm text-gray-600">
+          Media, mediana, teorema de Bayes y variables aleatorias — Semana 07 (Fase 09).
+        </p>
+      </div>
+
+      {/* Calculadora estadística */}
+      <section className="card space-y-4">
+        <div className="flex items-center gap-2">
+          <Calculator aria-hidden="true" className="h-5 w-5 text-primary" />
+          <h2 className="text-h4 text-gray-800">Calculadora de media y mediana</h2>
+        </div>
+
+        <Textarea
+          label="Observaciones"
+          hint="Separa los valores con espacios o comas (mínimo 2, RN-40)"
+          value={values}
+          onChange={(event) => setValues(event.target.value)}
+        />
+
+        <Button onClick={handleCalculate}>Calcular</Button>
+
+        {error && (
+          <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
+            {error}
+          </p>
+        )}
+
+        {summary && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <dl className="grid grid-cols-2 gap-y-2 text-body-sm">
+                <div>
+                  <dt className="text-caption text-gray-500">Observaciones</dt>
+                  <dd className="font-semibold text-gray-900">{formatNumber(summary.count)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Media</dt>
+                  <dd className="font-semibold text-primary">{formatCurrency(summary.mean)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Mediana</dt>
+                  <dd className="font-semibold text-accent">{formatCurrency(summary.median)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Rango</dt>
+                  <dd className="font-semibold text-gray-900">{formatCurrency(summary.range)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Mínimo</dt>
+                  <dd className="font-medium text-gray-700">{formatCurrency(summary.min)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Máximo</dt>
+                  <dd className="font-medium text-gray-700">{formatCurrency(summary.max)}</dd>
+                </div>
+              </dl>
+              <p className="mt-3 rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                {summary.compare.interpretation}
+              </p>
+            </div>
+
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distribution} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                  <XAxis dataKey="rango" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                  <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="valor" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  <ReferenceLine y={summary.mean} stroke="#1E3A8A" strokeDasharray="4 4" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Bayes */}
+      <section className="card space-y-4">
+        <h2 className="text-h4 text-gray-800">Teorema de Bayes</h2>
+        <p className="text-caption text-gray-500">
+          P(A|B) = P(B|A) · P(A) / P(B) — resultado reproducible y explicable (RF-17).
+        </p>
+        <BayesForm
+          onResult={(posterior) => {
+            registerAnalysis({ kind: 'bayes', label: 'Bayes · cálculo manual', result: `P(A|B) = ${posterior}` })
+            refreshHistory()
+          }}
+        />
+      </section>
+
+      {/* Clasificación de variables */}
+      <section className="card space-y-4">
+        <h2 className="text-h4 text-gray-800">Clasificación de variables</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Input
+            label="Nombre de la variable"
+            value={variableName}
+            onChange={(event) => setVariableName(event.target.value)}
+            className="sm:col-span-1"
+          />
+          <div className="sm:col-span-2">
+            <Textarea
+              label="Observaciones"
+              value={variableValues}
+              onChange={(event) => setVariableValues(event.target.value)}
+            />
+          </div>
+        </div>
+        <Button variant="secondary" onClick={handleClassify}>
+          Clasificar variable
+        </Button>
+
+        {variableError && (
+          <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
+            {variableError}
+          </p>
+        )}
+
+        {classification && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-body-sm font-semibold text-gray-900">{classification.name}</span>
+              <Badge variant={classification.type === 'quantitative' ? 'info' : 'primary'}>
+                {classification.type === 'quantitative' ? 'Cuantitativa' : 'Cualitativa'}
+              </Badge>
+              <Badge variant="neutral">{classification.subtype}</Badge>
+              <span className="text-caption text-gray-500">{classification.count} observaciones</span>
+            </div>
+
+            {classification.type === 'quantitative' ? (
+              <dl className="grid grid-cols-2 gap-y-2 rounded-lg bg-gray-50 p-4 text-body-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-caption text-gray-500">Media</dt>
+                  <dd className="font-semibold">{formatCurrency(classification.mean ?? 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Mediana</dt>
+                  <dd className="font-semibold">{formatCurrency(classification.median ?? 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Mínimo</dt>
+                  <dd className="font-medium">{formatCurrency(classification.min ?? 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-caption text-gray-500">Máximo</dt>
+                  <dd className="font-medium">{formatCurrency(classification.max ?? 0)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <Table headers={['Valor', 'Frecuencia', '%']}>
+                {classification.frequencies?.map((frequency) => (
+                  <TableRow key={frequency.value}>
+                    <TableCell className="font-medium">{frequency.value}</TableCell>
+                    <TableCell>{frequency.count}</TableCell>
+                    <TableCell>{formatPercent(frequency.pct / 100)}</TableCell>
+                  </TableRow>
+                ))}
+              </Table>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Historial de análisis */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <ListChecks aria-hidden="true" className="h-5 w-5 text-primary" />
+          <h2 className="text-h3 text-gray-800">Historial de análisis</h2>
+        </div>
+        <p className="text-body-sm text-gray-600">
+          Cada cálculo queda registrado con su resultado para poder consultarlo después (RF-21).
+        </p>
+        <Table headers={['Fecha', 'Tipo', 'Análisis', 'Resultado']}>
+          {history.map((entry) => (
+            <TableRow key={entry.id}>
+              <TableCell className="text-gray-600">
+                {new Date(entry.created_at).toLocaleDateString('es-PE')}
+              </TableCell>
+              <TableCell>
+                <Badge variant="neutral">{entry.kind}</Badge>
+              </TableCell>
+              <TableCell className="font-medium text-gray-900">{entry.label}</TableCell>
+              <TableCell>{entry.result}</TableCell>
+            </TableRow>
+          ))}
+        </Table>
+      </section>
+    </div>
+  )
+}

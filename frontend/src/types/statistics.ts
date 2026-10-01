@@ -61,3 +61,51 @@ export interface StatInput {
   field?: string
   save_history?: boolean
 }
+
+/* ------------------------------------------------------------------
+   Probabilidad y variables aleatorias (Fase 09 · RF-15…RF-17)
+   ------------------------------------------------------------------ */
+
+/** Entrada del teorema de Bayes. */
+export interface BayesInput {
+  /** P(A): probabilidad previa del evento A. */
+  prior: number
+  /** P(B|A): verosimilitud. */
+  likelihood: number
+  /** P(B): evidencia total. */
+  evidence: number
+}
+
+/** Resultado del teorema de Bayes. */
+export interface BayesResult {
+  posterior: number
+  prior: number
+  likelihood: number
+  evidence: number
+  /** Verosimilitud conjunta P(B ∩ A). */
+  joint: number
+  /** Explicación paso a paso (reproducible, RF-17). */
+  steps: string[]
+}
+
+/** Variable aleatoria clasificada (RF-16). */
+export interface VariableClassification {
+  name: string
+  type: 'quantitative' | 'qualitative'
+  subtype: string
+  count: number
+  mean?: number
+  median?: number
+  min?: number
+  max?: number
+  frequencies?: Array<{ value: string; count: number; pct: number }>
+}
+
+/** Análisis registrado en el historial (RF-21). */
+export interface AnalysisRecord {
+  id: number
+  kind: 'media' | 'mediana' | 'comparacion' | 'bayes' | 'variable'
+  label: string
+  result: string
+  created_at: string
+}
