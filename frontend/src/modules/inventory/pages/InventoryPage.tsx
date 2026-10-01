@@ -12,6 +12,8 @@ import type { InventoryMovement } from '@/types/sale'
 import { MOVEMENT_LABELS, createMovement, listMovements, listStock } from '../services/inventoryService'
 import type { MovementInput, StockRow } from '../services/inventoryService'
 import MovementForm from '../components/MovementForm'
+import ProcessTraceList from '@/components/ProcessTraceList'
+import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Página de Inventario (Fase 08 · RF-08): existencias, alertas de
@@ -34,6 +36,7 @@ export default function InventoryPage() {
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
+  const version = useDataVersion()
 
   useEffect(() => {
     let cancelled = false
@@ -56,7 +59,7 @@ export default function InventoryPage() {
     return () => {
       cancelled = true
     }
-  }, [attempt])
+  }, [attempt, version])
 
   const alerts = useMemo(() => stock.filter((row) => row.current_stock <= row.min_stock), [stock])
 
@@ -84,7 +87,7 @@ export default function InventoryPage() {
 
   const handleSubmit = async (input: MovementInput) => {
     try {
-      const movement = await createMovement(input)
+      const { movement } = await createMovement(input)
       toast.success(
         'Movimiento registrado',
         `${MOVEMENT_LABELS[movement.type]} · ${movement.sku} → ${movement.resulting_stock} und.`,
@@ -244,6 +247,9 @@ export default function InventoryPage() {
       )}
 
       <MovementForm open={formOpen} onClose={() => setFormOpen(false)} stock={stock} onSubmit={handleSubmit} />
+
+      {/* Trazabilidad de movimientos */}
+      <ProcessTraceList limit={3} title="Procesos ejecutados en Inventario" />
     </div>
   )
 }

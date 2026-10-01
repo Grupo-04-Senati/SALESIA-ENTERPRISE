@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { SaleInput, SaleItem } from '@/types/sale'
 import type { PaymentMethod } from '@/types/sale'
@@ -6,12 +6,13 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/form'
 import { formatCurrency } from '@/utils/formatters'
+import { useDataVersion } from '@/data/DataProvider'
 import {
   DEFAULT_TAX_RATE,
-  SALE_CUSTOMERS,
-  SALE_PRODUCTS,
-  SALE_SELLERS,
   computeTotals,
+  getSaleCustomers,
+  getSaleProducts,
+  getSaleSellers,
 } from '../services/saleService'
 
 /**
@@ -23,7 +24,8 @@ import {
 interface SaleFormProps {
   open: boolean
   onClose: () => void
-  onSubmit: (input: SaleInput) => Promise<void>
+  /** Envía la venta; puede devolver la traza del proceso ejecutado. */
+  onSubmit: (input: SaleInput) => Promise<unknown>
 }
 
 interface CartItem {
@@ -40,8 +42,15 @@ const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
 ]
 
 export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
+  const version = useDataVersion()
+  // Clientes, vendedores y productos leídos del almacén compartido:
+  // reflejan al instante el stock y el directorio vigentes.
+  const customers = useMemo(() => getSaleCustomers(), [version])
+  const sellers = useMemo(() => getSaleSellers(), [version])
+  const products = useMemo(() => getSaleProducts(), [version])
+
   const [customerId, setCustomerId] = useState('')
-  const [sellerId, setSellerId] = useState(String(SALE_SELLERS[0].id))
+  const [sellerId, setSellerId] = useState('')
   const [items, setItems] = useState<CartItem[]>([])
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
@@ -51,11 +60,12 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const effectiveSellerId = sellerId || (sellers[0] ? String(sellers[0].id) : '')
   const totals = computeTotals(items, DEFAULT_TAX_RATE)
 
   const reset = () => {
     setCustomerId('')
-    setSellerId(String(SALE_SELLERS[0].id))
+    setSellerId('')
     setItems([])
     setProductId('')
     setQuantity('1')
@@ -72,18 +82,27 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   }
 
   const addItem = () => {
-    const product = SALE_PRODUCTS.find((entry) => entry.id === Number(productId))
+    const product = products.find((entry) => entry.id === Number(productId))
     if (!product) return
     const parsedQuantity = Math.max(Number(quantity) || 1, 1)
     const parsedDiscount = Math.max(Number(discount) || 0, 0)
     setItems((previous) => {
       const existing = previous.find((item) => item.product_id === product.id)
       if (existing) {
+        const nextQuantity = existing.quantity + parsedQuantity
+        if (nextQuantity > product.stock) {
+          setError(`Stock insuficiente de ${product.name} (disponible: ${product.stock}).`)
+          return previous
+        }
         return previous.map((item) =>
           item.product_id === product.id
-            ? { ...item, quantity: item.quantity + parsedQuantity, discount: item.discount + parsedDiscount }
+            ? { ...item, quantity: nextQuantity, discount: item.discount + parsedDiscount }
             : item,
         )
+      }
+      if (parsedQuantity > product.stock) {
+        setError(`Stock insuficiente de ${product.name} (disponible: ${product.stock}).`)
+        return previous
       }
       return [
         ...previous,
@@ -120,7 +139,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
     try {
       await onSubmit({
         customer_id: Number(customerId),
-        seller_id: Number(sellerId),
+        seller_id: Number(effectiveSellerId),
         items: items.map((item) => ({ ...item })),
         payment: { method, amount: payment },
         tax_rate: DEFAULT_TAX_RATE,
@@ -158,14 +177,14 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             onChange={(event) => setCustomerId(event.target.value)}
           >
             <option value="">Selecciona un cliente…</option>
-            {SALE_CUSTOMERS.map((customer) => (
+            {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.name}
               </option>
             ))}
           </Select>
-          <Select label="Vendedor" value={sellerId} onChange={(event) => setSellerId(event.target.value)}>
-            {SALE_SELLERS.map((seller) => (
+          <Select label="Vendedor" value={effectiveSellerId} onChange={(event) => setSellerId(event.target.value)}>
+            {sellers.map((seller) => (
               <option key={seller.id} value={seller.id}>
                 {seller.name}
               </option>
@@ -180,9 +199,9 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             <div className="sm:col-span-6">
               <Select aria-label="Producto" value={productId} onChange={(event) => setProductId(event.target.value)}>
                 <option value="">Producto…</option>
-                {SALE_PRODUCTS.map((product) => (
+                {products.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} ({product.sku})
+                    {product.name} ({product.sku}) · stock {product.stock}
                   </option>
                 ))}
               </Select>
@@ -225,7 +244,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
         ) : (
           <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
             {items.map((item) => {
-              const product = SALE_PRODUCTS.find((entry) => entry.id === item.product_id)
+              const product = products.find((entry) => entry.id === item.product_id)
               return (
                 <li key={item.product_id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">

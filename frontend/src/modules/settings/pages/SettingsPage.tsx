@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Palette, Save, Server, UserCog, Users } from 'lucide-react'
+import { Palette, RotateCcw, Save, Server, UserCog, Users, Database } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Table, { TableRow, TableCell } from '@/components/ui/Table'
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
 import { MANAGED_USERS, ROLES } from '@/modules/auth/services/authService'
 import { useAuth } from '@/hooks/useAuth'
+import { getState, resetDemoData } from '@/data/store'
 
 /**
  * Configuración del sistema (Fase 06 · RF-02):
@@ -168,6 +169,43 @@ export default function SettingsPage() {
               <p className="text-caption text-gray-400">{color.uso}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Datos de demostración */}
+      <section className="card space-y-3">
+        <div className="flex items-center gap-2">
+          <Database aria-hidden="true" className="h-5 w-5 text-primary" />
+          <h2 className="text-h4 text-gray-800">Datos de demostración</h2>
+        </div>
+        <p className="text-body-sm text-gray-600">
+          Todos los módulos (Clientes, Productos, Ventas, Inventario, Analytics, Probabilidad,
+          Insights, Reportes y Dashboard) leen y escriben sobre el mismo almacén en memoria: al
+          registrar una venta se actualizan el stock, el kardex, el historial del cliente y los
+          indicadores, y queda registrada la traza del proceso.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetDemoData()
+              toast.success('Datos restablecidos', 'Se restauró el conjunto de demostración inicial.')
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="h-4 w-4" />
+            Restablecer datos demo
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              toast.info(
+                'Almacén en memoria',
+                `Productos: ${getState().products.length} · Clientes: ${getState().customers.length} · Ventas: ${getState().sales.length} · Movimientos: ${getState().movements.length}`,
+              )
+            }
+          >
+            Ver estado del almacén
+          </Button>
         </div>
       </section>
 

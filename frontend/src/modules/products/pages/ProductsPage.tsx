@@ -17,6 +17,7 @@ import {
 } from '../services/productService'
 import type { Product, ProductInput } from '@/types/product'
 import ProductForm from '../components/ProductForm'
+import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Página de Productos (Fase 07 · RF-04): catálogo con búsqueda, filtros
@@ -50,6 +51,7 @@ export default function ProductsPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+  const version = useDataVersion()
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
@@ -79,7 +81,7 @@ export default function ProductsPage() {
     return () => {
       cancelled = true
     }
-  }, [debouncedSearch, categoryId, status, lowStock, attempt])
+  }, [debouncedSearch, categoryId, status, lowStock, attempt, version])
 
   const pageCount = Math.max(Math.ceil(products.length / PAGE_SIZE), 1)
   const currentPage = Math.min(page, pageCount)

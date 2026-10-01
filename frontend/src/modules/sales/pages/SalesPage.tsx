@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
 import type { Sale, SaleInput } from '@/types/sale'
 import { useSales } from '@/hooks/useSales'
+import ProcessTraceList from '@/components/ProcessTraceList'
 import { createSale } from '../services/saleService'
 import SaleForm from '../components/SaleForm'
 import SaleDetailModal, { SALE_STATUS_LABELS } from '../components/SaleDetailModal'
@@ -63,12 +64,17 @@ export default function SalesPage() {
 
   const handleSubmit = async (input: SaleInput) => {
     try {
-      const sale = await createSale(input)
-      toast.success('Venta registrada', `${sale.sale_number} por ${formatCurrency(sale.total)}.`)
+      const { sale, trace } = await createSale(input)
+      toast.success(
+        'Venta registrada',
+        `${sale.sale_number} por ${formatCurrency(sale.total)} · stock e historial actualizados.`,
+      )
       setFormOpen(false)
       reload()
+      return trace
     } catch (reason: unknown) {
       toast.error('No se pudo registrar la venta', reason instanceof Error ? reason.message : 'Error inesperado')
+      return null
     }
   }
 
@@ -206,6 +212,9 @@ export default function SalesPage() {
 
       <SaleForm open={formOpen} onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />
       <SaleDetailModal sale={selected} onClose={() => setSelected(null)} />
+
+      {/* Trazabilidad: qué hizo el sistema al ejecutar cada operación */}
+      <ProcessTraceList limit={3} title="Procesos ejecutados en Ventas" />
     </div>
   )
 }

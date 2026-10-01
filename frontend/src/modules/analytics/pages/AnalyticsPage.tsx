@@ -19,10 +19,10 @@ import { Select } from '@/components/ui/form'
 import KpiCard from '@/modules/dashboard/components/KpiCard'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
 import {
-  CATEGORIES,
+  CATEGORY_NAMES,
   CHART_AXIS,
   CHART_GRID,
-  SELLERS,
+  SELLER_NAMES,
 } from '../services/statisticsService'
 import type { PeriodMonths } from '../services/statisticsService'
 import { useStatistics } from '@/hooks/useStatistics'
@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
         </Select>
         <Select label="Vendedor" value={seller} onChange={(event) => setSeller(event.target.value)} className="md:w-48">
           <option value="">Todos los vendedores</option>
-          {SELLERS.map((name) => (
+          {SELLER_NAMES.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>
@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
         </Select>
         <Select label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)} className="md:w-52">
           <option value="">Todas las categorías</option>
-          {CATEGORIES.map((name) => (
+          {CATEGORY_NAMES.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>

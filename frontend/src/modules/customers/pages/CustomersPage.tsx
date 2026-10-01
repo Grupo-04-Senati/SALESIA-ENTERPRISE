@@ -19,6 +19,7 @@ import {
 import type { Customer, CustomerInput } from '@/types/customer'
 import CustomerForm from '../components/CustomerForm'
 import CustomerHistoryModal from '../components/CustomerHistoryModal'
+import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Página de Clientes (Fase 07 · RF-03): listado con búsqueda y filtros,
@@ -52,6 +53,7 @@ export default function CustomersPage() {
   // Diálogos
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
+  const version = useDataVersion()
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null)
   const [deleting, setDeleting] = useState<Customer | null>(null)
   const [deletingBusy, setDeletingBusy] = useState(false)
@@ -87,7 +89,7 @@ export default function CustomersPage() {
     return () => {
       cancelled = true
     }
-  }, [debouncedSearch, segment, status, attempt])
+  }, [debouncedSearch, segment, status, attempt, version])
 
   const pageCount = Math.max(Math.ceil(customers.length / PAGE_SIZE), 1)
   const currentPage = Math.min(page, pageCount)
