@@ -1,5 +1,5 @@
 import type { Sale } from '@/types/sale'
-import { getState } from './store'
+import { getState, isLowStock, ruleEnabled, ruleNumber } from './store'
 import type { StoreState } from './store'
 
 /**
@@ -297,3 +297,151 @@ export const getSellerNames = (): string[] => getState().sellers.map((seller) =>
 export const getCategoryNames = (): string[] => getState().categories.map((category) => category.name)
 export const getTopProductNames = (limit = 8): string[] =>
   getByProduct().slice(0, limit).map((product) => product.name)
+
+/* ------------------------------------------------------------------
+   Alertas automáticas del sistema
+   Se calculan con las reglas configuradas en Automatizaciones y se
+   muestran en Analytics (y en el resto de módulos) sin que nadie
+   tenga que pedirlas.
+   ------------------------------------------------------------------ */
+
+export interface SystemAlert {
+  id: string
+  severity: 'info' | 'warning' | 'error'
+  title: string
+  detail: string
+  module: 'inventario' | 'ventas' | 'analítica'
+}
+
+export function getSystemAlerts(filters: Partial<AnalyticsFilters> = {}): SystemAlert[] {
+  const state = getState()
+  const alerts: SystemAlert[] = []
+
+  // Inventario: stock bajo o agotado (regla ALERTA_STOCK).
+  const lowStock = state.products.filter((product) => isLowStock(product))
+  const outOfStock = state.products.filter((product) => product.current_stock === 0)
+  if (ruleEnabled('REG-07_STOCK_INSIGHT') && lowStock.length > 0) {
+    alerts.push({
+      id: 'stock',
+      severity: outOfStock.length > 0 ? 'error' : 'warning',
+      title:
+        outOfStock.length > 0
+          ? `${outOfStock.length} producto(s) sin stock`
+          : `${lowStock.length} producto(s) en alerta de stock`,
+      detail:
+        outOfStock.length > 0
+          ? `Agotados: ${outOfStock.map((p) => p.sku).join(', ')}. Revisa la reposición en Inventario.`
+          : `SKU: ${lowStock.slice(0, 4).map((p) => p.sku).join(', ')}${lowStock.length > 4 ? '…' : ''}.`,
+      module: 'inventario',
+    })
+  }
+
+  // Ventas: cobranza pendiente (RF-07).
+  const sales = valid(selectSales(filters))
+  const pending = sales.filter((sale) => sale.status !== 'paid')
+  const pendingAmount = round2(pending.reduce((total, sale) => total + sale.balance, 0))
+  if (pending.length > 0) {
+    alerts.push({
+      id: 'cobranza',
+      severity: pendingAmount > 300 ? 'warning' : 'info',
+      title: `${pending.length} venta(s) con saldo pendiente`,
+      detail: `Saldo por cobrar: S/ ${pendingAmount.toFixed(2)} (${pending.filter((s) => s.status === 'pending').length} sin registrar pago).`,
+      module: 'ventas',
+    })
+  }
+
+  // Analítica: concentración por vendedor (regla REG-03).
+  const bySeller = getBySeller(filters)
+  const total = bySeller.reduce((sum, seller) => sum + seller.ingresos, 0)
+  const top = bySeller[0]
+  const umbral = ruleNumber('REG-03_CONCENTRACION', 'umbral', 40)
+  if (ruleEnabled('REG-03_CONCENTRACION') && top && total > 0) {
+    const share = Math.round((top.ingresos / total) * 1000) / 10
+    alerts.push({
+      id: 'concentracion',
+      severity: share >= umbral ? 'warning' : 'info',
+      title: `${top.name} concentra el ${share}% de los ingresos`,
+      detail:
+        share >= umbral
+          ? `Supera el umbral configurado del ${umbral}%. Considera repartir la cartera.`
+          : `Dentro del umbral configurado del ${umbral}%.`,
+      module: 'analítica',
+    })
+  }
+
+  // Analítica: tendencia del último mes (regla REG-01).
+  const monthly = getMonthly(filters)
+  const last = monthly[monthly.length - 1]
+  const previous = monthly[monthly.length - 2]
+  const margen = ruleNumber('REG-01_TENDENCIA', 'margen', 10)
+  if (ruleEnabled('REG-01_TENDENCIA') && last && previous && previous.ingresos > 0) {
+    const change = Math.round(((last.ingresos - previous.ingresos) / previous.ingresos) * 1000) / 10
+    if (Math.abs(change) >= margen) {
+      alerts.push({
+        id: 'tendencia',
+        severity: change < 0 ? 'warning' : 'info',
+        title: `${change >= 0 ? 'Crecimiento' : 'Caída'} de ingresos del ${change >= 0 ? '' : '−'}${Math.abs(change)}%`,
+        detail: `${last.mes}: S/ ${last.ingresos.toFixed(2)} frente a S/ ${previous.ingresos.toFixed(2)} en ${previous.mes}. Umbral de aviso ±${margen}%.`,
+        module: 'analítica',
+      })
+    }
+  }
+
+  return alerts
+}
+
+/**
+ * Escenario de Bayes construido con datos reales del negocio:
+ * A = cliente recurrente · B = compra con ticket sobre el promedio.
+ * Devuelve las probabilidades observadas; el posterior lo calcula el
+ * módulo de Probabilidad (teorema de Bayes).
+ */
+export interface BusinessBayes {
+  /** Probabilidad previa P(A): clientes recurrentes sobre el total. */
+  prior: number
+  /** Verosimilitud P(B|A): compras altas entre recurrentes. */
+  likelihood: number
+  /** Evidencia P(B): compras altas sobre el total. */
+  evidence: number
+  detalle: {
+    recurrentes: number
+    clientes: number
+    ventasRecurrente: number
+    comprasAltas: number
+    ventasValidas: number
+    comprasAltasRecurrente: number
+    ticketPromedio: number
+  }
+}
+
+export function getBusinessBayes(): BusinessBayes {
+  const state = getState()
+  const recurrentes = state.customers.filter(
+    (customer) => customer.status === 'active' && ['Recurrente', 'Frecuente'].includes(customer.segment),
+  )
+  const clientes = state.customers.filter((customer) => customer.status === 'active')
+  const ventas = state.sales.filter((sale) => sale.status !== 'cancelled')
+  const ticketPromedio = ventas.length > 0 ? ventas.reduce((sum, sale) => sum + sale.total, 0) / ventas.length : 0
+
+  const idsRecurrentes = new Set(recurrentes.map((customer) => customer.id))
+  const ventasRecurrente = ventas.filter((sale) => idsRecurrentes.has(sale.customer.id))
+  const comprasAltas = ventas.filter((sale) => sale.total > ticketPromedio)
+  const comprasAltasRecurrente = comprasAltas.filter((sale) => idsRecurrentes.has(sale.customer.id))
+
+  const ratio = (part: number, totalCount: number): number => (totalCount > 0 ? part / totalCount : 0)
+
+  return {
+    prior: round2(ratio(recurrentes.length, clientes.length)),
+    likelihood: round2(ratio(comprasAltasRecurrente.length, ventasRecurrente.length)),
+    evidence: round2(ratio(comprasAltas.length, ventas.length)),
+    detalle: {
+      recurrentes: recurrentes.length,
+      clientes: clientes.length,
+      ventasRecurrente: ventasRecurrente.length,
+      comprasAltas: comprasAltas.length,
+      ventasValidas: ventas.length,
+      comprasAltasRecurrente: comprasAltasRecurrente.length,
+      ticketPromedio: round2(ticketPromedio),
+    },
+  }
+}

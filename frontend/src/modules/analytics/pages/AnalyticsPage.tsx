@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Bar,
   BarChart,
@@ -14,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { DollarSign, Receipt, ShoppingCart, TrendingUp } from 'lucide-react'
+import { AlertTriangle, DollarSign, Info, Receipt, ShoppingCart, TrendingUp, XCircle } from 'lucide-react'
 import { Select } from '@/components/ui/form'
 import KpiCard from '@/modules/dashboard/components/KpiCard'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
@@ -24,6 +25,7 @@ import {
   CHART_GRID,
   SELLER_NAMES,
 } from '../services/statisticsService'
+import { getSystemAlerts } from '@/data/analytics'
 import type { PeriodMonths } from '../services/statisticsService'
 import { useStatistics } from '@/hooks/useStatistics'
 import MeanPanel from '../components/MeanPanel'
@@ -61,6 +63,9 @@ export default function AnalyticsPage() {
     seller,
     category,
   })
+
+  // Alertas que el sistema calcula solo, con las reglas de Automatizaciones.
+  const alerts = useMemo(() => getSystemAlerts({ months, seller, category }), [months, seller, category, dataset])
 
   return (
     <div className="space-y-6">
@@ -102,6 +107,48 @@ export default function AnalyticsPage() {
           ))}
         </Select>
       </div>
+
+      {/* Alertas automáticas */}
+      <section className="card space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-h4 text-gray-800">Alertas automáticas</h2>
+          <span className="text-caption text-gray-500">
+            Se recalculan solas con cada venta o movimiento · reglas en{' '}
+            <Link to="/automatizaciones" className="font-medium text-primary hover:underline">
+              Automatizaciones
+            </Link>
+          </span>
+        </div>
+
+        {alerts.length === 0 ? (
+          <p className="rounded-md bg-success-bg px-3 py-2 text-body-sm text-success-fg">
+            Sin alertas: todo está dentro de los umbrales configurados.
+          </p>
+        ) : (
+          <ul className="grid gap-3 md:grid-cols-2">
+            {alerts.map((alert) => {
+              const Icon = alert.severity === 'error' ? XCircle : alert.severity === 'warning' ? AlertTriangle : Info
+              const tone =
+                alert.severity === 'error'
+                  ? 'border-error bg-error-bg text-error-fg'
+                  : alert.severity === 'warning'
+                    ? 'border-warning bg-warning-bg text-warning-fg'
+                    : 'border-info bg-info-bg text-info-fg'
+              return (
+                <li key={alert.id} className={`rounded-lg border p-3 ${tone}`}>
+                  <div className="flex items-start gap-2">
+                    <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p className="text-body-sm font-semibold">{alert.title}</p>
+                      <p className="mt-0.5 text-caption opacity-90">{alert.detail}</p>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
 
       {/* KPIs */}
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
