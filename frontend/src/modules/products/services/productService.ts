@@ -131,3 +131,20 @@ export async function toggleProductStatus(id: number): Promise<Product> {
   products = products.map((product) => (product.id === id ? updated : product))
   return updated
 }
+
+/**
+ * Ajusta existencias desde un movimiento de inventario
+ * (POST /api/v1/inventory/movements).
+ * RN-20: el stock no puede quedar negativo.
+ */
+export async function adjustStock(id: number, delta: number): Promise<Product> {
+  const existing = products.find((product) => product.id === id)
+  if (!existing) throw new Error('Producto no encontrado.')
+  const nextStock = existing.current_stock + delta
+  if (nextStock < 0) {
+    throw new Error(`Stock insuficiente de ${existing.name} (disponible: ${existing.current_stock}).`)
+  }
+  const updated: Product = { ...existing, current_stock: nextStock }
+  products = products.map((product) => (product.id === id ? updated : product))
+  return updated
+}
