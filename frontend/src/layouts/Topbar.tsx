@@ -1,17 +1,20 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigation } from 'react-router-dom'
 import { Bell, Search } from 'lucide-react'
 import { PATH_TITLES } from '@/utils/constants'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 /**
  * Topbar: 64px de alto, fondo blanco, borde inferior gris 200.
  * Contenido: título/breadcrumbs, búsqueda, notificaciones y avatar (txt §7.1).
+ * Lleva la barra de progreso de cargas debajo (txt §5.5).
  */
 export default function Topbar() {
   const { pathname } = useLocation()
+  const navigation = useNavigation()
   const title = PATH_TITLES[pathname] ?? 'SalesIA Enterprise'
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 lg:px-8">
+    <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 lg:px-8">
       {/* Título de la página */}
       <div className="flex items-center gap-2 text-body-sm text-gray-500">
         <span>SalesIA</span>
@@ -54,6 +57,9 @@ export default function Topbar() {
           </span>
         </div>
       </div>
+
+      {/* Barra de progreso de cargas de ruta (txt §5.5) */}
+      <ProgressBar active={navigation.state === 'loading'} />
     </header>
   )
 }
