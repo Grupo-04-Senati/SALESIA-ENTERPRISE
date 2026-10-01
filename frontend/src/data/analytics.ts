@@ -445,3 +445,225 @@ export function getBusinessBayes(): BusinessBayes {
     },
   }
 }
+
+/* ------------------------------------------------------------------
+   Probabilidad automática: conjuntos de datos y escenarios de Bayes
+   calculados sobre la operación real, sin que el usuario escriba nada.
+   ------------------------------------------------------------------ */
+
+export interface StatisticalDataset {
+  id: string
+  label: string
+  description: string
+  unit: string
+  values: number[]
+}
+
+/** Variables numéricas que el sistema analiza automáticamente. */
+export function getStatisticalDatasets(filters: Partial<AnalyticsFilters> = {}): StatisticalDataset[] {
+  const sales = valid(selectSales(filters))
+  const lines = sales.flatMap((sale) => sale.items)
+  return [
+    {
+      id: 'total',
+      label: 'Total de la venta',
+      description: 'Importe final de cada venta, con descuento e impuesto.',
+      unit: 'S/',
+      values: sales.map((sale) => sale.total),
+    },
+    {
+      id: 'cantidad',
+      label: 'Cantidad por línea',
+      description: 'Unidades vendidas en cada línea de venta.',
+      unit: 'und',
+      values: lines.map((item) => item.quantity),
+    },
+    {
+      id: 'precio',
+      label: 'Precio unitario',
+      description: 'Precio de venta de cada producto facturado.',
+      unit: 'S/',
+      values: lines.map((item) => item.unit_price),
+    },
+    {
+      id: 'subtotal',
+      label: 'Subtotal por línea',
+      description: 'Resultado de cantidad × precio menos el descuento de la línea.',
+      unit: 'S/',
+      values: lines.map((item) => item.quantity * item.unit_price - item.discount),
+    },
+    {
+      id: 'descuento',
+      label: 'Descuento aplicado',
+      description: 'Descuentos de línea (0 cuando no se aplicó).',
+      unit: 'S/',
+      values: lines.map((item) => item.discount),
+    },
+  ]
+}
+
+export interface BayesScenario {
+  id: string
+  eventA: string
+  eventB: string
+  prior: number
+  likelihood: number
+  evidence: number
+  detalle: {
+    conA: number
+    total: number
+    conAyB: number
+    conB: number
+  }
+  lectura: string
+}
+
+/**
+ * Escenarios de Bayes listos para aplicar: el sistema cuenta cuántos casos
+ * hay de cada evento en la operación real y devuelve P(A), P(B|A) y P(B).
+ */
+export function getBayesScenarios(): BayesScenario[] {
+  const state = getState()
+  const ventas = state.sales.filter((sale) => sale.status !== 'cancelled')
+  const total = ventas.length
+  const ticketPromedio = total > 0 ? ventas.reduce((sum, sale) => sum + sale.total, 0) / total : 0
+  const recurrentes = new Set(
+    state.customers
+      .filter((customer) => customer.status === 'active' && ['Recurrente', 'Frecuente'].includes(customer.segment))
+      .map((customer) => customer.id),
+  )
+  const bebidas = new Set(
+    state.products.filter((product) => product.category.name === 'Bebidas').map((product) => product.id),
+  )
+  const topSeller = [...new Set(ventas.map((sale) => sale.seller.name))].sort(
+    (a, b) =>
+      ventas.filter((sale) => sale.seller.name === b).length - ventas.filter((sale) => sale.seller.name === a).length,
+  )[0]
+
+  interface Definition {
+    id: string
+    eventA: string
+    eventB: string
+    isA: (sale: Sale) => boolean
+    isB: (sale: Sale) => boolean
+    lectura: (d: { conA: number; conAyB: number; conB: number }) => string
+  }
+
+  const definitions: Definition[] = [
+    {
+      id: 'recurrente-ticket',
+      eventA: 'Cliente recurrente o frecuente',
+      eventB: 'Compra con ticket sobre el promedio',
+      isA: (sale) => recurrentes.has(sale.customer.id),
+      isB: (sale) => sale.total > ticketPromedio,
+      lectura: (d) =>
+        `De cada ${d.conB} compras con ticket alto, ${d.conAyB} son de clientes recurrentes.`,
+    },
+    {
+      id: 'vendedor-pagada',
+      eventA: `Vendedor con más ventas (${topSeller ?? '—'})`,
+      eventB: 'Venta totalmente pagada',
+      isA: (sale) => sale.seller.name === topSeller,
+      isB: (sale) => sale.status === 'paid',
+      lectura: (d) =>
+        `De las ${d.conB} ventas pagadas, ${d.conAyB} pertenecen al vendedor con más cartera.`,
+    },
+    {
+      id: 'bebidas-descuento',
+      eventA: 'Venta con producto de Bebidas',
+      eventB: 'Venta que recibió descuento',
+      isA: (sale) => sale.items.some((item) => bebidas.has(item.product_id)),
+      isB: (sale) => sale.discount > 0,
+      lectura: (d) =>
+        `${d.conAyB} de las ${d.conAyB + Math.max(d.conA - d.conAyB, 0)} ventas de Bebidas usaron descuento.`,
+    },
+    {
+      id: 'multilinea',
+      eventA: 'Venta de una sola línea',
+      eventB: 'Venta con más de 2 líneas',
+      isA: (sale) => sale.items.length === 1,
+      isB: (sale) => sale.items.length > 2,
+      lectura: (d) => `Las ventas grandes (más de 2 líneas) suelen ser ${d.conAyB === 0 ? 'de una sola línea' : 'de varias líneas'}.`,
+    },
+  ]
+
+  const ratio = (part: number, totalCount: number): number => (totalCount > 0 ? round2(part / totalCount) : 0)
+
+  return definitions.map((definition) => {
+    const conA = ventas.filter(definition.isA).length
+    const conB = ventas.filter(definition.isB).length
+    const conAyB = ventas.filter((sale) => definition.isA(sale) && definition.isB(sale)).length
+    return {
+      id: definition.id,
+      eventA: definition.eventA,
+      eventB: definition.eventB,
+      prior: ratio(conA, total),
+      likelihood: ratio(conAyB, conA),
+      evidence: ratio(conB, total),
+      detalle: { conA, total, conAyB, conB },
+      lectura: definition.lectura({ conA, conAyB, conB }),
+    }
+  })
+}
+
+/**
+ * Variables del sistema ya clasificadas (cualitativa / cuantitativa) con
+ * sus frecuencias o estadísticos. No requiere que el usuario escriba datos.
+ */
+export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Array<{
+  name: string
+  type: 'quantitative' | 'qualitative'
+  subtype: string
+  count: number
+  mean?: number
+  median?: number
+  min?: number
+  max?: number
+  frequencies?: Array<{ value: string; count: number; pct: number }>
+}> {
+  const state = getState()
+  const sales = valid(selectSales(filters))
+  const lines = sales.flatMap((sale) => sale.items)
+  const frequencies = (values: string[]): Array<{ value: string; count: number; pct: number }> => {
+    const counts = new Map<string, number>()
+    for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([value, count]) => ({ value, count, pct: round2((count / values.length) * 100) }))
+  }
+  const quantitative = (name: string, values: number[]) => ({
+    name,
+    type: 'quantitative' as const,
+    subtype: values.every((value) => Number.isInteger(value)) ? 'discreta' : 'continua',
+    count: values.length,
+    mean: round2(mean(values)),
+    median: round2(median(values)),
+    min: Math.min(...values),
+    max: Math.max(...values),
+  })
+  const qualitative = (name: string, values: string[]) => ({
+    name,
+    type: 'qualitative' as const,
+    subtype: 'nominal',
+    count: values.length,
+    frequencies: frequencies(values),
+  })
+
+  return [
+    quantitative('total de la venta', sales.map((sale) => sale.total)),
+    quantitative('subtotal de la venta', sales.map((sale) => sale.subtotal)),
+    quantitative('impuesto de la venta', sales.map((sale) => sale.tax)),
+    quantitative('cantidad vendida (línea)', lines.map((item) => item.quantity)),
+    quantitative('precio unitario', lines.map((item) => item.unit_price)),
+    qualitative('categoría del producto', lines.map((item) => {
+      const product = state.products.find((entry) => entry.id === item.product_id)
+      return product?.category.name ?? 'Sin categoría'
+    })),
+    qualitative('vendedor', sales.map((sale) => sale.seller.name)),
+    qualitative('estado de la venta', state.sales.map((sale) => sale.status)),
+    qualitative('segmento del cliente', sales.map((sale) => {
+      const customer = state.customers.find((entry) => entry.id === sale.customer.id)
+      return customer?.segment ?? 'Sin segmento'
+    })),
+  ]
+}
