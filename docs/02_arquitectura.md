@@ -541,6 +541,24 @@ React / Vite  ──►  Vercel  ──HTTPS──►  FastAPI (Railway)  ──
 6. **Backups:** PITR de Supabase habilitado; restauración probada antes de la FASE 15 (CA-37 de Fase 01).
 7. `.env` real **no se versiona**; se configura aparte en Railway y Vercel.
 
+### 13.4 Estado de la conexión (evidencia FASE 02)
+
+| Verificación | Resultado |
+|---|---|
+| Conexión vía *session pooler* | ✅ Correcta |
+| Versión del servidor | **PostgreSQL 17.11** (`x86_64-pc-linux-gnu`) |
+| Esquemas disponibles | `public`, `auth`, `extensions`, `graphql`, `graphql_public`, `realtime`, `storage`, `vault` |
+| Extensiones habilitadas | `plpgsql` 1.0 · `pgcrypto` 1.3 · `uuid-ossp` 1.1 · `pg_stat_statements` 1.11 · `supabase_vault` 0.3.1 |
+| Aislamiento de transacciones | `read committed` |
+| Tablas en `public` | **0** — esquema pendiente de **FASE 04** |
+| Tamaño de la base | 10 MB |
+| Archivo `.env` local | ✅ Creado, verificado con `git check-ignore` y **no** trackeado |
+| Secretos en archivos versionados | ✅ Verificado: `.env.example` y todo el árbol versionado están libres de credenciales |
+
+> ⚠️ **Regla de seguridad verificada en este commit:** ninguna clave de Supabase aparece en
+> ningún archivo del repositorio. Solo existe en `.env` (ignorado) y en las variables de entorno
+> de Railway/Vercel.
+
 ---
 
 ## 14. Estrategia de pruebas (RNF-09)
