@@ -1,20 +1,23 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 
 /**
  * Página de Login (Fase 03 — sistema de diseño).
- * La autenticación real contra la API se conecta en la Fase 05.
+ *
+ * MODO DEMO: la autenticación real contra la API se implementa en la
+ * Fase 05 (POST /api/v1/auth/login). Mientras tanto, cualquier correo
+ * y contraseña abren la aplicación para poder revisar el diseño.
  */
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setMessage(
-      'La autenticación se conectará al backend en la Fase 05 (API FastAPI).',
-    )
+    // TODO(Fase 05): sustituir por llamada real a la API de autenticación.
+    navigate('/', { replace: true })
   }
 
   return (
@@ -63,14 +66,11 @@ export default function LoginPage() {
         Iniciar sesión
       </button>
 
-      {message && (
-        <p
-          role="status"
-          className="rounded-md border border-info bg-info-bg px-3 py-2 text-caption text-info-fg"
-        >
-          {message}
-        </p>
-      )}
+      <p className="rounded-md border border-info bg-info-bg px-3 py-2 text-center text-caption text-info-fg">
+        Modo demo: cualquier correo y contraseña abren la aplicación.
+        <br />
+        La autenticación real se conecta en la Fase 05 (API FastAPI).
+      </p>
 
       <p className="text-center text-caption text-gray-500">
         ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
