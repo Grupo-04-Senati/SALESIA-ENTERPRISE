@@ -516,10 +516,10 @@ React / Vite  ──►  Vercel  ──HTTPS──►  FastAPI (Railway)  ──
 
 | Parámetro | Valor / ubicación |
 |---|---|
-| Proyecto | `ijgukrdqooebycnedisu` (ref extraído del JWT) |
+| Proyecto (PROJECT_REF) | `<PROJECT_REF>` — visible en el dashboard y en el campo `ref` del JWT; **no se documenta** |
 | Región | `aws-0-us-east-2` |
 | Conexión (pooler) | `aws-0-us-east-2.pooler.supabase.com:5432` |
-| Usuario | `postgres.ijgukrdqooebycnedisu` |
+| Usuario | `postgres.<PROJECT_REF>` |
 | Base | `postgres` |
 | Credenciales | **Solo en `.env`** — nunca en el repositorio ni en los documentos |
 
