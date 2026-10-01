@@ -1,545 +1,532 @@
-# SalesIA Enterprise — Contrato de API REST
+# 05 · API REST
 
-> **Anexo del entregable FASE 02** — *"Definir DTO/schemas y contratos REST"*.
-> Fuente normativa: *SalesIA Enterprise — Plan Integral de Desarrollo v1.0* (§16 *API inicial*).
-> Arquitectura y decisiones: [`docs/02_arquitectura.md`](02_arquitectura.md).
+**SalesIA Enterprise** — Documento 05 de la serie de arquitectura · Versión 1.1 (fusión)
 
-| Campo | Valor |
-|---|---|
-| **Documento** | Contrato de API REST — SalesIA Enterprise |
-| **Fase** | FASE 02 (implementación en FASE 05) |
-| **Versión** | 1.0 |
-| **Base URL** | `{API_BASE_URL}` = `http://localhost:8000/api/v1` |
-| **Formato** | JSON · UTF-8 · `snake_case` |
-| **Esquema** | OpenAPI 3.1 generado por FastAPI en `/docs` (RNF-05) |
-| **Estado** | En revisión |
+**Framework:** FastAPI · **Base:** `/api/v1` · **Documentación:** Swagger en `/docs` (OpenAPI) · **Fase:** FASE 02 (implementación en FASE 05)
+
+> **Entregable FASE 02** — *"Definir DTO/schemas y contratos REST"*.
+> Arquitectura y decisiones: [`02_arquitectura.md`](02_arquitectura.md) · Requisitos: [`01_requisitos.md`](01_requisitos.md)
+>
+> **v1.1** = fusión del contrato del equipo (v1.0) con el detalle DTO, el mapa de autorización y la
+> trazabilidad RF → endpoint. Ninguna aportación original fue descartada.
 
 ---
 
-## 1. Convenciones generales
+## 1. Convenciones
 
-### 1.1 Cabeceras
+| Aspecto | Regla |
+|---|---|
+| Versionado | Todo bajo `/api/v1/...` |
+| Prefijo en las tablas | Las rutas se listan **con** el prefijo completo (`/api/v1/...`) |
+| Formato | JSON (UTF-8) · fechas ISO 8601 UTC · montos numéricos con 2 decimales |
+| Nombres de campo | `snake_case`, idéntico entre Pydantic y TypeScript (AR-05) |
+| Autenticación | `Authorization: Bearer <access_token>` (excepto login, `refresh` y `/health`) |
+| Listados | `{ "items": [...], "total": n, "page": n, "page_size": n, "pages": n }` |
+| Paginación | `?page=1&page_size=20` (`page_size` máximo 100) |
+| Orden y filtros | `?sort=campo_asc\|campo_desc` · `?q=` · `?date_from=` · `?date_to=` |
+| Creación | `201` + objeto creado (+ cabecera `Location`) · `204` en DELETE exitoso |
+| Errores | Ver §3 (formato estándar + DEC-00 pendiente) |
+| Validación | `422` de Pydantic, traducido al formato de error estándar |
+| Borrado | Lógico (`status = inactive`); los recursos con historial **nunca** se eliminan físicamente |
 
-| Cabecera | Dirección | Valor |
-|---|---|---|
-| `Content-Type` | Petición y respuesta | `application/json; charset=utf-8` |
-| `Authorization` | Petición | `Bearer <access_token>` |
-| `X-Request-Id` | Ambas | ID de correlación (opcional; si no viene, lo genera el servidor) |
+### 1.1 Códigos de estado usados
 
-### 1.2 URL y verbos
+`200` OK · `201` Created · `204` No Content · `202` Accepted · `400` Bad Request · `401` No autenticado ·
+`403` Sin permiso · `404` No existe · `409` Conflicto (duplicado) · `422` Validación · `429` Demasiadas
+peticiones · `500` Error interno.
 
-| Elemento | Regla | Ejemplo |
-|---|---|---|
-| Prefijo de versión | `/api/v1` | `/api/v1/sales` |
-| Recursos | sustantivos en **plural**, `snake_case` | `/sale_details` no se expone (va embebido) |
-| Subrecurso | `/padre/{id}/hijo` | `/sales/{sale_id}/payments` |
-| Acciones | verbo en inglés al final si no es CRUD | `/statistics/compare`, `/auth/login` |
-| IDs | en la URL, numéricos o UUID | `/sales/101` |
-| Filtros | query string | `?estado=COMPLETADA&desde=2026-01-01` |
-| Paginación | `page`, `page_size` (máx. 100) | `?page=2&page_size=20` |
-| Orden | `sort=campo_asc\|campo_desc` | `?sort=fecha_desc` |
-
-**Verbos:** `GET` leer · `POST` crear/actuar · `PUT` reemplazar · `PATCH` modificar parcial · `DELETE` desactivar.
-
-### 1.3 Respuesta paginada (listados)
-
-```json
-{
-  "items": [ /* recurso[] */ ],
-  "total": 137,
-  "page": 1,
-  "page_size": 20,
-  "pages": 7
-}
-```
-
-### 1.4 Respuesta de éxito
-
-- `POST` → `201` + cuerpo del recurso creado (+ cabecera `Location`).
-- `GET/PUT/PATCH` → `200` + cuerpo.
-- `DELETE` → `204` sin cuerpo.
-- No se usa envoltorio `data`: el recurso se devuelve **directo** (el envoltorio solo aplica a listados, §1.3).
-
-### 1.5 Formato de error (obligatorio en toda respuesta ≥ 400)
-
-```json
-{
-  "codigo": "VENTA_STOCK_INSUFICIENTE",
-  "mensaje": "Stock insuficiente para el producto SKU-0001.",
-  "detalle": { "sku": "SKU-0001", "disponible": 3, "solicitado": 5 },
-  "trace_id": "9f2c1a7e4b0d"
-}
-```
-
-Catálogo completo de códigos en `02_arquitectura.md` §10.3.
-
-### 1.6 Fechas, moneda y nulos
+### 1.2 Tipos de datos
 
 | Tipo | Formato | Ejemplo |
 |---|---|---|
 | Fecha y hora | ISO-8601 UTC | `2026-10-01T14:30:00Z` |
 | Fecha | `YYYY-MM-DD` | `2026-10-01` |
-| Moneda | decimal 2 decimales, moneda `PEN` | `149.90` |
-| Porcentaje | decimal 2 decimales | `18.50` |
-| Campos opcionales | `null` explícito | `"fecha_anulacion": null` |
+| Moneda | decimal, 2 decimales, `PEN` | `149.90` |
+| Porcentaje | decimal, 2 decimales | `18.50` |
+| Opcional | `null` explícito | `"cancelled_at": null` |
 
 ---
 
-## 2. Autenticación y autorización
+## 2. Endpoints
 
-- Todo endpoint salvo los marcados `público` exige `Authorization: Bearer <jwt>`.
-- Los roles permitidos se listan en cada endpoint con la sigla: **A**dministrador · **G**erente · **V**endedor · **Ana**lista · **Alm**acén.
-- Falta de token → `401 AUTH_TOKEN_INVALIDO`; rol no permitido → `403 AUTH_ACCESO_DENEGADO`.
+### 2.1 Salud y autenticación (RF-01)
 
-### Token
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/health` | Health check del servicio | Público |
+| POST | `/api/v1/auth/login` | Autenticación → JWT (RF-01) | Público |
+| POST | `/api/v1/auth/refresh` | Renovar access token | Bearer |
+| POST | `/api/v1/auth/logout` | Cerrar sesión | Bearer |
+| POST | `/api/v1/auth/forgot-password` | Solicitar recuperación de clave | Público |
+| POST | `/api/v1/auth/reset-password` | Restablecer clave | Público |
+| GET | `/api/v1/auth/me` | Usuario de la sesión actual | Bearer |
 
 ```json
-// POST /auth/login  → 200
+// POST /api/v1/auth/login  → 200
+{ "email": "ana@salesia.pe", "password": "********" }
+
+// Respuesta
 {
   "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
   "token_type": "bearer",
-  "expires_in": 28800,
-  "user": { "id": 1, "nombre": "Ana Torres", "email": "ana@salesia.pe", "rol": "Gerente" }
+  "expires_in": 1800,
+  "user": { "id": 1, "name": "Ana Torres", "email": "ana@salesia.pe", "role": "Gerente" }
 }
 ```
 
----
+### 2.2 Usuarios y roles (RF-02)
 
-## 3. DTO — reglas de nombrado
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/api/v1/users` | Listar usuarios | Admin |
+| POST | `/api/v1/users` | Crear usuario | Admin |
+| PUT | `/api/v1/users/{id}` | Actualizar usuario/rol | Admin |
+| PATCH | `/api/v1/users/{id}/status` | Activar / desactivar | Admin |
+| DELETE | `/api/v1/users/{id}` | Desactivar usuario | Admin |
+| GET | `/api/v1/roles` | Listar roles | Admin |
 
-| Sufijo | Dirección | Ejemplo |
-|---|---|---|
-| `*Create` | Entrada para crear | `CustomerCreate` |
-| `*Update` | Entrada para modificar (todos opcionales) | `ProductUpdate` |
-| `*Response` | Salida | `SaleResponse` |
-| `*Summary` | Salida ligera para listados | `SaleSummary` |
-| `*Paginated` | Envoltorio de listado | `SalePaginated` |
+> RN-33: un usuario **no** puede modificar su propio rol ni elevar sus permisos.
 
-Campos de solo salida (`id`, `fecha_creacion`, `estado`, totales calculados) se **ignoran** si llegan en la petición.
+### 2.3 Clientes (RF-03)
 
----
-
-## 4. Endpoints
-
-> ✅ = incluido en los 14 endpoints iniciales del plan (§16). Los demás son necesarios para RF-01…RF-22.
-
-### 4.1 Auth — `/auth` (RF-01, RF-02)
-
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ POST | `/auth/login` | Autenticación | público | 200 / 401 / 429 |
-| POST | `/auth/logout` | Cerrar sesión | cualquiera | 204 |
-| POST | `/auth/refresh` | Renovar token | cualquiera | 200 / 401 |
-| POST | `/auth/forgot-password` | Solicitar recuperación | público | 202 |
-| POST | `/auth/reset-password` | Restablecer clave | público | 200 / 422 |
-| GET | `/auth/me` | Usuario actual | cualquiera | 200 |
-| GET | `/users` | Listar usuarios | **A** | 200 |
-| POST | `/users` | Crear usuario | **A** | 201 / 409 |
-| PATCH | `/users/{id}` | Modificar usuario/rol | **A** | 200 / 403 |
-
-```json
-// POST /auth/login — Request
-{ "email": "ana@salesia.pe", "password": "********" }
-
-// POST /auth/login — Error 401
-{ "codigo": "AUTH_CREDENCIALES_INVALIDAS",
-  "mensaje": "Credenciales inválidas.",
-  "detalle": { "intentos_restantes": 3 },
-  "trace_id": "ab12cd34ef56" }
-```
-
-### 4.2 Clientes — `/customers` (RF-03)
-
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/customers` | Listar (paginado, `q`, `segmento`) | **A G V Ana** | 200 |
-| ✅ POST | `/customers` | Crear cliente | **A G V** | 201 / 409 |
-| GET | `/customers/{id}` | Detalle | **A G V Ana** | 200 / 404 |
-| PUT | `/customers/{id}` | Actualizar | **A G V** | 200 / 409 |
-| PATCH | `/customers/{id}/status` | Activar/desactivar | **A G** | 200 |
-| GET | `/customers/{id}/purchases` | Historial de compras | **A G V Ana** | 200 |
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/api/v1/customers` | Listar (búsqueda, filtros, paginación) | Admin/Gerente/Vendedor/Analista |
+| GET | `/api/v1/customers/{id}` | Ficha del cliente | idem |
+| GET | `/api/v1/customers/{id}/history` | Historial de compras | idem |
+| POST | `/api/v1/customers` | Crear cliente | Admin/Vendedor |
+| PUT | `/api/v1/customers/{id}` | Editar cliente | Admin/Vendedor |
+| DELETE | `/api/v1/customers/{id}` | Baja lógica | Admin |
 
 ```json
 // CustomerCreate
 {
-  "tipo_documento": "DNI",
-  "numero_documento": "74125896",
-  "nombre": "María Quispe",
+  "document_type": "DNI",
+  "document_number": "74125896",
+  "name": "María Quispe",
   "email": "maria@correo.com",
-  "telefono": "+51987654321",
-  "direccion": "Av. Los Olivos 123, Lima",
-  "segmento": "Recurrente"
+  "phone": "+51987654321",
+  "address": "Av. Los Olivos 123, Lima",
+  "segment": "Recurrente"
 }
 
 // CustomerResponse
 {
-  "id": 12, "tipo_documento": "DNI", "numero_documento": "74125896",
-  "nombre": "María Quispe", "email": "maria@correo.com",
-  "telefono": "+51987654321", "direccion": "Av. Los Olivos 123, Lima",
-  "segmento": "Recurrente", "estado": "ACTIVO",
-  "fecha_creacion": "2026-03-14T10:05:00Z",
-  "total_compras": 18, "monto_total_comprado": 1450.50
+  "id": 12, "document_type": "DNI", "document_number": "74125896",
+  "name": "María Quispe", "email": "maria@correo.com",
+  "phone": "+51987654321", "address": "Av. Los Olivos 123, Lima",
+  "segment": "Recurrente", "status": "active",
+  "created_at": "2026-03-14T10:05:00Z",
+  "purchase_count": 18, "total_purchased": 1450.50
 }
 ```
 
-**Errores:** `CLIENTE_DOCUMENTO_DUPLICADO` (409, RN-01), `VALIDACION_FALLIDA` (422).
+**Errores:** `CONFLICT` 409 si el documento ya existe (RN-01) · `VALIDATION_ERROR` 422.
 
-### 4.3 Productos y categorías — `/products`, `/categories` (RF-04)
+### 2.4 Productos y categorías (RF-04)
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/products` | Listar (paginado, `q`, `categoria_id`, `estado`, `bajo_stock`) | **A G V Ana Alm** | 200 |
-| POST | `/products` | Crear producto | **A G** | 201 / 409 |
-| GET | `/products/{id}` | Detalle | **A G V Ana Alm** | 200 / 404 |
-| PUT | `/products/{id}` | Actualizar | **A G** | 200 / 409 |
-| PATCH | `/products/{id}/status` | Activar/desactivar | **A G** | 200 |
-| GET | `/categories` | Listar categorías | **A G V Ana Alm** | 200 |
-| POST | `/categories` | Crear categoría | **A G** | 201 |
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/api/v1/products` | Listar (filtro categoría, estado, texto, `low_stock`) | Admin/Gerente/Vendedor/Almacén |
+| GET | `/api/v1/products/{id}` | Detalle de producto | idem |
+| POST | `/api/v1/products` | Crear producto | Admin |
+| PUT | `/api/v1/products/{id}` | Editar producto | Admin |
+| PATCH | `/api/v1/products/{id}/status` | Activar / desactivar | Admin |
+| DELETE | `/api/v1/products/{id}` | Baja lógica | Admin |
+| GET/POST | `/api/v1/categories` | Categorías | Admin (escritura) |
+| PUT/DELETE | `/api/v1/categories/{id}` | Editar / dar de baja categoría | Admin |
 
 ```json
 // ProductCreate
 {
-  "sku": "SKU-0001", "nombre": "Gaseosa 500ml",
-  "categoria_id": 3, "precio_costo": 3.50, "precio_venta": 5.00,
-  "stock_minimo": 24, "unidad": "UND"
+  "sku": "SKU-0001", "name": "Gaseosa 500ml",
+  "category_id": 3, "cost_price": 3.50, "sale_price": 5.00,
+  "min_stock": 24, "unit": "UND"
 }
 
 // ProductResponse
 {
-  "id": 1, "sku": "SKU-0001", "nombre": "Gaseosa 500ml",
-  "categoria": { "id": 3, "nombre": "Bebidas" },
-  "precio_costo": 3.50, "precio_venta": 5.00,
-  "stock_minimo": 24, "stock_actual": 96, "unidad": "UND",
-  "estado": "ACTIVO", "fecha_creacion": "2026-02-01T09:00:00Z"
+  "id": 1, "sku": "SKU-0001", "name": "Gaseosa 500ml",
+  "category": { "id": 3, "name": "Bebidas" },
+  "cost_price": 3.50, "sale_price": 5.00,
+  "min_stock": 24, "current_stock": 96, "unit": "UND",
+  "status": "active", "created_at": "2026-02-01T09:00:00Z"
 }
 ```
 
-**Errores:** `PRODUCTO_SKU_DUPLICADO` (409), `VALIDACION_FALLIDA` (422 si `precio_venta < precio_costo`, RN-05).
+**Errores:** `CONFLICT` 409 si el SKU se repite (RN-03) · `VALIDATION_ERROR` 422 si `sale_price < cost_price` (RN-05).
 
-### 4.4 Vendedores — `/employees` (RF-05 · **AR-04 pendiente de aprobación**)
+### 2.5 Vendedores y empleados (RF-05)
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| GET | `/employees` | Listar vendedores | **A G Ana** | 200 |
-| POST | `/employees` | Crear vendedor | **A** | 201 / 409 |
-| PUT | `/employees/{id}` | Actualizar | **A** | 200 |
-| GET | `/employees/{id}/metrics` | Métricas comerciales (ventas, ingresos, promedio) | **A G Ana** | 200 |
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/api/v1/employees` | Listar vendedores | Admin/Gerente/Analista |
+| POST | `/api/v1/employees` | Crear vendedor | Admin |
+| PUT | `/api/v1/employees/{id}` | Editar vendedor | Admin |
+| GET | `/api/v1/employees/{id}/metrics` | Métricas: ventas, ingresos, promedio | Admin/Gerente/Analista |
+
+> ⚠️ **AR-04 pendiente de aprobación** — ver `02_arquitectura.md` §15. El contrato ya está definido;
+> la implementación es la brecha detectada en la FASE 01 (D-04).
 
 ```json
 // EmployeeResponse
 {
-  "id": 4, "nombre": "Luis Ríos", "email": "luis@salesia.pe",
-  "cargo": "Vendedor", "estado": "ACTIVO",
-  "fecha_ingreso": "2026-01-15",
-  "metricas": { "ventas": 214, "ingresos": 38250.00, "ticket_promedio": 178.74 }
+  "id": 4, "name": "Luis Ríos", "email": "luis@salesia.pe",
+  "position": "Vendedor", "status": "active",
+  "hired_at": "2026-01-15",
+  "metrics": { "sales": 214, "revenue": 38250.00, "average_ticket": 178.74 }
 }
 ```
 
-### 4.5 Ventas y pagos — `/sales` (RF-06, RF-07)
+### 2.6 Ventas, pagos e inventario (RF-06, RF-07, RF-08)
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/sales` | Listar (paginado, `estado`, `desde`, `hasta`, `cliente_id`, `vendedor_id`) | **A G V Ana Alm** | 200 |
-| ✅ POST | `/sales` | Registrar venta (pedido → venta) | **A G V** | 201 / 400 / 409 |
-| GET | `/sales/{id}` | Detalle con líneas y pagos | **A G V Ana** | 200 / 404 |
-| PATCH | `/sales/{id}/status` | Cambiar estado | **A G** | 200 |
-| POST | `/sales/{id}/cancel` | Anular venta (devuelve stock) | **A G** | 200 / 400 |
-| GET | `/sales/{id}/payments` | Pagos de la venta | **A G V** | 200 |
-| POST | `/sales/{id}/payments` | Registrar pago | **A G V** | 201 / 400 |
-
-```json
-// SaleCreate
-{
-  "cliente_id": 12,
-  "vendedor_id": 4,
-  "descuento_global": 10.00,
-  "items": [
-    { "product_id": 1, "cantidad": 6, "precio_unitario": 5.00, "descuento": 0.00 },
-    { "product_id": 7, "cantidad": 2, "precio_unitario": 12.90, "descuento": 2.00 }
-  ]
-}
-
-// SaleResponse  (el servidor recalcula todo — RN-11)
-{
-  "id": 101, "numero": "V-000000101", "cliente": { "id": 12, "nombre": "María Quispe" },
-  "vendedor": { "id": 4, "nombre": "Luis Ríos" },
-  "fecha": "2026-10-01T15:42:00Z", "estado": "COMPLETADA",
-  "items": [
-    { "product_id": 1, "sku": "SKU-0001", "nombre": "Gaseosa 500ml",
-      "cantidad": 6, "precio_unitario": 5.00, "descuento": 0.00, "subtotal": 30.00 },
-    { "product_id": 7, "sku": "SKU-0007", "nombre": "Galletas x6",
-      "cantidad": 2, "precio_unitario": 12.90, "descuento": 2.00, "subtotal": 23.80 }
-  ],
-  "subtotal": 53.80, "descuento": 10.00, "impuesto": 7.45, "total": 51.25,
-  "pagado": 51.25, "saldo": 0.00, "metodo_pago": "TARJETA",
-  "fecha_anulacion": null, "motivo_anulacion": null
-}
-
-// PaymentCreate
-{ "monto": 25.00, "metodo_pago": "EFECTIVO" }
-// metodo_pago: EFECTIVO | TARJETA | TRANSFERENCIA | YAPE | PLIN
-```
-
-**Errores:**
-
-| Código | HTTP | Condición |
+| Método | Endpoint | Función |
 |---|---|---|
-| `VENTA_STOCK_INSUFICIENTE` | 400 | RN-10 |
-| `VENTA_NUMERACION_CONFLICTO` | 409 | RN-12 |
-| `VENTA_FECHA_FUTURA` | 400 | RN-19 |
-| `VENTA_TOTAL_INVALIDO` | 422 | Total recalculado ≠ 0 y consistente |
-| `PAGO_EXCEDE_SALDO` | 400 | RN-16 |
-| `VENTA_NO_ENCONTRADA` | 404 | — |
+| POST | `/api/v1/sales` | Registrar venta (transaccional: detalle + pago + stock) |
+| GET | `/api/v1/sales` | Consultar ventas (filtros por fecha, cliente, vendedor, estado) |
+| GET | `/api/v1/sales/{id}` | Detalle de venta con líneas y pagos |
+| PUT | `/api/v1/sales/{id}/status` | Cambiar estado (`pending`/`paid`/`partial`/`cancelled`) |
+| POST | `/api/v1/sales/{id}/cancel` | Anular venta → devuelve stock (Admin/Gerente) |
+| GET | `/api/v1/sales/{id}/payments` | Pagos de la venta |
+| POST | `/api/v1/sales/{id}/payments` | Registrar pago adicional |
+| GET | `/api/v1/inventory` | Existencias actuales |
+| GET | `/api/v1/inventory/{product_id}` | Stock de un producto |
+| GET | `/api/v1/inventory/{product_id}/movements` | Kardex del producto |
+| GET | `/api/v1/inventory/movements` | Historial general de movimientos |
+| POST | `/api/v1/inventory/movements` | Entrada / salida / merma / ajuste de stock |
+| GET | `/api/v1/inventory/alerts` | Productos con `stock ≤ min_stock` |
 
-### 4.6 Inventario — `/inventory` (RF-08)
-
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| GET | `/inventory` | Stock actual (paginado, `categoria_id`, `bajo_stock`) | **A G V Ana Alm** | 200 |
-| GET | `/inventory/{product_id}` | Stock de un producto | **A G Alm** | 200 / 404 |
-| GET | `/inventory/movements` | Historial de movimientos | **A G Alm** | 200 |
-| POST | `/inventory/movements` | Registrar entrada / salida / merma / ajuste | **A G Alm** | 201 / 400 |
-| GET | `/inventory/alerts` | Productos con `stock ≤ stock_minimo` | **A G Alm** | 200 |
+**Ejemplo — crear venta:**
 
 ```json
-// InventoryMovementCreate
+POST /api/v1/sales
 {
-  "product_id": 1, "tipo": "ENTRADA", "cantidad": 48,
-  "motivo": "Recepción de compra OC-0042"
+  "customer_id": 12,
+  "seller_id": 3,
+  "items": [
+    { "product_id": 45, "quantity": 2, "unit_price": 149.90, "discount": 0 },
+    { "product_id": 12, "quantity": 1, "unit_price": 59.50,  "discount": 5.00 }
+  ],
+  "payment": { "method": "cash", "amount": 364.30 },
+  "tax_rate": 0.18
 }
-// tipo: ENTRADA | SALIDA | DEVOLUCION | MERMA | AJUSTE
+```
 
-// InventoryMovementResponse
+Respuesta `201` (el servidor recalcula todo — RN-11):
+
+```json
+{
+  "id": 1001,
+  "sale_number": "V-2026-000123",
+  "subtotal": 359.30,
+  "discount": 5.00,
+  "tax": 42.52,
+  "total": 396.82,
+  "status": "paid",
+  "inventory_updated": true
+}
+```
+
+**Detalle completo de venta:**
+
+```json
+GET /api/v1/sales/1001 → 200
+{
+  "id": 1001, "sale_number": "V-2026-000123",
+  "customer": { "id": 12, "name": "María Quispe" },
+  "seller": { "id": 3, "name": "Luis Ríos" },
+  "issued_at": "2026-10-01T15:42:00Z", "status": "paid",
+  "items": [
+    { "product_id": 45, "sku": "SKU-0045", "name": "Café 250g",
+      "quantity": 2, "unit_price": 149.90, "discount": 0, "subtotal": 299.80 },
+    { "product_id": 12, "sku": "SKU-0012", "name": "Azúcar 1kg",
+      "quantity": 1, "unit_price": 59.50, "discount": 5.00, "subtotal": 54.50 }
+  ],
+  "subtotal": 359.30, "discount": 5.00, "tax": 42.52, "total": 396.82,
+  "paid": 396.82, "balance": 0.00,
+  "cancelled_at": null, "cancel_reason": null
+}
+```
+
+**Movimiento de inventario:**
+
+```json
+POST /api/v1/inventory/movements
+{ "product_id": 1, "type": "IN", "quantity": 48, "reason": "Recepción de compra OC-0042" }
+// type: IN | OUT | RETURN | SHRINKAGE | ADJUSTMENT
+
+// Respuesta 201
 {
   "id": 88, "product_id": 1, "sku": "SKU-0001",
-  "tipo": "ENTRADA", "cantidad": 48, "stock_resultante": 144,
-  "motivo": "Recepción de compra OC-0042",
-  "usuario": { "id": 3, "nombre": "Carlos Peña" },
-  "fecha": "2026-10-01T16:00:00Z"
+  "type": "IN", "quantity": 48, "resulting_stock": 144,
+  "reason": "Recepción de compra OC-0042",
+  "user": { "id": 3, "name": "Carlos Peña" },
+  "created_at": "2026-10-01T16:00:00Z"
 }
 ```
 
-**Errores:** `INVENTARIO_STOCK_NEGATIVO` (400, RN-20), `INVENTARIO_MOVIMIENTO_INVALIDO` (400, RN-21/22), `VALIDACION_FALLIDA` (422 si falta `motivo`).
+**Errores de este bloque:**
 
-### 4.7 Dashboard — `/dashboard` (RF-09)
+| code | HTTP | Condición |
+|---|---|---|
+| `BUSINESS_RULE_ERROR` | 400 | Stock insuficiente (RN-10) · stock negativo (RN-20) · pago excede saldo (RN-16) · fecha futura (RN-19) |
+| `CONFLICT` | 409 | Conflicto de numeración correlativa (RN-12) |
+| `NOT_FOUND` | 404 | Venta / producto inexistente |
+| `VALIDATION_ERROR` | 422 | Falta `reason` obligatorio en merma/ajuste (RN-21) |
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/dashboard/summary` | Resumen ejecutivo (KPI-01…KPI-05) | **A G Ana** | 200 |
-| GET | `/dashboard/sales-by-period` | Serie temporal de ventas | **A G Ana** | 200 |
-| GET | `/dashboard/sales-by-product` | Ventas por producto | **A G Ana** | 200 |
-| GET | `/dashboard/sales-by-vendedor` | Ventas por vendedor (RF-05) | **A G Ana** | 200 |
-| GET | `/dashboard/stock-alerts` | Alertas de stock mínimo | **A G Alm** | 200 |
+### 2.7 Dashboard (RF-09)
 
-**Query string común:** `?desde=2026-09-01&hasta=2026-09-30&categoria_id=3&vendedor_id=4&sucursal_id=1`
+| Método | Endpoint | Función |
+|---|---|---|
+| GET | `/api/v1/dashboard/summary` | Ventas, ingresos, transacciones, clientes del periodo |
+| GET | `/api/v1/dashboard/timeseries?period=day\|month` | Serie temporal de ventas |
+| GET | `/api/v1/dashboard/top?entity=products\|sellers` | Ranking por producto/vendedor |
+| GET | `/api/v1/dashboard/stock-alerts` | Alertas de stock mínimo |
+
+Query params comunes: `date_from`, `date_to`, `branch_id`, `seller_id`, `category_id`.
 
 ```json
-// GET /dashboard/summary → 200
+GET /api/v1/dashboard/summary?date_from=2026-09-01&date_to=2026-09-30 → 200
 {
-  "periodo": { "desde": "2026-09-01", "hasta": "2026-09-30" },
-  "ventas": 214, "ingresos": 38250.00, "transacciones": 214,
-  "clientes_nuevos": 27, "ticket_promedio": 178.74,
-  "media_venta": 166.32, "mediana_venta": 142.50,
-  "productos_bajo_stock": 6, "anulaciones": 3,
-  "variacion_vs_periodo_anterior": { "ingresos_pct": 8.4, "ventas_pct": 3.1 }
+  "period": { "from": "2026-09-01", "to": "2026-09-30" },
+  "sales": 214, "revenue": 38250.00, "transactions": 214,
+  "new_customers": 27, "average_ticket": 178.74,
+  "mean_sale": 166.32, "median_sale": 142.50,
+  "low_stock_products": 6, "cancellations": 3,
+  "vs_previous_period": { "revenue_pct": 8.4, "sales_pct": 3.1 }
 }
 ```
 
-### 4.8 Estadística — `/statistics` (RF-10 a RF-14, RF-21)
+### 2.8 Estadística — Semana 07 (RF-10…RF-14, RF-21)
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ POST | `/statistics/mean` | Calcular media | **A G Ana** | 200 / 400 |
-| ✅ POST | `/statistics/median` | Calcular mediana | **A G Ana** | 200 / 400 |
-| ✅ POST | `/statistics/compare` | Comparar media vs. mediana | **A G Ana** | 200 / 400 |
-| POST | `/statistics/variables` | Clasificar variables y frecuencias | **A G Ana** | 200 / 422 |
-| GET | `/statistics/datasets` | Listar datasets | **A G Ana** | 200 |
-| POST | `/statistics/datasets` | Crear dataset desde operación o archivo | **A G Ana** | 201 / 422 |
-| GET | `/statistics/datasets/{id}` | Detalle con variables y observaciones | **A G Ana** | 200 / 404 |
-| GET | `/statistics/history` | Historial de análisis (RF-21) | **A G Ana** | 200 |
-| GET | `/statistics/history/{id}` | Resultado almacenado | **A G Ana** | 200 / 404 |
+| Método | Endpoint | Función |
+|---|---|---|
+| POST | `/api/v1/statistics/mean` | Calcular media (RF-11) |
+| POST | `/api/v1/statistics/median` | Calcular mediana (RF-12) |
+| POST | `/api/v1/statistics/compare` | Comparar media vs. mediana (RF-13) |
+| POST | `/api/v1/statistics/variables` | Clasificar/analizar variables (RF-14) |
+| GET | `/api/v1/statistics/analyses` | Historial de análisis (RF-21) |
+| GET | `/api/v1/statistics/analyses/{id}` | Resultado almacenado (RF-21) |
+| GET | `/api/v1/statistics/datasets` | Datasets disponibles (RF-10) |
+| POST | `/api/v1/statistics/datasets` | Crear dataset desde la operación o un archivo (RF-10) |
+| GET | `/api/v1/statistics/datasets/{id}` | Detalle con variables y observaciones (RF-10) |
+
+**Ejemplo — media:**
 
 ```json
-// MeanRequest / MedianRequest (mismo contrato)
-{
-  "dataset_id": 5,
-  "variable": "monto_venta",
-  "guardar_historial": true
-}
-// Alternativa sin dataset (para pruebas / Semana 07):
-{ "valores": [10, 20, 30, 40], "guardar_historial": false }
+POST /api/v1/statistics/mean
+{ "dataset_id": 5, "field": "total" }
+→ { "metric": "mean", "value": 356.87, "count": 128,
+    "min": 12.0, "max": 980.0,
+    "period": { "from": "2026-09-01", "to": "2026-09-30" },
+    "analysis_id": 33, "calculated_at": "2026-10-01T17:10:00Z" }
+```
 
-// MeanResponse
-{
-  "metrica": "media", "variable": "monto_venta",
-  "valor": 25.0,
-  "n": 4, "suma": 100.0,
-  "minimo": 10.0, "maximo": 40.0,
-  "periodo": { "desde": "2026-09-01", "hasta": "2026-09-30" },
-  "analisis_id": 33,
-  "fecha_calculo": "2026-10-01T17:10:00Z"
-}
+*También admite valores directos para pruebas académicas:*
+`{ "values": [10, 20, 30, 40], "save_history": false }` → `{ "metric": "mean", "value": 25.0, "count": 4 }`
 
-// CompareRequest / CompareResponse
-// Request  { "dataset_id": 5, "variable": "monto_venta" }
-{
-  "media": 166.32, "mediana": 142.50,
-  "diferencia_absoluta": 23.82, "diferencia_pct": 16.72,
-  "interpretacion": "La media supera a la mediana: existe sesgo positivo por ventas atípicas altas.",
-  "n": 214, "analisis_id": 34
-}
+**Ejemplo — comparación:**
 
-// VariableAnalysisRequest / Response
-// Request { "dataset_id": 5 }
+```json
+POST /api/v1/statistics/compare
+{ "values_source": "dataset", "dataset_id": 5, "field": "total" }
+→ {
+    "mean": 356.87,
+    "median": 298.40,
+    "difference": 58.47,
+    "difference_pct": 19.62,
+    "interpretation": "La media supera a la mediana: la distribución tiene cola derecha (algunas ventas muy altas elevan el promedio)."
+  }
+```
+
+**Ejemplo — clasificación de variables (RF-14):**
+
+```json
+POST /api/v1/statistics/variables
+{ "dataset_id": 5 }
+→ {
+    "variables": [
+      { "name": "total", "type": "quantitative", "subtype": "continuous",
+        "count": 214, "mean": 166.32, "median": 142.50, "min": 12.0, "max": 980.0 },
+      { "name": "category_name", "type": "qualitative", "subtype": "nominal",
+        "count": 214,
+        "frequencies": [ { "value": "Bebidas", "count": 88, "pct": 41.12 } ] }
+    ]
+  }
+```
+
+**Errores:** `DATOS_INSUFICIENTES` 400 con menos de 2 observaciones (RN-40) · `VALIDATION_ERROR` 422 si la variable no está declarada (RN-46) · `NOT_FOUND` 404.
+
+### 2.9 Probabilidad y variables aleatorias (RF-15…RF-17)
+
+| Método | Endpoint | Función |
+|---|---|---|
+| POST | `/api/v1/probability/bayes` | Teorema de Bayes (RF-17) |
+| POST | `/api/v1/probability/basic` | Probabilidad simple / conjunta / condicional (RF-16) |
+| POST | `/api/v1/probability/events` | Crear evento sobre un dataset |
+| GET | `/api/v1/probability/events` | Listar eventos |
+| POST | `/api/v1/random-variables/analyze` | Analizar variable aleatoria (RF-15) |
+| GET | `/api/v1/random-variables` | Listar variables aleatorias |
+
+**Ejemplo — Bayes:**
+
+```json
+POST /api/v1/probability/bayes
 {
-  "variables": [
-    { "nombre": "monto_venta", "tipo": "cuantitativa", "subtipo": "continua",
-      "n": 214, "media": 166.32, "mediana": 142.50, "minimo": 12.0, "maximo": 980.0 },
-    { "nombre": "categoria_producto", "tipo": "cualitativa", "subtipo": "nominal",
-      "n": 214, "frecuencias": [ { "valor": "Bebidas", "n": 88, "pct": 41.12 } ] }
+  "label": "Cliente repite compra dado que usó promoción",
+  "p_a": 0.30,          // P(A)  — probabilidad previa
+  "p_b_given_a": 0.80,  // P(B|A)
+  "p_b": 0.50           // P(B)
+}
+→ {
+    "p_a_given_b": 0.48,
+    "formula": "P(A|B) = P(B|A)·P(A) / P(B)",
+    "explanation": "Si ocurre B, la probabilidad de A pasa de 30% a 48%."
+  }
+```
+
+**Errores:** `BAYES_POR_CERO` 422 cuando `p_b = 0` (RN-43) · `VALIDATION_ERROR` 422 si alguna probabilidad está fuera de `[0, 1]`.
+
+**Ejemplo — variable aleatoria:**
+
+```json
+POST /api/v1/random-variables/analyze
+{ "dataset_id": 5, "field": "quantity", "distribution": "discrete", "save_history": true }
+// distribution: discrete | continuous | binomial | poisson | normal | uniform
+→ {
+    "field": "quantity", "distribution": "discrete",
+    "count": 214,
+    "possible_values": [1, 2, 3, 4, 5],
+    "probabilities": [0.18, 0.34, 0.27, 0.14, 0.07],
+    "expected_value": 2.38, "variance": 1.16,
+    "summary": "La cantidad promedio por venta es 2.38 unidades.",
+    "analysis_id": 42
+  }
+```
+
+### 2.10 Insights y reportes (RF-18…RF-20)
+
+| Método | Endpoint | Función |
+|---|---|---|
+| GET | `/api/v1/insights` | Consultar insights (filtro severidad, fecha) |
+| GET | `/api/v1/insights/{id}` | Insight con su evidencia y análisis origen |
+| GET | `/api/v1/insights/rules` | Reglas determinísticas vigentes |
+| GET | `/api/v1/reports` | Listar reportes generados |
+| POST | `/api/v1/reports` | Generar reporte (ventas / estadístico / productos / clientes / vendedores) |
+| GET | `/api/v1/reports/{id}` | Detalle de reporte |
+| GET | `/api/v1/reports/{id}/export?format=csv\|pdf\|xlsx` | Exportación |
+| GET | `/api/v1/reports/{id}/print` | Vista imprimible |
+
+```json
+// InsightResponse — RN-47: toda insight muestra su evidencia numérica
+GET /api/v1/insights/9 → 200
+{
+  "id": 9,
+  "title": "Caída del ticket promedio en Bebidas",
+  "severity": "WARNING",
+  "rule": "REG-07_VARIACION_TICKET",
+  "message": "El ticket promedio de Bebidas bajó 12.4% respecto al periodo anterior.",
+  "evidence": {
+    "current_period": { "average_ticket": 41.20, "count": 88 },
+    "previous_period": { "average_ticket": 47.03, "count": 92 },
+    "change_pct": -12.40
+  },
+  "analysis_id": 34, "dataset_id": 5,
+  "created_at": "2026-10-01T18:00:00Z", "read": false
+}
+```
+
+### 2.11 Auditoría (RF-22)
+
+| Método | Endpoint | Función | Acceso |
+|---|---|---|---|
+| GET | `/api/v1/audit-logs` | Consulta de auditoría (fecha, usuario, acción) | Admin |
+
+---
+
+## 3. Formato de error (estándar)
+
+```json
+{
+  "code": "BUSINESS_RULE_ERROR",
+  "message": "El stock disponible es insuficiente.",
+  "detail": [
+    { "field": "items[0].quantity", "issue": "Disponible: 3, solicitado: 5" }
   ]
 }
 ```
 
-**Errores:** `ESTADISTICA_DATOS_INSUFICIENTES` (400, RN-40), `ESTADISTICA_VARIABLE_NO_DECLARADA` (422, RN-46), `RECURSO_NO_ENCONTRADO` (404).
+> ⚠️ **DEC-00 — pendiente de decisión del Product Owner.** El criterio **CA-48 de `01_requisitos.md`
+> (FASE 01 aprobada)** define `{ codigo, mensaje, detalle }` (claves en español) y añade `trace_id`.
+> Ver `02_arquitectura.md` §9.1.
 
-### 4.9 Probabilidad y variables aleatorias — `/probability`, `/random-variables` (RF-15 a RF-17)
+| code | HTTP | Caso |
+|---|---|---|
+| `VALIDATION_ERROR` | 422 | Falla de schema/Pydantic |
+| `UNAUTHENTICATED` | 401 | Token ausente o expirado |
+| `FORBIDDEN` | 403 | Rol sin permiso |
+| `NOT_FOUND` | 404 | Recurso inexistente |
+| `CONFLICT` | 409 | Duplicado (SKU, email, documento) |
+| `BUSINESS_RULE_ERROR` | 400 | Regla de negocio (stock, totales, estados) |
+| `RATE_LIMITED` | 429 | 5 intentos fallidos de login (RN-31) |
+| `BAYES_POR_CERO` | 422 | `P(B) = 0` (RN-43) |
+| `DATOS_INSUFICIENTES` | 400 | Menos de 2 observaciones (RN-40) |
+| `INTERNAL_ERROR` | 500 | No controlado (`trace_id` en logs) |
 
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| POST | `/probability/calculate` | Probabilidad simple / conjunta / condicional | **A G Ana** | 200 / 422 |
-| ✅ POST | `/probability/bayes` | Teorema de Bayes | **A G Ana** | 200 / 422 |
-| POST | `/probability/events` | Crear evento sobre un dataset | **A G Ana** | 201 |
-| GET | `/probability/events` | Listar eventos | **A G Ana** | 200 |
-| ✅ POST | `/random-variables/analyze` | Analizar variable aleatoria | **A G Ana** | 200 / 422 |
-| GET | `/random-variables` | Listar variables aleatorias | **A G Ana** | 200 |
+---
 
-```json
-// ProbabilityRequest
-{ "p_a": 0.30, "p_b": 0.50, "p_b_given_a": 0.80, "tipo": "condicional" }
-// tipo: SIMPLE | CONJUNTA | CONDICIONAL
+## 4. Endpoints de la Fase 05 — estado inicial
 
-// ProbabilityResponse
-{
-  "tipo": "CONDICIONAL", "p_a": 0.30, "p_b": 0.50, "p_b_given_a": 0.80,
-  "resultado": 0.48, "formula": "P(A|B) = P(B|A) * P(A) / P(B)",
-  "explicacion": "Dados P(A)=0.30, P(B|A)=0.80 y P(B)=0.50, la probabilidad de A dado B es 0.48.",
-  "analisis_id": 41
-}
+Los siguientes son los definidos en el plan maestro como **primera entrega** y deben existir desde el inicio:
 
-// BayesRequest  (mismo esquema que ProbabilityRequest con tipo CONDICIONAL)
-// BayesResponse = ProbabilityResponse + {"regla": "bayes"}
+`POST /auth/login` · `GET /customers` · `POST /customers` · `GET /products` · `POST /sales` ·
+`GET /sales` · `GET /dashboard/summary` · `POST /statistics/mean` · `POST /statistics/median` ·
+`POST /statistics/compare` · `POST /probability/bayes` · `POST /random-variables/analyze` ·
+`GET /insights` · `GET /reports`
 
-// Error 422 cuando P(B) = 0  (RN-43)
-{ "codigo": "BAYES_POR_CERO", "mensaje": "La probabilidad P(B) debe ser mayor que cero.",
-  "detalle": { "p_b": 0.0 }, "trace_id": "cd34ef56ab12" }
-
-// RandomVariableAnalyzeRequest
-{
-  "dataset_id": 5, "variable": "cantidad_unidades",
-  "distribucion": "discreta", "guardar_historial": true
-}
-// distribucion: discreta | continua | binomial | poisson | normal | uniforme
-
-// RandomVariableResponse
-{
-  "variable": "cantidad_unidades", "distribucion": "discreta",
-  "n": 214, "valores_posibles": [1, 2, 3, 4, 5],
-  "probabilidades": [0.18, 0.34, 0.27, 0.14, 0.07],
-  "esperanza": 2.38, "varianza": 1.16,
-  "resumen": "La cantidad promedio por venta es 2.38 unidades.",
-  "analisis_id": 42
-}
-```
-
-**Errores:** `BAYES_POR_CERO` (422, RN-43), `ESTADISTICA_DATOS_INSUFICIENTES` (400), `VALIDACION_FALLIDA` (422 si probabilidad fuera de `[0,1]`).
-
-### 4.10 Insights — `/insights` (RF-19)
-
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/insights` | Consultar insights (`nivel`, `desde`, `hasta`) | **A G Ana** | 200 |
-| GET | `/insights/{id}` | Detalle **con la evidencia numérica** (RN-47) | **A G Ana** | 200 / 404 |
-| GET | `/insights/rules` | Reglas determinísticas vigentes | **A G Ana** | 200 |
-| POST | `/insights/{id}/read` | Marcar como leído | **A G Ana** | 200 |
-
-```json
-// InsightResponse
-{
-  "id": 9,
-  "titulo": "Caída del ticket promedio en Bebidas",
-  "nivel": "ADVERTENCIA",
-  "regla": "REG-07_VARIACION_TICKET",
-  "mensaje": "El ticket promedio de Bebidas bajó 12.4% respecto al periodo anterior.",
-  "evidencia": {
-    "periodo_actual": { "ticket_promedio": 41.20, "n": 88 },
-    "periodo_anterior": { "ticket_promedio": 47.03, "n": 92 },
-    "variacion_pct": -12.40
-  },
-  "analisis_id": 34, "dataset_id": 5,
-  "fecha": "2026-10-01T18:00:00Z", "leido": false
-}
-```
-
-### 4.11 Reportes — `/reports` (RF-20)
-
-| Método | Ruta | Descripción | Roles | Código |
-|---|---|---|---|:---:|
-| ✅ GET | `/reports` | Listar reportes | **A G Ana** | 200 |
-| POST | `/reports` | Generar reporte | **A G Ana** | 201 |
-| GET | `/reports/{id}` | Detalle | **A G Ana** | 200 / 404 |
-| GET | `/reports/{id}/export` | Exportar (`?formato=pdf\|csv\|xlsx`) | **A G Ana** | 200 / 422 |
-
-**Tipos de reporte:** `VENTAS` · `ESTADISTICO` · `PRODUCTOS` · `CLIENTES` · `VENDEDORES`.
-
-```json
-// ReportCreate
-{ "tipo": "ESTADISTICO", "desde": "2026-09-01", "hasta": "2026-09-30",
-  "parametros": { "categoria_id": 3, "metricas": ["media", "mediana"] } }
-
-// ReportResponse
-{
-  "id": 12, "tipo": "ESTADISTICO",
-  "titulo": "Reporte estadístico Bebidas — Septiembre 2026",
-  "periodo": { "desde": "2026-09-01", "hasta": "2026-09-30" },
-  "contenido": { "media": 166.32, "mediana": 142.50, "n": 214, "observaciones": [] },
-  "estado": "DISPONIBLE",
-  "creado_por": { "id": 5, "nombre": "Ana Torres" },
-  "fecha": "2026-10-01T18:30:00Z"
-}
-```
+> **14 endpoints del plan** ✔️ — todos presentes en §2. **Total del contrato: 72 operaciones.**
 
 ---
 
 ## 5. Mapa de autorización (resumen)
 
-| Recurso | A | G | V | Ana | Alm |
+| Recurso | Admin | Gerente | Vendedor | Analista | Almacén |
 |---|:---:|:---:|:---:|:---:|:---:|
-| `/auth/*`, `/users` | ✅ | — | — | — | — |
-| `/customers` (CRUD) | ✅ | ✅ | ✅ | solo lectura | — |
-| `/products`, `/categories` (CRUD) | ✅ | ✅ | solo lectura | solo lectura | solo lectura |
-| `/employees` | ✅ | solo lectura | — | solo lectura | — |
-| `/sales` (crear) | ✅ | ✅ | ✅ | solo lectura | solo lectura |
-| `/sales/{id}/cancel` | ✅ | ✅ | — | — | — |
-| `/sales/{id}/payments` | ✅ | ✅ | ✅ | — | — |
-| `/inventory` (movimientos) | ✅ | solo lectura | solo lectura | solo lectura | ✅ |
-| `/dashboard/*` | ✅ | ✅ | — | ✅ | solo alertas |
-| `/statistics/*` | ✅ | ✅ | — | ✅ | — |
-| `/probability/*`, `/random-variables` | ✅ | ✅ | — | ✅ | — |
-| `/insights`, `/reports` (CRUD) | ✅ | ✅ | solo lectura | ✅ | — |
-| `/audit-logs` | ✅ | — | — | — | — |
+| `/health` | público | público | público | público | público |
+| `/auth/login`, `/auth/refresh`, `/auth/forgot-password` | público | público | público | público | público |
+| `/users`, `/roles` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `/customers` (CRUD) | ✅ | 👁️ | ✅ | 👁️ | ❌ |
+| `/customers/{id}/history` | ✅ | 👁️ | 👁️ | 👁️ | ❌ |
+| `/products`, `/categories` (CRUD) | ✅ | 👁️ | 👁️ | ❌ | 👁️ |
+| `/employees` (CRUD) | ✅ | 👁️ | ❌ | 👁️ | ❌ |
+| `/sales` (crear) | ✅ | ✅ | ✅ | 👁️ | 👁️ |
+| `/sales/{id}/cancel` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `/sales/{id}/payments` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `/inventory` (lectura) | ✅ | 👁️ | 👁️ | 👁️ | ✅ |
+| `/inventory/movements` (escritura) | ✅ | ❌ | ❌ | ❌ | ✅ |
+| `/dashboard/*` | ✅ | ✅ | ❌ | ✅ | 👁️ |
+| `/statistics/*` | ✅ | ✅ | ❌ | ✅ | ❌ |
+| `/probability/*`, `/random-variables` | ✅ | ✅ | ❌ | ✅ | ❌ |
+| `/insights`, `/reports` (CRUD) | ✅ | ✅ | 👁️ | ✅ | ❌ |
+| `/audit-logs` | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+✅ acceso total · 👁️ solo lectura · ❌ sin acceso
+
+> La autoridad **siempre** es del backend (`require_role`); el frontend solo oculta la interfaz.
+> Además, cada petición filtra por `company_id` del token (aislamiento multiempresa).
 
 ---
 
-## 6. Mapeo requisito → endpoint
+## 6. Trazabilidad RF → endpoint → fase
 
 | RF | Endpoints | Fase |
 |---|---|---|
-| RF-01 Autenticación | `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/me` | 05 |
-| RF-02 Usuarios | `/users` | 05 |
+| RF-01 Autenticación | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/forgot-password`, `/auth/reset-password` | 05 |
+| RF-02 Usuarios | `/users`, `/roles` | 05 |
 | RF-03 Clientes | `/customers` | 07 |
 | RF-04 Productos y categorías | `/products`, `/categories` | 07 |
-| RF-05 Vendedores | `/employees` ⚠️ AR-04 | 07 |
+| RF-05 Vendedores ⚠️ AR-04 | `/employees`, `/employees/{id}/metrics` | 07 |
 | RF-06 Ventas | `/sales` | 08 |
 | RF-07 Pagos | `/sales/{id}/payments` | 08 |
 | RF-08 Inventario | `/inventory` | 08 |
@@ -550,15 +537,15 @@ Campos de solo salida (`id`, `fecha_creacion`, `estado`, totales calculados) se 
 | RF-13 Comparación | `/statistics/compare` | 09 |
 | RF-14 Variables | `/statistics/variables` | 09 |
 | RF-15 Variables aleatorias | `/random-variables/analyze` | 09 |
-| RF-16 Probabilidades | `/probability/calculate` | 09 |
+| RF-16 Probabilidades | `/probability/basic` | 09 |
 | RF-17 Bayes | `/probability/bayes` | 09 |
 | RF-18 Gráficos | consumo de `/dashboard/*` y `/statistics/*` | 10 |
 | RF-19 Insights | `/insights` | 11 |
 | RF-20 Reportes | `/reports` | 12 |
-| RF-21 Historial | `/statistics/history` | 09 |
+| RF-21 Historial | `/statistics/analyses` | 09 |
 | RF-22 Auditoría | `/audit-logs` | 13 |
 
-**Total: 66 operaciones — los 14 endpoints iniciales del plan (marcados ✅) + 52 adicionales necesarios para RF-01…RF-22.**
+**Los 22 RF tienen al menos un endpoint asociado.**
 
 ---
 
@@ -567,14 +554,15 @@ Campos de solo salida (`id`, `fecha_creacion`, `estado`, totales calculados) se 
 | ID | Criterio |
 |---|---|
 | CA5-01 | Los 14 endpoints iniciales del plan existen con su método, ruta y función exactos (§4). |
-| CA5-02 | Toda operación declara roles permitidos y código de error (§5). |
-| CA5-03 | Toda respuesta de error cumple `{ codigo, mensaje, detalle, trace_id }` (§1.5). |
-| CA5-04 | Todo listado es paginado y ordenable (§1.3). |
+| CA5-02 | Toda operación declara roles permitidos y código de error (§2, §5). |
+| CA5-03 | Toda respuesta de error cumple el formato estándar (§3) y DEC-00 queda resuelta antes de la FASE 05. |
+| CA5-04 | Todo listado es paginado y ordenable (§1). |
 | CA5-05 | Los nombres de campo son `snake_case` idénticos entre Pydantic y TypeScript (AR-05). |
 | CA5-06 | OpenAPI generado en `/docs` sin errores de validación (RNF-05). |
 | CA5-07 | Los 22 RF tienen al menos un endpoint asociado (§6). |
-| CA5-08 | Ningún endpoint expone datos de otra `company_id` (aislamiento §2 de `02_arquitectura.md`). |
+| CA5-08 | Ningún endpoint expone datos de otra `company_id` (aislamiento multiempresa). |
+| CA5-09 | Ningún endpoint del frontend usa la `service_role` key de Supabase (§13.3 de `02_arquitectura.md`). |
 
 ---
 
-*SalesIA Enterprise — Contrato de API REST v1.0 · FASE 02 · Grupo 4 — SENATI*
+*SalesIA Enterprise — API REST v1.1 (fusión) · FASE 02 · Grupo 4 — SENATI*
