@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Calculator, ListChecks } from 'lucide-react'
+import { Activity, Calculator, ListChecks, Percent } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Table, { TableRow, TableCell } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
 import { Input, Textarea } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
-import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
+import { CHART_AXIS, CHART_GRID, getTicketDataset, mean, median } from '@/modules/analytics/services/statisticsService'
+import { getBusinessBayes } from '@/data/analytics'
+import { useDataVersion } from '@/data/DataProvider'
 import BayesForm from '../components/BayesForm'
 import {
+  bayes,
   classifyVariable,
   describe,
   listAnalyses,
@@ -41,6 +45,31 @@ export default function ProbabilityPage() {
   const [variableError, setVariableError] = useState<string | null>(null)
 
   const [history, setHistory] = useState<AnalysisRecord[]>([])
+  const version = useDataVersion()
+
+  /* ---------------- Cálculo automático con los datos del sistema ---------------- */
+  // Se recalcula solo: usa los tickets de las ventas registradas.
+  const automatic = useMemo(() => {
+    const tickets = getTicketDataset({ months: 12, seller: '', category: '' })
+    const sorted = [...tickets].sort((a, b) => a - b)
+    return {
+      count: tickets.length,
+      media: mean(tickets),
+      mediana: median(tickets),
+      minimo: sorted[0] ?? 0,
+      maximo: sorted[sorted.length - 1] ?? 0,
+      rango: (sorted[sorted.length - 1] ?? 0) - (sorted[0] ?? 0),
+      datos: tickets,
+    }
+    // `version` dispara el recálculo cuando otro módulo registra una venta.
+  }, [version])
+
+  // Escenario de Bayes construido con el negocio real (segmento vs. ticket alto).
+  const escenario = useMemo(() => {
+    const datos = getBusinessBayes()
+    const posterior = bayes({ prior: datos.prior, likelihood: datos.likelihood, evidence: datos.evidence })
+    return { datos, posterior }
+  }, [version])
 
   useEffect(() => {
     setHistory(listAnalyses())
@@ -108,6 +137,125 @@ export default function ProbabilityPage() {
           Media, mediana, teorema de Bayes y variables aleatorias — Semana 07 (Fase 09).
         </p>
       </div>
+
+      {/* Cálculo automático */}
+      <section className="card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Activity aria-hidden="true" className="h-5 w-5 text-primary" />
+            <h2 className="text-h4 text-gray-800">Cálculo automático de los datos del sistema</h2>
+          </div>
+          <span className="text-caption text-gray-500">
+            Se actualiza con cada venta registrada ·{' '}
+            <Link to="/ventas" className="font-medium text-primary hover:underline">
+              ir a Ventas
+            </Link>
+          </span>
+        </div>
+
+        <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: 'Tickets', value: formatNumber(automatic.count) },
+            { label: 'Media', value: formatCurrency(automatic.media), tone: 'text-primary' },
+            { label: 'Mediana', value: formatCurrency(automatic.mediana), tone: 'text-accent' },
+            { label: 'Mínimo', value: formatCurrency(automatic.minimo) },
+            { label: 'Máximo', value: formatCurrency(automatic.maximo) },
+            { label: 'Rango', value: formatCurrency(automatic.rango) },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg bg-gray-50 p-3">
+              <dt className="text-caption text-gray-500">{item.label}</dt>
+              <dd className={`text-body font-semibold text-gray-900 ${item.tone ?? ''}`}>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={automatic.datos.map((ticket, index) => ({ index: index + 1, ticket }))}
+              margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+            >
+              <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+              <XAxis dataKey="index" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+              <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `S/${Math.round(value)}`} />
+              <Tooltip
+                formatter={(value) => formatCurrency(Number(value))}
+                contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
+              />
+              <Bar dataKey="ticket" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+              <ReferenceLine y={automatic.media} stroke="#1E3A8A" strokeDasharray="4 4" />
+              <ReferenceLine y={automatic.mediana} stroke="#06B6D4" strokeDasharray="4 4" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-caption text-gray-500">
+          Línea azul: media · línea cyan: mediana. Valores calculados sobre las ventas del sistema.
+        </p>
+      </section>
+
+      {/* Bayes automático del negocio */}
+      <section className="card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Percent aria-hidden="true" className="h-5 w-5 text-primary" />
+            <h2 className="text-h4 text-gray-800">Bayes automático del negocio</h2>
+          </div>
+          <span className="text-caption text-gray-500">A = cliente recurrente · B = ticket sobre el promedio</span>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-2 text-body-sm">
+            <p className="rounded-md bg-gray-50 px-3 py-2">
+              <span className="font-semibold text-gray-900">P(A) previa</span> ·{' '}
+              {escenario.datos.detalle.recurrentes} de {escenario.datos.detalle.clientes} clientes activos son
+              recurrentes = <span className="font-semibold text-primary">{formatPercent(escenario.datos.prior)}</span>
+            </p>
+            <p className="rounded-md bg-gray-50 px-3 py-2">
+              <span className="font-semibold text-gray-900">P(B|A) verosimilitud</span> ·{' '}
+              {escenario.datos.detalle.comprasAltasRecurrente} de {escenario.datos.detalle.ventasRecurrente} compras
+              de recurrentes superan el ticket promedio ({formatCurrency(escenario.datos.detalle.ticketPromedio)}) ={' '}
+              <span className="font-semibold text-accent">{formatPercent(escenario.datos.likelihood)}</span>
+            </p>
+            <p className="rounded-md bg-gray-50 px-3 py-2">
+              <span className="font-semibold text-gray-900">P(B) evidencia</span> ·{' '}
+              {escenario.datos.detalle.comprasAltas} de {escenario.datos.detalle.ventasValidas} ventas superan el
+              promedio = <span className="font-semibold text-primary">{formatPercent(escenario.datos.evidence)}</span>
+            </p>
+            <p className="rounded-md border border-success bg-success-bg px-3 py-2 text-success-fg">
+              <span className="font-semibold">P(A|B) posterior</span> ·{' '}
+              <span className="text-h4 font-bold">{formatPercent(escenario.posterior.posterior)}</span> — la
+              probabilidad de que un comprador con ticket alto sea cliente recurrente.
+            </p>
+            <ol className="space-y-1 text-caption text-gray-600">
+              {escenario.posterior.steps.map((step) => (
+                <li key={step}>• {step}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { name: 'P(A) previa', valor: escenario.datos.prior },
+                  { name: 'P(B|A)', valor: escenario.datos.likelihood },
+                  { name: 'P(A|B) posterior', valor: escenario.posterior.posterior },
+                ]}
+                margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+              >
+                <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                <YAxis hide domain={[0, 1]} />
+                <Tooltip
+                  formatter={(value) => formatPercent(Number(value))}
+                  contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
+                />
+                <Bar dataKey="valor" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
 
       {/* Calculadora estadística */}
       <section className="card space-y-4">

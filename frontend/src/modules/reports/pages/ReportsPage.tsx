@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Download, FileText, Printer } from 'lucide-react'
+import { Download, FileText, Printer, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Table, { TableRow, TableCell } from '@/components/ui/Table'
@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
+import { useDataVersion } from '@/data/DataProvider'
 import {
   REPORT_TYPES,
   downloadCsv,
@@ -19,6 +20,8 @@ import type { Report, ReportType } from '../services/reportService'
 /**
  * Reportes (Fase 12 · RF-20): ventas, estadístico, productos, clientes y
  * vendedores, con exportación CSV y vista imprimible.
+ * El reporte se genera automáticamente al entrar, al cambiar de tipo y
+ * cada vez que cambia cualquier dato del sistema.
  * TODO(Fase 05): el backend generará los archivos finales
  * (POST /api/v1/reports y /reports/{id}/export).
  */
@@ -27,22 +30,44 @@ export default function ReportsPage() {
   const toast = useToast()
   const [type, setType] = useState<ReportType>('ventas')
   const [report, setReport] = useState<Report | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const version = useDataVersion()
 
   const selected = REPORT_TYPES.find((entry) => entry.value === type)
 
-  const handleGenerate = async () => {
+  // Generación automática: al entrar, al cambiar de tipo y ante cualquier
+  // cambio de datos (por ejemplo, una venta nueva en Ventas).
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    setError(null)
-    try {
-      setReport(await generateReport(type))
-    } catch (reason: unknown) {
-      setReport(null)
-      setError(reason instanceof Error ? reason.message : 'No se pudo generar el reporte')
-    } finally {
-      setLoading(false)
+    generateReport(type)
+      .then((result) => {
+        if (cancelled) return
+        setReport(result)
+        setError(null)
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return
+        setReport(null)
+        setError(reason instanceof Error ? reason.message : 'No se pudo generar el reporte')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
+  }, [type, version])
+
+  const handleGenerate = () => {
+    setLoading(true)
+    generateReport(type)
+      .then(setReport)
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : 'No se pudo generar el reporte'),
+      )
+      .finally(() => setLoading(false))
   }
 
   const handleExport = () => {
@@ -82,8 +107,9 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={handleGenerate} loading={loading}>
-            Generar reporte
+          <Button variant="outline" onClick={handleGenerate} loading={loading}>
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            Actualizar ahora
           </Button>
           {report && (
             <>
@@ -97,6 +123,9 @@ export default function ReportsPage() {
               </Button>
             </>
           )}
+          <span className="text-caption text-gray-500">
+            El reporte se arma solo con los datos actuales del sistema.
+          </span>
         </div>
       </div>
 
