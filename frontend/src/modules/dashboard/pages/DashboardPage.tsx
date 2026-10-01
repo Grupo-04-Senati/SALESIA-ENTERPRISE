@@ -10,8 +10,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-white">Dashboard</h1>
-        <p className="mt-1 text-body-sm text-white/70">
+        <h1>Dashboard</h1>
+        <p className="mt-1 text-body-sm text-gray-600">
           Resumen ejecutivo de ventas, ingresos y actividad comercial.
         </p>
       </div>
