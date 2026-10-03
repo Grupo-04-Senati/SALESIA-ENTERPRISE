@@ -1,0 +1,95 @@
+name: Deploy frontend (Vercel)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to Vercel production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    env:
+      VERCEL_ORG_ID: team_3128ffp5Kg72ta6xrt9J4Q2s
+      VERCEL_PROJECT_ID: prj_pUBKKi8Qi9oZe4zTvYCRqchAve2P
+      PRODUCTION_URL: https://salesia-frontend.vercel.app/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create GitHub deployment
+        id: deployment
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          id=$(curl -sS -X POST "https://api.github.com/repos/${{ github.repository }}/deployments" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"ref\":\"${{ github.sha }}\",\"environment\":\"production\",\"description\":\"Deployed to Vercel\",\"auto_merge\":false,\"required_contexts\":[]}" \
+            | jq -r '.id')
+          if [ -z "$id" ] || [ "$id" = "null" ]; then
+            echo "No se pudo crear el deployment en GitHub" >&2
+            exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm i -g vercel@latest
+          vercel deploy --prod --token "$VERCEL_TOKEN"
+
+      - name: Deployment status (success)
+        if: success()
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -sS -X POST "https://api.github.com/repos/${{ github.repository }}/deployments/${{ steps.deployment.outputs.id }}/statuses" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -d '{"state":"success","environment":"production","description":"Vercel production - salesia-frontend","target_url":"https://salesia-frontend.vercel.app/","environment_url":"https://salesia-frontend.vercel.app/","log_url":"https://vercel.com/grupo-4-5c32/salesia-frontend","auto_inactive":true}' \
+            > /dev/null
+
+      - name: Deployment status (failed)
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -sS -X POST "https://api.github.com/repos/${{ github.repository }}/deployments/${{ steps.deployment.outputs.id }}/statuses" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -d '{"state":"error","environment":"production","description":"Vercel deploy failed","target_url":"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}","environment_url":"https://salesia-frontend.vercel.app/","auto_inactive":true}' \
+            > /dev/null
