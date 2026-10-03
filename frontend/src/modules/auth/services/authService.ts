@@ -92,3 +92,19 @@ export async function listManagedUsers(): Promise<ManagedUser[]> {
   )
   return page.items
 }
+
+/** Datos para crear un usuario (RF-02 · POST /users, solo Admin). */
+export interface CreateUserInput {
+  full_name: string
+  email: string
+  password: string
+  role: Role
+}
+
+/** POST /users — crea un usuario nuevo con rol y contraseña iniciales. */
+export async function createManagedUser(input: CreateUserInput): Promise<ManagedUser> {
+  return apiFetch<ManagedUser>(ENDPOINTS.users, {
+    method: 'POST',
+    body: JSON.stringify({ ...input, status: 'active' }),
+  })
+}

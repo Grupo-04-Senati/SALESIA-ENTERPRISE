@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertTriangle, RotateCcw, Zap } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Switch from '@/components/ui/Switch'
+import Tabs from '@/components/ui/Tabs'
 import { Input } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
@@ -24,7 +25,8 @@ import {
  * Desde aquí se diseña el comportamiento automático del sistema: cada regla
  * se activa o se desactiva, y sus umbrales se ajustan. El cambio aplica de
  * inmediato en todos los módulos (Ventas, Inventario, Clientes, Productos,
- * Analítica, Probabilidad) sin tocar el código.
+ * Analítica, Probabilidad) sin tocar el código. Las reglas se separan por
+ * módulo en pestañas.
  *
  * TODO(Fase 05): el backend evaluará las mismas reglas; el frontend las
  * configura y las muestra (docs/06_reglas.md).
@@ -39,12 +41,20 @@ const MODULE_BADGE: Record<RuleModule, 'primary' | 'info' | 'success' | 'warning
   Probabilidad: 'neutral',
 }
 
+const TAB_ITEMS = [
+  { id: 'todas', label: 'Todas' },
+  ...RULE_MODULES.map((module) => ({ id: module, label: module })),
+]
+
 export default function AutomationPage() {
   const toast = useToast()
   const version = useDataVersion()
+  const [tab, setTab] = useState('todas')
 
   const rules = useMemo(() => getRules(), [version])
   const activas = rules.filter((rule) => rule.enabled).length
+  // Módulos visibles según la pestaña seleccionada.
+  const modulosVisibles = RULE_MODULES.filter((module) => tab === 'todas' || tab === module)
 
   // Efecto actual de las reglas configurables sobre los datos reales.
   const efecto = useMemo(() => {
@@ -136,8 +146,10 @@ export default function AutomationPage() {
         </div>
       </div>
 
+      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="automatizaciones" />
+
       {/* Reglas por módulo */}
-      {RULE_MODULES.map((module) => {
+      {modulosVisibles.map((module) => {
         const delModulo = rules.filter((rule) => rule.module === module)
         if (delModulo.length === 0) return null
         return (

@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Palette, RotateCcw, Save, Server, UserCog, Users, Database } from 'lucide-react'
+import { Palette, RotateCcw, Save, Server, UserCog, UserPlus, Users, Database } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
+import Modal from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/form'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
+import { EmptyState } from '@/components/feedback/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
-import { ROLES, listManagedUsers, updateProfileName } from '@/modules/auth/services/authService'
-import type { ManagedUser } from '@/modules/auth/services/authService'
+import {
+  ROLES,
+  createManagedUser,
+  listManagedUsers,
+  updateProfileName,
+} from '@/modules/auth/services/authService'
+import type { CreateUserInput, ManagedUser } from '@/modules/auth/services/authService'
+import type { Role } from '@/types/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { getState } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
@@ -17,8 +25,8 @@ import { API_BASE } from '@/services/api'
 
 /**
  * Configuración del sistema (RF-02): secciones separadas en pestañas —
- * Perfil, Parámetros, Usuarios y Sistema (paleta, datos y estado de la
- * integración con la API).
+ * Perfil, Parámetros, Usuarios y roles (alta de usuarios vía POST /users)
+ * y Sistema (paleta, datos y estado de la integración con la API).
  */
 
 const TAB_ITEMS = [
@@ -27,6 +35,13 @@ const TAB_ITEMS = [
   { id: 'usuarios', label: 'Usuarios y roles' },
   { id: 'sistema', label: 'Sistema' },
 ]
+
+const EMPTY_USER_FORM: CreateUserInput = {
+  full_name: '',
+  email: '',
+  password: '',
+  role: 'Vendedor',
+}
 
 const PALETTE = [
   { token: 'primary', hex: '#1E3A8A', uso: 'Azul corporativo' },
@@ -62,17 +77,38 @@ export default function SettingsPage() {
   const { user } = useAuth()
 
   const [users, setUsers] = useState<ManagedUser[]>([])
+  const [usersError, setUsersError] = useState<string | null>(null)
   const [name, setName] = useState(user?.name ?? '')
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [savingProfile, setSavingProfile] = useState(false)
   const [apiStatus, setApiStatus] = useState<'checking' | 'up' | 'down'>('checking')
   const [tab, setTab] = useState('perfil')
 
-  useEffect(() => {
+  // Alta de usuarios (POST /users, solo Admin).
+  const [userModalOpen, setUserModalOpen] = useState(false)
+  const [userForm, setUserForm] = useState(EMPTY_USER_FORM)
+  const [userFormError, setUserFormError] = useState<string | null>(null)
+  const [creatingUser, setCreatingUser] = useState(false)
+
+  const loadUsers = () => {
     // GET /api/v1/users (solo Admin).
     listManagedUsers()
-      .then(setUsers)
-      .catch(() => setUsers([]))
+      .then((items) => {
+        setUsers(items)
+        setUsersError(null)
+      })
+      .catch((reason: unknown) => {
+        setUsers([])
+        setUsersError(
+          reason instanceof Error
+            ? `No se pudo cargar el listado: ${reason.message}`
+            : 'No se pudo cargar el listado de usuarios.',
+        )
+      })
+  }
+
+  useEffect(() => {
+    loadUsers()
   }, [])
 
   useEffect(() => {
@@ -108,6 +144,42 @@ export default function SettingsPage() {
     )
   }
 
+  const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const fullName = userForm.full_name.trim()
+    const email = userForm.email.trim().toLowerCase()
+    if (fullName.length < 2) {
+      setUserFormError('El nombre completo debe tener al menos 2 caracteres.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setUserFormError('Ingresa un correo electrónico válido.')
+      return
+    }
+    if (userForm.password.length < 6) {
+      setUserFormError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    setUserFormError(null)
+    setCreatingUser(true)
+    try {
+      const created = await createManagedUser({
+        full_name: fullName,
+        email,
+        password: userForm.password,
+        role: userForm.role,
+      })
+      toast.success('Usuario creado', `${created.name} ya puede iniciar sesión con ${created.email}.`)
+      setUserModalOpen(false)
+      setUserForm(EMPTY_USER_FORM)
+      loadUsers()
+    } catch (reason) {
+      setUserFormError(reason instanceof Error ? reason.message : 'No se pudo crear el usuario.')
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -138,7 +210,7 @@ export default function SettingsPage() {
           <div className="sm:col-span-2">
             <p className="text-body-sm text-gray-600">
               Rol actual: <Badge variant="primary">{user?.role ?? 'Admin'}</Badge>{' '}
-              <span className="text-caption text-gray-500">(los roles se gestionan en Fase 13 · RF-02)</span>
+              <span className="text-caption text-gray-500">(se crean en la pestaña «Usuarios y roles» · RF-02)</span>
             </p>
           </div>
           <div className="sm:col-span-2">
@@ -196,28 +268,58 @@ export default function SettingsPage() {
       {/* Usuarios y roles */}
       <TabPanel tabId="usuarios" active={tab === 'usuarios'}>
       <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users aria-hidden="true" className="h-5 w-5 text-primary" />
-          <h2 className="text-h3 text-gray-800">Usuarios y roles</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Users aria-hidden="true" className="h-5 w-5 text-primary" />
+            <h2 className="text-h3 text-gray-800">Usuarios y roles</h2>
+          </div>
+          <Button
+            onClick={() => {
+              setUserForm(EMPTY_USER_FORM)
+              setUserFormError(null)
+              setUserModalOpen(true)
+            }}
+          >
+            <UserPlus aria-hidden="true" className="h-4 w-4" />
+            Nuevo usuario
+          </Button>
         </div>
-        <DataTable headers={['Usuario', 'Correo', 'Rol', 'Estado']}>
-          {users.map((managed) => (
-            <TableRow key={managed.id}>
-              <TableCell className="font-medium text-gray-900">{managed.name}</TableCell>
-              <TableCell className="text-gray-600">{managed.email}</TableCell>
-              <TableCell>
-                <Badge variant="primary">{managed.role}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={managed.status === 'active' ? 'success' : 'neutral'}>
-                  {managed.status === 'active' ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </DataTable>
+
+        {usersError ? (
+          <div className="card">
+            <EmptyState
+              title="Sin acceso al listado"
+              description={usersError}
+            />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="card">
+            <EmptyState
+              title="Sin usuarios"
+              description="Aún no hay usuarios en la lista. Crea el primero con el botón «Nuevo usuario»."
+            />
+          </div>
+        ) : (
+          <DataTable headers={['Usuario', 'Correo', 'Rol', 'Estado']}>
+            {users.map((managed) => (
+              <TableRow key={managed.id}>
+                <TableCell className="font-medium text-gray-900">{managed.name}</TableCell>
+                <TableCell className="text-gray-600">{managed.email}</TableCell>
+                <TableCell>
+                  <Badge variant="primary">{managed.role}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={managed.status === 'active' ? 'success' : 'neutral'}>
+                    {managed.status === 'active' ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </DataTable>
+        )}
         <p className="text-caption text-gray-500">
-          Roles disponibles: {ROLES.join(' · ')} — la gestión completa de usuarios llega con la Fase 13.
+          Roles disponibles: {ROLES.join(' · ')} — la contraseña inicial la defines al crear el
+          usuario y él podrá cambiarla después.
         </p>
       </section>
       </TabPanel>
@@ -323,6 +425,74 @@ export default function SettingsPage() {
       </section>
       </div>
       </TabPanel>
+
+      {/* Alta de usuarios (POST /users · RF-02) */}
+      <Modal
+        open={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        title="Nuevo usuario"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setUserModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="user-form" loading={creatingUser}>
+              <UserPlus aria-hidden="true" className="h-4 w-4" />
+              Crear usuario
+            </Button>
+          </>
+        }
+      >
+        <form id="user-form" onSubmit={handleCreateUser} className="space-y-4">
+          <Input
+            label="Nombre completo"
+            required
+            minLength={2}
+            maxLength={150}
+            value={userForm.full_name}
+            onChange={(event) => setUserForm({ ...userForm, full_name: event.target.value })}
+            placeholder="Ej. Ana Torres"
+          />
+          <Input
+            label="Correo electrónico"
+            type="email"
+            required
+            autoComplete="off"
+            value={userForm.email}
+            onChange={(event) => setUserForm({ ...userForm, email: event.target.value })}
+            placeholder="ana.torres@salesia.com"
+            hint="Será su usuario de acceso"
+          />
+          <Input
+            label="Contraseña inicial"
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={userForm.password}
+            onChange={(event) => setUserForm({ ...userForm, password: event.target.value })}
+            hint="Mínimo 6 caracteres; él podrá cambiarla después"
+          />
+          <Select
+            label="Rol"
+            required
+            value={userForm.role}
+            onChange={(event) => setUserForm({ ...userForm, role: event.target.value as Role })}
+            hint="Define los permisos del usuario en el sistema"
+          >
+            {ROLES.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </Select>
+          {userFormError && (
+            <p role="alert" className="rounded-md bg-error/10 px-3 py-2 text-caption text-error">
+              {userFormError}
+            </p>
+          )}
+        </form>
+      </Modal>
     </div>
   )
 }
