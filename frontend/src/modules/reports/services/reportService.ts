@@ -99,16 +99,17 @@ export async function generateReport(type: ReportType): Promise<Report> {
     const kpis = getKpis({ months: 12, seller: '', category: '' })
     const dataset = getTicketDataset({ months: 12, seller: '', category: '' })
     const compare = compareMeanMedian(dataset)
+    const sinVentas = dataset.length === 0
     const rows: ReportRow[] = [
       { indicador: 'Ingresos del periodo', valor: kpis.ingresos, unidad: 'S/' },
       { indicador: 'Transacciones', valor: kpis.transacciones, unidad: 'uds' },
       { indicador: 'Ticket promedio', valor: kpis.ticketPromedio, unidad: 'S/' },
-      { indicador: 'Media de tickets', valor: round2(compare.mean), unidad: 'S/' },
-      { indicador: 'Mediana de tickets', valor: round2(compare.median), unidad: 'S/' },
-      { indicador: 'Diferencia media − mediana', valor: compare.difference, unidad: 'S/' },
+      { indicador: 'Media de tickets', valor: sinVentas ? '—' : round2(compare.mean), unidad: 'S/' },
+      { indicador: 'Mediana de tickets', valor: sinVentas ? '—' : round2(compare.median), unidad: 'S/' },
+      { indicador: 'Diferencia media − mediana', valor: sinVentas ? '—' : compare.difference, unidad: 'S/' },
       { indicador: 'Variación mensual', valor: kpis.variacionMensual, unidad: '%' },
-      { indicador: 'Mínimo del ticket', valor: Math.min(...dataset), unidad: 'S/' },
-      { indicador: 'Máximo del ticket', valor: Math.max(...dataset), unidad: 'S/' },
+      { indicador: 'Mínimo del ticket', valor: sinVentas ? '—' : Math.min(...dataset), unidad: 'S/' },
+      { indicador: 'Máximo del ticket', valor: sinVentas ? '—' : Math.max(...dataset), unidad: 'S/' },
     ]
     return {
       type,
@@ -123,7 +124,12 @@ export async function generateReport(type: ReportType): Promise<Report> {
       rows,
       summary: [
         { label: 'Observaciones analizadas', value: formatNumber(dataset.length) },
-        { label: 'Interpretación', value: compare.interpretation },
+        {
+          label: 'Interpretación',
+          value: sinVentas
+            ? 'Sin ventas registradas en el periodo: no hay tickets que analizar.'
+            : compare.interpretation,
+        },
         { label: 'Meses incluidos', value: '12' },
       ],
     }

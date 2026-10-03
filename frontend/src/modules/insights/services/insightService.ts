@@ -61,26 +61,28 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
         variacion_pct: change,
         umbral_pct: margen,
       },
-      analysis_id: 41,
-      dataset_id: 5,
+      analysis_id: null,
+      dataset_id: null,
     })
   }
 
-  // REG-02 · Ticket promedio del periodo
-  insights.push({
-    title: 'Ticket promedio del periodo',
-    severity: 'INFO',
-    rule: 'REG-02_TICKET_PROMEDIO',
-    message: `El ticket promedio es S/ ${kpis.ticketPromedio} sobre ${kpis.transacciones} transacciones, con ingresos de S/ ${kpis.ingresos}.`,
-    evidence: {
-      ticket_promedio: kpis.ticketPromedio,
-      transacciones: kpis.transacciones,
-      ingresos: kpis.ingresos,
-      variacion_mensual_pct: kpis.variacionMensual,
-    },
-    analysis_id: 42,
-    dataset_id: 5,
-  })
+  // REG-02 · Ticket promedio del periodo (solo con ventas reales)
+  if (kpis.transacciones > 0) {
+    insights.push({
+      title: 'Ticket promedio del periodo',
+      severity: 'INFO',
+      rule: 'REG-02_TICKET_PROMEDIO',
+      message: `El ticket promedio es S/ ${kpis.ticketPromedio} sobre ${kpis.transacciones} transacciones, con ingresos de S/ ${kpis.ingresos}.`,
+      evidence: {
+        ticket_promedio: kpis.ticketPromedio,
+        transacciones: kpis.transacciones,
+        ingresos: kpis.ingresos,
+        variacion_mensual_pct: kpis.variacionMensual,
+      },
+      analysis_id: null,
+      dataset_id: null,
+    })
+  }
 
   // REG-03 · Concentración de ventas por vendedor (umbral configurable)
   const topSeller = bySeller[0]
@@ -99,8 +101,8 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
         participación_pct: share,
         umbral_pct: umbral,
       },
-      analysis_id: 43,
-      dataset_id: 6,
+      analysis_id: null,
+      dataset_id: null,
     })
   }
 
@@ -119,56 +121,60 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
         ingresos: topCategory.ingresos,
         participación_pct: share,
       },
-      analysis_id: 44,
-      dataset_id: 7,
+      analysis_id: null,
+      dataset_id: null,
     })
   }
 
-  // REG-05 · Asimetría de la distribución (cola derecha)
-  insights.push({
-    title:
-      Math.abs(compare.differencePct) < 5
-        ? 'Distribución simétrica de tickets'
-        : compare.difference > 0
-          ? 'Cola derecha: pocas ventas elevan el promedio'
-          : 'Cola izquierda: muchas ventas pequeñas bajan el promedio',
-    severity: Math.abs(compare.differencePct) < 5 ? 'INFO' : 'WARNING',
-    rule: 'REG-05_ASIMETRIA_DISTRIBUCION',
-    message: `${compare.interpretation} Media S/ ${round2(compare.mean)} vs. mediana S/ ${round2(compare.median)} (${compare.differencePct}%).`,
-    evidence: {
-      media: round2(compare.mean),
-      mediana: round2(compare.median),
-      diferencia: compare.difference,
-      diferencia_pct: compare.differencePct,
-    },
-    analysis_id: 45,
-    dataset_id: 5,
-  })
+  // REG-05 · Asimetría de la distribución (requiere tickets reales)
+  if (getTicketDataset(filters).length >= 2) {
+    insights.push({
+      title:
+        Math.abs(compare.differencePct) < 5
+          ? 'Distribución simétrica de tickets'
+          : compare.difference > 0
+            ? 'Cola derecha: pocas ventas elevan el promedio'
+            : 'Cola izquierda: muchas ventas pequeñas bajan el promedio',
+      severity: Math.abs(compare.differencePct) < 5 ? 'INFO' : 'WARNING',
+      rule: 'REG-05_ASIMETRIA_DISTRIBUCION',
+      message: `${compare.interpretation} Media S/ ${round2(compare.mean)} vs. mediana S/ ${round2(compare.median)} (${compare.differencePct}%).`,
+      evidence: {
+        media: round2(compare.mean),
+        mediana: round2(compare.median),
+        diferencia: compare.difference,
+        diferencia_pct: compare.differencePct,
+      },
+      analysis_id: null,
+      dataset_id: null,
+    })
+  }
 
-  // REG-06 · Cobranza pendiente
+  // REG-06 · Cobranza pendiente (solo con ventas registradas)
   const pending = sales.filter((sale) => sale.status === 'pending' || sale.status === 'partial')
   const pendingAmount = pending.reduce((total, sale) => total + sale.balance, 0)
-  insights.push({
-    title:
-      pending.length === 0
-        ? 'Sin ventas pendientes de cobro'
-        : `${pending.length} venta(s) con saldo pendiente`,
-    severity: pending.length === 0 ? 'SUCCESS' : pendingAmount > 200 ? 'WARNING' : 'INFO',
-    rule: 'REG-06_COBRANZA_PENDIENTE',
-    message:
-      pending.length === 0
-        ? 'Todas las ventas registradas están pagadas.'
-        : `El saldo por cobrar suma S/ ${round2(pendingAmount)} en ${pending.length} venta(s).`,
-    evidence: {
-      ventas_pendientes: pending.length,
-      saldo_por_cobrar: round2(pendingAmount),
-    },
-    analysis_id: null,
-    dataset_id: 8,
-  })
+  if (sales.length > 0) {
+    insights.push({
+      title:
+        pending.length === 0
+          ? 'Sin ventas pendientes de cobro'
+          : `${pending.length} venta(s) con saldo pendiente`,
+      severity: pending.length === 0 ? 'SUCCESS' : pendingAmount > 200 ? 'WARNING' : 'INFO',
+      rule: 'REG-06_COBRANZA_PENDIENTE',
+      message:
+        pending.length === 0
+          ? 'Todas las ventas registradas están pagadas.'
+          : `El saldo por cobrar suma S/ ${round2(pendingAmount)} en ${pending.length} venta(s).`,
+      evidence: {
+        ventas_pendientes: pending.length,
+        saldo_por_cobrar: round2(pendingAmount),
+      },
+      analysis_id: null,
+      dataset_id: null,
+    })
+  }
 
-  // REG-07 · Stock bajo o agotado (regla configurable)
-  if (ruleEnabled('REG-07_STOCK_INSIGHT')) {
+  // REG-07 · Stock bajo o agotado (regla configurable; requiere catálogo)
+  if (ruleEnabled('REG-07_STOCK_INSIGHT') && stock.length > 0) {
     const alerts = stock.filter((row) => isLowStock(row))
     const outOfStock = stock.filter((row) => row.current_stock === 0)
     insights.push({
@@ -185,7 +191,7 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
         skus: alerts.slice(0, 5).map((row) => row.sku).join(', '),
       },
       analysis_id: null,
-      dataset_id: 9,
+      dataset_id: null,
     })
   }
 
@@ -202,17 +208,30 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
         ingresos: topProduct.ingresos,
         unidades: topProduct.unidades,
       },
-      analysis_id: 46,
-      dataset_id: 10,
+      analysis_id: null,
+      dataset_id: null,
+    })
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      title: 'Sin datos suficientes para analizar',
+      severity: 'INFO',
+      rule: 'REG-02_TICKET_PROMEDIO',
+      message:
+        'Todavía no hay ventas ni productos registrados. En cuanto registres actividad, las reglas generarán observaciones con evidencia numérica.',
+      evidence: {},
+      analysis_id: null,
+      dataset_id: null,
     })
   }
 
   const now = Date.now()
-  return insights.map((insight, index) => ({
+  return insights.map((insight) => ({
     ...insight,
     id: ++seedId,
-    created_at: new Date(now - index * 3600_000).toISOString(),
-    read: index > 2,
+    created_at: new Date(now).toISOString(),
+    read: false,
   }))
 }
 

@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import { Input, Select } from '@/components/ui/form'
+import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
 import { ROLES, listManagedUsers, updateProfileName } from '@/modules/auth/services/authService'
@@ -15,10 +16,17 @@ import { hydrateStore } from '@/services/hydrate'
 import { API_BASE } from '@/services/api'
 
 /**
- * Configuración del sistema (RF-02): perfil del usuario (PUT /users/{id}),
- * parámetros de operación del navegador, usuarios y roles, paleta
- * corporativa y estado de la integración con la API.
+ * Configuración del sistema (RF-02): secciones separadas en pestañas —
+ * Perfil, Parámetros, Usuarios y Sistema (paleta, datos y estado de la
+ * integración con la API).
  */
+
+const TAB_ITEMS = [
+  { id: 'perfil', label: 'Mi perfil' },
+  { id: 'parametros', label: 'Parámetros' },
+  { id: 'usuarios', label: 'Usuarios y roles' },
+  { id: 'sistema', label: 'Sistema' },
+]
 
 const PALETTE = [
   { token: 'primary', hex: '#1E3A8A', uso: 'Azul corporativo' },
@@ -58,6 +66,7 @@ export default function SettingsPage() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [savingProfile, setSavingProfile] = useState(false)
   const [apiStatus, setApiStatus] = useState<'checking' | 'up' | 'down'>('checking')
+  const [tab, setTab] = useState('perfil')
 
   useEffect(() => {
     // GET /api/v1/users (solo Admin).
@@ -108,7 +117,10 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="configuracion" />
+
       {/* Perfil */}
+      <TabPanel tabId="perfil" active={tab === 'perfil'}>
       <section className="card space-y-4">
         <div className="flex items-center gap-2">
           <UserCog aria-hidden="true" className="h-5 w-5 text-primary" />
@@ -137,8 +149,10 @@ export default function SettingsPage() {
           </div>
         </form>
       </section>
+      </TabPanel>
 
       {/* Parámetros */}
+      <TabPanel tabId="parametros" active={tab === 'parametros'}>
       <section className="card space-y-4">
         <h2 className="text-h4 text-gray-800">Parámetros de operación</h2>
         <form onSubmit={handleParams} className="grid gap-4 sm:grid-cols-3">
@@ -177,8 +191,10 @@ export default function SettingsPage() {
           </div>
         </form>
       </section>
+      </TabPanel>
 
       {/* Usuarios y roles */}
+      <TabPanel tabId="usuarios" active={tab === 'usuarios'}>
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Users aria-hidden="true" className="h-5 w-5 text-primary" />
@@ -204,7 +220,11 @@ export default function SettingsPage() {
           Roles disponibles: {ROLES.join(' · ')} — la gestión completa de usuarios llega con la Fase 13.
         </p>
       </section>
+      </TabPanel>
 
+      {/* Sistema: paleta, datos y estado */}
+      <TabPanel tabId="sistema" active={tab === 'sistema'}>
+      <div className="space-y-6">
       {/* Paleta corporativa */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
@@ -301,6 +321,8 @@ export default function SettingsPage() {
           </div>
         </dl>
       </section>
+      </div>
+      </TabPanel>
     </div>
   )
 }

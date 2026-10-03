@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
 import { mean } from '../services/statisticsService'
 import MediaChart from '@/components/charts/MediaChart'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 /**
  * Panel de la media aritmética (Fase 09 · RF-11).
@@ -12,6 +14,23 @@ interface MeanPanelProps {
 }
 
 export default function MeanPanel({ values }: MeanPanelProps) {
+  if (values.length === 0) {
+    return (
+      <div className="card">
+        <h3 className="text-h4 text-gray-800">Media aritmética</h3>
+        <EmptyState
+          title="Sin ventas en el periodo"
+          description="La media se calcula con los tickets reales. Registra ventas para verla."
+          action={
+            <Link to="/ventas" className="btn-primary">
+              Registrar venta
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
   const value = mean(values)
 
   return (

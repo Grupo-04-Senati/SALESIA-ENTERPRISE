@@ -175,43 +175,67 @@ export default function ReportsPage() {
             </dl>
           </div>
 
-          {report.type === 'ventas' && (
-            <div className="card no-print">
-              <h3 className="text-h4 text-gray-800">Evolución mensual (referencia)</h3>
-              <div className="mt-4 h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getMonthlySummary()} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                    <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
-                    <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
-                    <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }} />
-                    <Bar dataKey="ingresos" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+          {report.type === 'ventas' &&
+            (getMonthlySummary().every((point) => point.ingresos === 0) ? (
+              <div className="card no-print">
+                <h3 className="text-h4 text-gray-800">Evolución mensual (referencia)</h3>
+                <EmptyState
+                  title="Sin ventas en el periodo"
+                  description="La evolución mensual se dibujará cuando haya ventas registradas."
+                />
               </div>
-            </div>
-          )}
-
-          <DataTable headers={report.columns.map((column) => column.label)}>
-            {report.rows.map((row, index) => (
-              <TableRow key={index}>
-                {report.columns.map((column) => {
-                  const value = row[column.key]
-                  return (
-                    <TableCell key={column.key} className={column.align === 'right' ? 'text-right' : undefined}>
-                      {typeof value === 'number'
-                        ? column.key.includes('total') || column.key.includes('ingreso') || column.key.includes('costo') || column.key.includes('precio') || column.key.includes('ticket') || column.key.includes('impuesto') || column.key.includes('descuento') || column.key.includes('saldo')
-                          ? formatCurrency(value)
-                          : column.key.includes('media') || column.key.includes('mediana') || column.key.includes('diferencia') || column.key.includes('minimo') || column.key.includes('maximo') || column.key === 'valor'
-                            ? formatCurrency(value)
-                            : formatNumber(value)
-                        : value}
-                    </TableCell>
-                  )
-                })}
-              </TableRow>
+            ) : (
+              <div className="card no-print">
+                <h3 className="text-h4 text-gray-800">Evolución mensual (referencia)</h3>
+                <div className="mt-4 h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getMonthlySummary()} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                      <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                      <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                      <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }} />
+                      <Bar dataKey="ingresos" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             ))}
-          </DataTable>
+
+          {report.rows.length === 0 ? (
+            <div className="card no-print">
+              <EmptyState
+                title="Sin registros"
+                description="Este reporte no tiene registros porque todavía no hay datos en el sistema."
+                action={
+                  <Button onClick={handleGenerate}>
+                    <RefreshCw aria-hidden="true" className="h-4 w-4" />
+                    Actualizar reporte
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <DataTable headers={report.columns.map((column) => column.label)}>
+              {report.rows.map((row, index) => (
+                <TableRow key={index}>
+                  {report.columns.map((column) => {
+                    const value = row[column.key]
+                    return (
+                      <TableCell key={column.key} className={column.align === 'right' ? 'text-right' : undefined}>
+                        {typeof value === 'number'
+                          ? column.key.includes('total') || column.key.includes('ingreso') || column.key.includes('costo') || column.key.includes('precio') || column.key.includes('ticket') || column.key.includes('impuesto') || column.key.includes('descuento') || column.key.includes('saldo')
+                            ? formatCurrency(value)
+                            : column.key.includes('media') || column.key.includes('mediana') || column.key.includes('diferencia') || column.key.includes('minimo') || column.key.includes('maximo') || column.key === 'valor'
+                              ? formatCurrency(value)
+                              : formatNumber(value)
+                          : value}
+                      </TableCell>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </DataTable>
+          )}
 
           <p className="text-caption text-gray-400">
             {report.rows.length} registros · SalesIA Enterprise · {formatDateTime(report.generated_at)}

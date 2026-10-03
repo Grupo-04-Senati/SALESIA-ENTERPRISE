@@ -240,16 +240,12 @@ export function getDistribution(filters: Partial<AnalyticsFilters> = {}): Distri
 
 /**
  * Dataset de tickets de venta para media, mediana y Bayes.
- * Con menos de 2 ventas se devuelve un conjunto de apoyo para que la vista
- * siga siendo utilizable (el módulo Probabilidad avisa cuando no hay datos
- * suficientes · RN-40).
+ * Devuelve solo tickets reales: con menos de 2 ventas el conjunto está
+ * vacío y las vistas muestran su estado vacío (el módulo Probabilidad
+ * avisa con la regla RN-40 cuando no hay datos suficientes).
  */
 export function getTicketDataset(filters: Partial<AnalyticsFilters> = {}): number[] {
-  const tickets = valid(selectSales(filters)).map((sale) => sale.total)
-  if (tickets.length >= 2) return tickets
-  const kpis = getKpis(filters)
-  const base = kpis.ticketPromedio > 0 ? kpis.ticketPromedio : 120
-  return [0.85, 0.95, 1, 1.1, 1.25].map((factor) => round2(base * factor))
+  return valid(selectSales(filters)).map((sale) => sale.total)
 }
 
 /* ------------------------------------------------------------------
@@ -275,6 +271,15 @@ export interface CompareResult {
 }
 
 export function compareMeanMedian(values: number[]): CompareResult {
+  if (values.length === 0) {
+    return {
+      mean: 0,
+      median: 0,
+      difference: 0,
+      differencePct: 0,
+      interpretation: 'Sin ventas suficientes en el periodo: todavía no hay tickets que comparar.',
+    }
+  }
   const meanValue = mean(values)
   const medianValue = median(values)
   const difference = round2(meanValue - medianValue)
@@ -634,12 +639,12 @@ export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Arr
   const quantitative = (name: string, values: number[]) => ({
     name,
     type: 'quantitative' as const,
-    subtype: values.every((value) => Number.isInteger(value)) ? 'discreta' : 'continua',
+    subtype: values.length === 0 ? 'sin datos' : values.every((value) => Number.isInteger(value)) ? 'discreta' : 'continua',
     count: values.length,
-    mean: round2(mean(values)),
-    median: round2(median(values)),
-    min: Math.min(...values),
-    max: Math.max(...values),
+    mean: values.length > 0 ? round2(mean(values)) : 0,
+    median: values.length > 0 ? round2(median(values)) : 0,
+    min: values.length > 0 ? Math.min(...values) : 0,
+    max: values.length > 0 ? Math.max(...values) : 0,
   })
   const qualitative = (name: string, values: string[]) => ({
     name,

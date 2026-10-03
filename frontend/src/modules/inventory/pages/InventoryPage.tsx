@@ -4,6 +4,7 @@ import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tabl
 import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
+import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import { Checkbox, Input } from '@/components/ui/form'
 import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -19,12 +20,18 @@ import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 
 /**
- * Página de Inventario (Fase 08 · RF-08): existencias, alertas de
- * stock bajo, kardex de movimientos y registro de entradas/salidas.
+ * Página de Inventario (Fase 08 · RF-08): dos secciones en pestañas —
+ * Existencias (stock, alertas) y Movimientos (kardex) — con registro
+ * de entradas/salidas.
  * TODO(Fase 05): conectar con /api/v1/inventory.
  */
 
 const PAGE_SIZE = 10
+
+const TAB_ITEMS = [
+  { id: 'existencias', label: 'Existencias' },
+  { id: 'movimientos', label: 'Movimientos' },
+]
 
 export default function InventoryPage() {
   const toast = useToast()
@@ -39,6 +46,7 @@ export default function InventoryPage() {
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
+  const [tab, setTab] = useState('existencias')
   const version = useDataVersion()
 
   useEffect(() => {
@@ -118,22 +126,6 @@ export default function InventoryPage() {
         </Button>
       </div>
 
-      {/* Alertas */}
-      <div className="card flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <AlertTriangle aria-hidden="true" className="h-5 w-5 text-warning" />
-          <div>
-            <p className="text-body-sm font-semibold text-gray-900">
-              {alerts.length} producto{alerts.length === 1 ? '' : 's'} en alerta de stock
-            </p>
-            <p className="text-caption text-gray-500">
-              Alerta según el umbral configurado en Automatizaciones (regla ALERTA_STOCK).
-            </p>
-          </div>
-        </div>
-        <Checkbox label="Solo productos con alerta" checked={onlyAlerts} onChange={(event) => setOnlyAlerts(event.target.checked)} />
-      </div>
-
       {error ? (
         <div className="card">
           <ErrorState
@@ -147,113 +139,143 @@ export default function InventoryPage() {
         </div>
       ) : (
         <>
-          {/* Existencias */}
-          <section className="space-y-4">
-            <h2>Existencias actuales</h2>
-            <Input
-              type="search"
-              aria-label="Buscar productos en inventario"
-              placeholder="Buscar por nombre o SKU…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
+          <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="inventario" />
 
-            {loading && stock.length === 0 ? (
-              <div className="card">
-                <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
-                  <TableStateRow colSpan={5}>
-                    <span className="inline-flex items-center gap-2">
-                      <Spinner size={16} className="text-loading" />
-                      Cargando inventario…
-                    </span>
-                  </TableStateRow>
-                </DataTable>
+          {/* Existencias */}
+          <TabPanel tabId="existencias" active={tab === 'existencias'}>
+            <div className="space-y-4">
+              {/* Alertas */}
+              <div className="card flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle aria-hidden="true" className="h-5 w-5 text-warning" />
+                  <div>
+                    <p className="text-body-sm font-semibold text-gray-900">
+                      {alerts.length} producto{alerts.length === 1 ? '' : 's'} en alerta de stock
+                    </p>
+                    <p className="text-caption text-gray-500">
+                      Alerta según el umbral configurado en Automatizaciones (regla ALERTA_STOCK).
+                    </p>
+                  </div>
+                </div>
+                <Checkbox label="Solo productos con alerta" checked={onlyAlerts} onChange={(event) => setOnlyAlerts(event.target.checked)} />
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="card">
-                <EmptyState title="Sin existencias" description="No hay productos que coincidan con el filtro." />
-              </div>
-            ) : (
-              <>
-                <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
-                  {visible.map((row) => {
-                    const isEmpty = row.current_stock === 0
-                    const isLow = !isEmpty && isLowStock(row)
+
+              <Input
+                type="search"
+                aria-label="Buscar productos en inventario"
+                placeholder="Buscar por nombre o SKU…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+
+              {loading && stock.length === 0 ? (
+                <div className="card">
+                  <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                    <TableStateRow colSpan={5}>
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size={16} className="text-loading" />
+                        Cargando inventario…
+                      </span>
+                    </TableStateRow>
+                  </DataTable>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="card">
+                  <EmptyState title="Sin existencias" description="No hay productos que coincidan con el filtro." />
+                </div>
+              ) : (
+                <>
+                  <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                    {visible.map((row) => {
+                      const isEmpty = row.current_stock === 0
+                      const isLow = !isEmpty && isLowStock(row)
+                      return (
+                        <TableRow key={row.product_id}>
+                          <TableCell>
+                            <div className="font-medium text-gray-900">{row.name}</div>
+                            <div className="font-mono text-caption text-gray-500">{row.sku}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="primary">{row.category}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {row.current_stock} {row.unit}
+                          </TableCell>
+                          <TableCell className="text-gray-500">{row.min_stock}</TableCell>
+                          <TableCell>
+                            {isEmpty ? (
+                              <Badge variant="error">Sin stock</Badge>
+                            ) : isLow ? (
+                              <Badge variant="warning">Stock bajo</Badge>
+                            ) : (
+                              <Badge variant="success">Disponible</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </DataTable>
+                  <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} total={filtered.length} pageSize={PAGE_SIZE} />
+                </>
+              )}
+            </div>
+          </TabPanel>
+
+          {/* Kardex */}
+          <TabPanel tabId="movimientos" active={tab === 'movimientos'}>
+            <div className="space-y-4">
+              <h2>Movimientos recientes</h2>
+              {movements.length === 0 ? (
+                <div className="card">
+                  <EmptyState
+                    title="Sin movimientos"
+                    description="Aún no hay entradas ni salidas registradas."
+                    action={
+                      <Button onClick={() => setFormOpen(true)}>
+                        <Plus aria-hidden="true" className="h-4 w-4" />
+                        Nuevo movimiento
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                <DataTable headers={['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock resultante', 'Motivo', 'Usuario']}>
+                  {movements.slice(0, 8).map((movement) => {
+                    const isIn = movement.type === 'IN' || movement.type === 'RETURN'
+                    const Icon = isIn ? TrendingUp : TrendingDown
                     return (
-                      <TableRow key={row.product_id}>
+                      <TableRow key={movement.id}>
+                        <TableCell>{formatDateTime(movement.created_at)}</TableCell>
+                        <TableCell className="font-mono text-caption">{movement.sku}</TableCell>
                         <TableCell>
-                          <div className="font-medium text-gray-900">{row.name}</div>
-                          <div className="font-mono text-caption text-gray-500">{row.sku}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="primary">{row.category}</Badge>
+                          <span
+                            className={`inline-flex items-center gap-1 text-caption font-medium ${isIn ? 'text-success' : 'text-error'}`}
+                          >
+                            <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                            {MOVEMENT_LABELS[movement.type]}
+                          </span>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {row.current_stock} {row.unit}
+                          {isIn ? '+' : '−'}
+                          {movement.quantity}
                         </TableCell>
-                        <TableCell className="text-gray-500">{row.min_stock}</TableCell>
-                        <TableCell>
-                          {isEmpty ? (
-                            <Badge variant="error">Sin stock</Badge>
-                          ) : isLow ? (
-                            <Badge variant="warning">Stock bajo</Badge>
-                          ) : (
-                            <Badge variant="success">Disponible</Badge>
-                          )}
-                        </TableCell>
+                        <TableCell>{movement.resulting_stock}</TableCell>
+                        <TableCell className="max-w-56 truncate text-gray-600">{movement.reason}</TableCell>
+                        <TableCell className="text-gray-600">{movement.user.name}</TableCell>
                       </TableRow>
                     )
                   })}
                 </DataTable>
-                <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} total={filtered.length} pageSize={PAGE_SIZE} />
-              </>
-            )}
-          </section>
+              )}
 
-          {/* Kardex */}
-          <section className="space-y-4">
-            <h2>Movimientos recientes</h2>
-            {movements.length === 0 ? (
-              <div className="card">
-                <EmptyState title="Sin movimientos" description="Aún no hay entradas ni salidas registradas." />
-              </div>
-            ) : (
-              <DataTable headers={['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock resultante', 'Motivo', 'Usuario']}>
-                {movements.slice(0, 8).map((movement) => {
-                  const isIn = movement.type === 'IN' || movement.type === 'RETURN'
-                  const Icon = isIn ? TrendingUp : TrendingDown
-                  return (
-                    <TableRow key={movement.id}>
-                      <TableCell>{formatDateTime(movement.created_at)}</TableCell>
-                      <TableCell className="font-mono text-caption">{movement.sku}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center gap-1 text-caption font-medium ${isIn ? 'text-success' : 'text-error'}`}
-                        >
-                          <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                          {MOVEMENT_LABELS[movement.type]}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {isIn ? '+' : '−'}
-                        {movement.quantity}
-                      </TableCell>
-                      <TableCell>{movement.resulting_stock}</TableCell>
-                      <TableCell className="max-w-56 truncate text-gray-600">{movement.reason}</TableCell>
-                      <TableCell className="text-gray-600">{movement.user.name}</TableCell>
-                    </TableRow>
-                  )
-                })}
-              </DataTable>
-            )}
-          </section>
+              {/* Trazabilidad de movimientos */}
+              <ProcessTraceList limit={3} title="Procesos ejecutados en Inventario" />
+            </div>
+          </TabPanel>
         </>
       )}
 
       <MovementForm open={formOpen} onClose={() => setFormOpen(false)} stock={stock} onSubmit={handleSubmit} />
-
-      {/* Trazabilidad de movimientos */}
-      <ProcessTraceList limit={3} title="Procesos ejecutados en Inventario" />
     </div>
   )
 }

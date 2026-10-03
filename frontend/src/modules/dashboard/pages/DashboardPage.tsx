@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowRight, DollarSign, Lightbulb, Percent, Receipt, ShoppingCart, TrendingUp, Users, Warehouse } from 'lucide-react'
 import KpiCard from '../components/KpiCard'
+import { EmptyState } from '@/components/feedback/EmptyState'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
 import { useStatistics } from '@/hooks/useStatistics'
@@ -37,6 +38,9 @@ export default function DashboardPage() {
   const { kpis, monthly, byProduct, compare } = useStatistics({ months: 12, seller: '', category: '' })
   const [totalClientes, setTotalClientes] = useState<number | null>(null)
   const [alertasStock, setAlertasStock] = useState<number | null>(null)
+
+  // Sin ventas reales no se dibujan gráficas: estado vacío (RF-09).
+  const sinVentas = kpis.transacciones === 0
 
   useEffect(() => {
     let cancelled = false
@@ -76,7 +80,11 @@ export default function DashboardPage() {
           label="Ticket promedio"
           value={formatCurrency(kpis.ticketPromedio)}
           icon={Receipt}
-          hint={`media S/ ${compare.mean.toFixed(2)} · mediana S/ ${compare.median.toFixed(2)}`}
+          hint={
+            sinVentas
+              ? 'sin ventas registradas todavía'
+              : `media S/ ${compare.mean.toFixed(2)} · mediana S/ ${compare.median.toFixed(2)}`
+          }
         />
         <KpiCard
           label="Clientes"
@@ -87,42 +95,56 @@ export default function DashboardPage() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-h4 text-gray-800">Evolución de ventas</h2>
-            <Link to="/analytics" className="inline-flex items-center gap-1 text-caption text-primary hover:underline">
-              Ver analytics <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthly} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" />
-                <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
-                <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatCurrency(Number(value))} />
-                <Line type="monotone" dataKey="ingresos" name="Ingresos" stroke="#06B6D4" strokeWidth={2} dot={{ fill: '#1E3A8A', r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
+      {sinVentas ? (
+        <div className="card">
+          <EmptyState
+            title="Sin ventas registradas"
+            description="El resumen de evolución y el ranking de productos aparecerán en cuanto registres la primera venta."
+            action={
+              <Link to="/ventas" className="btn-primary">
+                Registrar venta
+              </Link>
+            }
+          />
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <section className="card lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-h4 text-gray-800">Evolución de ventas</h2>
+              <Link to="/analytics" className="inline-flex items-center gap-1 text-caption text-primary hover:underline">
+                Ver analytics <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthly} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" />
+                  <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                  <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatCurrency(Number(value))} />
+                  <Line type="monotone" dataKey="ingresos" name="Ingresos" stroke="#06B6D4" strokeWidth={2} dot={{ fill: '#1E3A8A', r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
 
-        <section className="card">
-          <h2 className="text-h4 text-gray-800">Top productos</h2>
-          <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byProduct.slice(0, 5)} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 4 }}>
-                <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" horizontal={false} />
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatCurrency(Number(value))} />
-                <Bar dataKey="ingresos" fill="#1E3A8A" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      </div>
+          <section className="card">
+            <h2 className="text-h4 text-gray-800">Top productos</h2>
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byProduct.slice(0, 5)} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 4 }}>
+                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" horizontal={false} />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatCurrency(Number(value))} />
+                  <Bar dataKey="ingresos" fill="#1E3A8A" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Accesos rápidos */}
       <section className="space-y-4">
@@ -151,10 +173,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <TrendingUp aria-hidden="true" className="h-5 w-5 text-primary" />
           <div>
-            <p className="text-body-sm font-semibold text-gray-900">Frontend completo (Fase 06 · Fase 12)</p>
+            <p className="text-body-sm font-semibold text-gray-900">Conectado a la API real</p>
             <p className="text-caption text-gray-500">
-              Los datos mostrados provienen del servicio de analítica; en la Fase 05 los supplantará
-              la API real (FastAPI).
+              Los indicadores se calculan con tus ventas registradas en el backend (FastAPI +
+              Supabase).
             </p>
           </div>
         </div>

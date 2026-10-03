@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID, compareMeanMedian } from '../services/statisticsService'
+import { EmptyState } from '@/components/feedback/EmptyState'
 
 /**
  * Comparación media vs. mediana (Fase 09 · RF-13).
@@ -12,6 +14,23 @@ interface ComparePanelProps {
 }
 
 export default function ComparePanel({ values }: ComparePanelProps) {
+  if (values.length === 0) {
+    return (
+      <div className="card">
+        <h3 className="text-h4 text-gray-800">Media vs. mediana</h3>
+        <EmptyState
+          title="Sin ventas en el periodo"
+          description="La comparación se calcula con los tickets reales. Registra ventas para verla."
+          action={
+            <Link to="/ventas" className="btn-primary">
+              Registrar venta
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
   const result = compareMeanMedian(values)
   const data = [
     { name: 'Media', valor: Math.round(result.mean * 100) / 100 },
