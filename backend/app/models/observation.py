@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 
 
 class Observation(IDMixin, Base):
-    __tablename__ = 'observations'
-    __table_args__ = (Index('ix_observations_data_gin', 'data', postgresql_using='gin'),)
+    __tablename__ = 'observaciones'
+    __table_args__ = (Index('ix_observaciones_data_gin', 'data', postgresql_using='gin'),)
 
     dataset_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('datasets.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('conjuntos_datos.id', ondelete='CASCADE'), index=True
     )
     data: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(

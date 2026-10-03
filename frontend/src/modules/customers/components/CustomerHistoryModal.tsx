@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import type { Customer } from '@/types/customer'
 import type { SaleStatus } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import { getCustomerHistory } from '../services/customerService'
 import type { CustomerPurchase } from '../services/customerService'
@@ -79,7 +81,7 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
         <EmptyState title="Sin compras" description="Este cliente aún no tiene compras registradas." />
       ) : (
         <div className="space-y-4">
-          <Table headers={['Fecha', 'Venta', 'Total', 'Estado']}>
+          <DataTable headers={['Fecha', 'Venta', 'Total', 'Estado']}>
             {purchases.map((purchase) => {
               const status = STATUS_LABELS[purchase.status]
               return (
@@ -93,7 +95,7 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
                 </TableRow>
               )
             })}
-          </Table>
+          </DataTable>
 
           {customer && (
             <p className="text-right text-body-sm text-gray-600">

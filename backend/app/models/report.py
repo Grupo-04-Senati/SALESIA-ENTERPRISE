@@ -18,7 +18,7 @@ REPORT_TYPES = ('ventas', 'estadistico', 'productos', 'clientes', 'vendedores')
 
 
 class Report(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'reports'
+    __tablename__ = 'reportes'
     __table_args__ = (
         CheckConstraint(
             "report_type IN ('ventas','estadistico','productos','clientes','vendedores')",
@@ -33,5 +33,5 @@ class Report(IDMixin, TimestampMixin, Base):
     summary: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     file_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     generated_by: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True
     )

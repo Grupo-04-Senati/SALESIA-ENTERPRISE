@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { History, Pencil, Plus, Trash2 } from 'lucide-react'
-import Table, { TableRow, TableCell, TableStateRow } from '@/components/ui/Table'
-import Pagination from '@/components/ui/Pagination'
+import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
+import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/form'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/formatters'
 import {
@@ -206,14 +208,14 @@ export default function CustomersPage() {
         </div>
       ) : loading && customers.length === 0 ? (
         <div className="card">
-          <Table headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', '']}>
+          <DataTable headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', '']}>
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
                 Cargando clientes…
               </span>
             </TableStateRow>
-          </Table>
+          </DataTable>
         </div>
       ) : customers.length === 0 ? (
         <div className="card">
@@ -230,7 +232,7 @@ export default function CustomersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <Table headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', 'Acciones']}>
+          <DataTable headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', 'Acciones']}>
             {visible.map((customer) => {
               const statusLabel = STATUS_LABELS[customer.status]
               return (
@@ -291,7 +293,7 @@ export default function CustomersPage() {
                 </TableRow>
               )
             })}
-          </Table>
+          </DataTable>
 
           <Pagination
             page={currentPage}

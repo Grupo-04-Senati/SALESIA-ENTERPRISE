@@ -19,12 +19,12 @@ PAYMENT_METHODS = ('cash', 'card', 'transfer')
 
 
 class Payment(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'payments'
+    __tablename__ = 'pagos'
     __table_args__ = (
         CheckConstraint('amount > 0', name='ck_payments_amount_positive'),
     )
 
-    sale_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('sales.id', ondelete='CASCADE'), index=True)
+    sale_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('ventas.id', ondelete='CASCADE'), index=True)
     method: Mapped[str] = mapped_column(String(20))
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     paid_at: Mapped[datetime] = mapped_column(

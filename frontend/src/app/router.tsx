@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import MainLayout from '@/components/layout/MainLayout'
+import MainLayout from '@/layouts/MainLayout'
 import AuthLayout from '@/layouts/AuthLayout'
 import PlaceholderPage from './PlaceholderPage'
 import NotFoundPage from './NotFoundPage'

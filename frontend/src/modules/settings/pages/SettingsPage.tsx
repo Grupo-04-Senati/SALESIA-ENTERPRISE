@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Palette, RotateCcw, Save, Server, UserCog, Users, Database } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import { Input, Select } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
@@ -143,7 +143,7 @@ export default function SettingsPage() {
           <Users aria-hidden="true" className="h-5 w-5 text-primary" />
           <h2 className="text-h3 text-gray-800">Usuarios y roles</h2>
         </div>
-        <Table headers={['Usuario', 'Correo', 'Rol', 'Estado']}>
+        <DataTable headers={['Usuario', 'Correo', 'Rol', 'Estado']}>
           {users.map((managed) => (
             <TableRow key={managed.id}>
               <TableCell className="font-medium text-gray-900">{managed.name}</TableCell>
@@ -158,7 +158,7 @@ export default function SettingsPage() {
               </TableCell>
             </TableRow>
           ))}
-        </Table>
+        </DataTable>
         <p className="text-caption text-gray-500">
           Roles disponibles: {ROLES.join(' · ')} — la gestión completa de usuarios llega con la Fase 13.
         </p>

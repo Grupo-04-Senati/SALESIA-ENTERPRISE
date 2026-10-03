@@ -8,41 +8,41 @@
 ## 1. Diagrama de relaciones
 
 ```
-companies
+empresas
   │
-  ├── users ── roles
-  ├── employees
-  ├── customers
-  ├── products ── categories
-  ├── inventory ── inventory_movements
+  ├── usuarios ── roles
+  ├── empleados
+  ├── clientes
+  ├── productos ── categorias
+  ├── inventario ── movimientos_inventario
   │
-  └── sales ── sale_details ── products
+  └── ventas ── detalle_ventas ── productos
         │
-        └── payments
+        └── pagos
 
   ────── base analítica ──────
 
-sales / customers / products
+ventas / clientes / productos
         │
         ▼
-     datasets
+     conjuntos_datos
         │
-   dataset_variables
+   variables_conjunto
         │
-   observations
+   observaciones
         │
         ▼
-  statistical_analyses
+  analisis_estadisticos
         │
-        ├── statistical_results
-        ├── bayes_analyses
-        ├── random_variables
-        └── insights
+        ├── resultados_estadisticos
+        ├── analisis_bayes
+        ├── variables_aleatorias
+        └── hallazgos
 
-  reports · audit_logs   (transversales)
+  reportes · registros_auditoria   (transversales)
 ```
 
-**22 entidades** en total.
+**54 entidades** en total (22 de la base + 32 extensiones de la migración `0002`).
 
 ---
 
@@ -52,38 +52,52 @@ sales / customers / products
 
 | Entidad | Propósito |
 |---|---|
-| `companies` | Empresa propietaria de los datos (aislamiento multi-tenant). |
+| `empresas` | Empresa propietaria de los datos (aislamiento multi-tenant). |
 | `roles` | Roles del sistema (admin, gerente, vendedor, analista, almacén). |
-| `users` | Usuarios del sistema (credenciales, rol, estado activo). |
-| `employees` | Personal / vendedores con ficha y métricas comerciales. |
-| `customers` | Clientes y su comportamiento comercial. |
-| `categories` | Categorías de productos. |
-| `products` | Catálogo de productos (precio, stock mínimo, estado). |
-| `sales` | Cabecera de venta (fecha, totales, estado, vendedor). |
-| `sale_details` | Líneas de venta (producto, cantidad, precio, subtotal). |
-| `payments` | Pagos asociados a una venta (método, monto, fecha). |
-| `inventory` | Existencias actuales por producto. |
-| `inventory_movements` | Entradas y salidas de stock (trazabilidad). |
+| `usuarios` | Usuarios del sistema (credenciales, rol, estado activo). |
+| `empleados` | Personal / vendedores con ficha y métricas comerciales. |
+| `clientes` | Clientes y su comportamiento comercial. |
+| `categorias` | Categorías de productos. |
+| `productos` | Catálogo de productos (precio, stock mínimo, estado). |
+| `ventas` | Cabecera de venta (fecha, totales, estado, vendedor). |
+| `detalle_ventas` | Líneas de venta (producto, cantidad, precio, subtotal). |
+| `pagos` | Pagos asociados a una venta (método, monto, fecha). |
+| `inventario` | Existencias actuales por producto. |
+| `movimientos_inventario` | Entradas y salidas de stock (trazabilidad). |
 
 ### 2.2 Núcleo analítico (Semana 07)
 
 | Entidad | Propósito |
 |---|---|
-| `datasets` | Conjunto de datos derivado de las operaciones para análisis. |
-| `dataset_variables` | Variables estadísticas del dataset (tipo, naturaleza, unidad). |
-| `observations` | Filas/observaciones del dataset. |
-| `statistical_analyses` | Historial de análisis ejecutados (parámetros, autor, fecha). |
-| `statistical_results` | Resultados calculados (media, mediana, comparaciones). |
-| `bayes_analyses` | Resultados de Bayes: P(A), P(B\|A), P(B), P(A\|B). |
-| `random_variables` | Configuración de variables aleatorias analizadas. |
-| `insights` | Conclusiones generadas por reglas, con evidencia numérica. |
+| `conjuntos_datos` | Conjunto de datos derivado de las operaciones para análisis. |
+| `variables_conjunto` | Variables estadísticas del dataset (tipo, naturaleza, unidad). |
+| `observaciones` | Filas/observaciones del dataset. |
+| `analisis_estadisticos` | Historial de análisis ejecutados (parámetros, autor, fecha). |
+| `resultados_estadisticos` | Resultados calculados (media, mediana, comparaciones). |
+| `analisis_bayes` | Resultados de Bayes: P(A), P(B\|A), P(B), P(A\|B). |
+| `variables_aleatorias` | Configuración de variables aleatorias analizadas. |
+| `hallazgos` | Conclusiones generadas por reglas, con evidencia numérica. |
 
 ### 2.3 Transversales
 
 | Entidad | Propósito |
 |---|---|
-| `reports` | Reportes generados (tipo, filtros, autor, fecha). |
-| `audit_logs` | Registro de operaciones críticas (RNF-07, RF-22). |
+| `reportes` | Reportes generados (tipo, filtros, autor, fecha). |
+| `registros_auditoria` | Registro de operaciones críticas (RNF-07, RF-22). |
+
+### 2.4 Extensiones — migración `0002` (32 tablas)
+
+| Grupo | Entidades | Propósito |
+|---|---|---|
+| Operación | `sucursales`, `envios` | Sucursales y envíos de ventas. |
+| Compras | `proveedores`, `ordenes_compra`, `detalle_ordenes_compra` | Proveedores y órdenes de compra con detalle. |
+| Cotizaciones / devoluciones | `cotizaciones`, `detalle_cotizaciones`, `devoluciones`, `detalle_devoluciones` | Presupuestos y notas de crédito con líneas. |
+| Precios y promociones | `unidades`, `listas_precios`, `detalle_listas_precios`, `promociones`, `productos_promociones` | Unidades de medida, listas de precios y promociones. |
+| CRM | `segmentos_clientes`, `interacciones_clientes` | Segmentación y bitácora de interacciones. |
+| Almacenes | `almacenes`, `stock_almacenes`, `conteos_stock`, `detalle_conteos` | Bodegas, stock por bodega y conteos cíclicos. |
+| Seguridad | `permisos`, `roles_permisos`, `tokens_refresco`, `intentos_login`, `recuperaciones_password` | RBAC fino, sesiones renovables, intentos de login y recuperación. |
+| Analítica y automatización | `instantaneas_kpi`, `reportes_programados`, `exportaciones_datos`, `reglas_automatizacion` | Fotografías de KPIs, reportes programados, exportaciones y reglas. |
+| Sistema | `notificaciones`, `ajustes_sistema`, `eventos_app` | Notificaciones, configuración por clave y eventos de la app. |
 
 ---
 
@@ -98,11 +112,11 @@ sales / customers / products
 | name | varchar(30) | UNIQUE, NOT NULL |
 | description | text | |
 
-**users**
+**usuarios**
 | Campo | Tipo | Restricción |
 |---|---|---|
 | id | serial PK | |
-| company_id | int | FK → companies, NOT NULL |
+| company_id | int | FK → empresas, NOT NULL |
 | role_id | int | FK → roles, NOT NULL |
 | email | varchar(160) | UNIQUE, NOT NULL |
 | password_hash | varchar(255) | NOT NULL |
@@ -112,65 +126,65 @@ sales / customers / products
 
 ### 3.2 Comercial
 
-**customers**
-`id, company_id, name, document_type, document_number, email, phone, address, seller_id (FK employees), created_at, is_active`
+**clientes**
+`id, company_id, name, document_type, document_number, email, phone, address, seller_id (FK empleados), created_at, is_active`
 → UNIQUE `(company_id, document_number)`
 
-**products**
+**productos**
 `id, company_id, category_id (FK), sku, name, description, price (numeric 12,2 CHECK ≥ 0), unit, is_active, created_at`
 → UNIQUE `(company_id, sku)`
 
-**sales**
-`id, company_id, customer_id (FK), seller_id (FK employees), sale_number, sold_at, subtotal, discount, tax, total (numeric 12,2), status (pending|paid|cancelled|shipped), notes, created_at`
+**ventas**
+`id, company_id, customer_id (FK), seller_id (FK empleados), sale_number, sold_at, subtotal, discount, tax, total (numeric 12,2), status (pending|paid|cancelled|shipped), notes, created_at`
 → CHECK `total = subtotal - discount + tax` · INDEX `(company_id, sold_at)`
 
-**sale_details**
+**detalle_ventas**
 `id, sale_id (FK CASCADE), product_id (FK), quantity (int > 0), unit_price (numeric 12,2), discount, subtotal`
 
-**payments**
+**pagos**
 `id, sale_id (FK), method (cash|card|transfer), amount (numeric 12,2 > 0), paid_at, reference, created_at`
 
-**inventory**
+**inventario**
 `id, company_id, product_id (FK UNIQUE), stock (int ≥ 0), min_stock (int), updated_at`
 → CHECK `stock >= 0`
 
-**inventory_movements**
-`id, product_id (FK), movement_type (in|out|adjustment), quantity (> 0), reason, reference_id, created_by (FK users), created_at`
+**movimientos_inventario**
+`id, product_id (FK), movement_type (in|out|adjustment), quantity (> 0), reason, reference_id, created_by (FK usuarios), created_at`
 → INDEX `(product_id, created_at)`
 
 ### 3.3 Analítico
 
-**datasets**
+**conjuntos_datos**
 `id, company_id, name, source (sales|customers|products|custom), filters (jsonb), row_count, created_by, created_at`
 
-**dataset_variables**
+**variables_conjunto**
 `id, dataset_id (FK), name, label, stat_type (qualitative|quantitative), scale (nominal|ordinal|discrete|continuous), unit, is_random_variable (bool)`
 
-**observations**
+**observaciones**
 `id, dataset_id (FK), data (jsonb), created_at`
 
-**statistical_analyses**
-`id, dataset_id (FK), analysis_type (mean|median|compare|variables|random|probability), parameters (jsonb), executed_by (FK users), executed_at`
+**analisis_estadisticos**
+`id, dataset_id (FK), analysis_type (mean|median|compare|variables|random|probability), parameters (jsonb), executed_by (FK usuarios), executed_at`
 
-**statistical_results**
+**resultados_estadisticos**
 `id, analysis_id (FK), metric (varchar), value (numeric), summary (jsonb)`
 
-**bayes_analyses**
+**analisis_bayes**
 `id, company_id, label, p_a, p_b_given_a, p_b (numeric 10,6), p_a_given_b (numeric 10,6), explanation (text), created_by, created_at`
 → CHECK todos en rango `[0,1]`
 
-**random_variables**
+**variables_aleatorias**
 `id, analysis_id (FK), variable_name, distribution (discrete|continuous), values (jsonb), expected_value, variance (nullable fase posterior)`
 
-**insights**
+**hallazgos**
 `id, company_id, analysis_id (FK NULL), rule_code, severity (info|warning|opportunity), title, message, evidence (jsonb), created_at`
 
 ### 3.4 Transversales
 
-**reports**
+**reportes**
 `id, company_id, report_type, title, parameters (jsonb), generated_by, generated_at`
 
-**audit_logs**
+**registros_auditoria**
 `id, company_id, user_id (FK NULL), action, entity, entity_id, detail (jsonb), ip, created_at`
 → INDEX `(company_id, created_at)`
 
@@ -178,7 +192,7 @@ sales / customers / products
 
 ## 4. Restricciones e integridad (RNF-03)
 
-1. **Claves foráneas** en todas las relaciones; `ON DELETE CASCADE` solo en `sale_details` respecto a `sales`.
+1. **Claves foráneas** en todas las relaciones; `ON DELETE CASCADE` solo en `detalle_ventas` respecto a `ventas`.
 2. **CHECKs** para rangos: precios ≥ 0, stock ≥ 0, probabilidades ∈ [0,1], totales coherentes.
 3. **UNIQUE** compuestos por `company_id` para evitar duplicados entre empresas.
 4. **NOT NULL** en campos financieros y de identidad.
@@ -191,15 +205,15 @@ sales / customers / products
 
 | Tabla | Índice | Motivo |
 |---|---|---|
-| sales | `(company_id, sold_at)` | Filtros por periodo (dashboard, reportes). |
-| sales | `(company_id, customer_id)` | Historial del cliente. |
-| sale_details | `(sale_id)` | Detalle rápido de venta. |
-| payments | `(sale_id)` | Pagos por venta. |
-| inventory_movements | `(product_id, created_at)` | Kardex de producto. |
-| audit_logs | `(company_id, created_at)` | Consulta de auditoría por fecha. |
-| customers | `(company_id, document_number)` UNIQUE | Búsqueda e inserción sin duplicados. |
-| products | `(company_id, sku)` UNIQUE | Idem. |
-| observations | GIN sobre `data (jsonb)` | Consultas analíticas sobre datos. |
+| ventas | `(company_id, sold_at)` | Filtros por periodo (dashboard, reportes). |
+| ventas | `(company_id, customer_id)` | Historial del cliente. |
+| detalle_ventas | `(sale_id)` | Detalle rápido de venta. |
+| pagos | `(sale_id)` | Pagos por venta. |
+| movimientos_inventario | `(product_id, created_at)` | Kardex de producto. |
+| registros_auditoria | `(company_id, created_at)` | Consulta de auditoría por fecha. |
+| clientes | `(company_id, document_number)` UNIQUE | Búsqueda e inserción sin duplicados. |
+| productos | `(company_id, sku)` UNIQUE | Idem. |
+| observaciones | GIN sobre `data (jsonb)` | Consultas analíticas sobre datos. |
 
 ---
 
@@ -217,10 +231,11 @@ sales / customers / products
 | Grupo | Contenido |
 |---|---|
 | roles | administrador, gerente, vendedor, analista, almacen |
-| users demo | 1 por rol (credenciales documentadas en `docs/07`) |
-| categories | p. ej. Electrónica, Oficina, Hogar, Servicios |
-| products | ~20 productos con precios y stock |
-| customers | ~10 clientes de prueba |
+| usuarios demo | 1 por rol (credenciales documentadas en `docs/07`) |
+| categorias | p. ej. Electrónica, Oficina, Hogar, Servicios |
+| productos | ~20 productos con precios y stock |
+| clientes | ~10 clientes de prueba |
 | ventas | ~50 ventas históricas para poblar Analytics |
+| extensiones 0002 | 2 sucursales, 3 proveedores, 2 OC, 3 cotizaciones, 1 devolución, 4 unidades, 1 lista de precios, 2 promociones, 3 segmentos, 4 interacciones, 2 almacenes (12 stocks), 1 conteo, 2 envíos, 9 permisos + 34 asignaciones, intentos de login/tokens, 9 KPIs, 2 reportes, 2 exportaciones, 6 reglas de automatización, 4 notificaciones, 4 ajustes del sistema, 6 eventos (~153 filas). |
 
 > El seed es **opcional y controlado**: existe para desarrollo y demos; no se ejecuta en producción sin validación.

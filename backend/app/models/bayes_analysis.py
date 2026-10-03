@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class BayesAnalysis(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'bayes_analyses'
+    __tablename__ = 'analisis_bayes'
     __table_args__ = (
         CheckConstraint('p_a >= 0 AND p_a <= 1', name='ck_bayes_p_a'),
         CheckConstraint('p_b_given_a >= 0 AND p_b_given_a <= 1', name='ck_bayes_p_b_given_a'),
@@ -33,5 +33,5 @@ class BayesAnalysis(IDMixin, TimestampMixin, Base):
     p_a_given_b: Mapped[Decimal] = mapped_column(Numeric(10, 6))
     explanation: Mapped[str] = mapped_column(Text)
     created_by: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True
     )

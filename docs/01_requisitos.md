@@ -106,7 +106,7 @@ Problemas concretos detectados en el levantamiento:
 - Pasarela de pagos en línea (el pago se registra manualmente).
 - Facturación electrónica / emisión de comprobantes.
 - Compras y órdenes de compra a proveedores.
-- Planilla y recursos humanos (solo `employees` como dato base).
+- Planilla y recursos humanos (solo `empleados` como dato base).
 - App móvil nativa, multi-idioma y multi-moneda.
 - Integración con marketplaces.
 - Contenido de Semana 08: hipótesis, p-valor, modelos predictivos (etapa posterior).
@@ -211,7 +211,7 @@ flowchart TD
 | 4 | Cálculo de totales | Sistema | Subtotal por línea | Subtotal, descuento, impuesto, total | Recálculo en servidor |
 | 5 | Emisión de venta | Vendedor | Pedido confirmado | `sale` numerada | Numeración correlativa inmutable |
 | 6 | Registro de pago | Vendedor / Caja | Monto y medio de pago | `payment` vinculado | `PENDIENTE` / `PARCIAL` / `PAGADO` |
-| 7 | Actualización de inventario | Sistema | Detalle de la venta | `inventory_movement` = `SALIDA` | Stock nunca negativo |
+| 7 | Actualización de inventario | Sistema | Detalle de la venta | `movimientos_inventario` = `SALIDA` | Stock nunca negativo |
 | 8 | Dataset analítico | Sistema | Datos en PostgreSQL | Dataset analítico | Base de todo el motor |
 | 9 | Cálculo estadístico | Analista / Gerente | Dataset + métrica | Media, mediana, variables, probabilidad, Bayes | Se registra cada análisis y resultado (RF-21) |
 | 10 | Gráficos, insights y reportes | Sistema / Analista | Resultados | KPIs, insights explicables, reportes | Cada insight muestra su evidencia numérica |
@@ -269,7 +269,7 @@ flowchart LR
     DS --> VA[Variables aleatorias]
     DS --> PR[Probabilidades]
     DS --> BY[Teorema de Bayes]
-    M1 --> H[Historial de análisis<br/>statistical_analyses / results]
+    M1 --> H[Historial de análisis<br/>analisis_estadisticos / results]
     M2 --> H
     M3 --> H
     VA --> H
@@ -288,70 +288,70 @@ flowchart LR
 
 | Entidad | Propósito | Archivo en `backend/app/models/` |
 |---|---|---|
-| `users` | Usuarios del sistema | `user.py` |
+| `usuarios` | Usuarios del sistema | `user.py` |
 | `roles` | Roles y permisos | `role.py` |
-| `companies` | Empresa propietaria de los datos | `company.py` |
-| `customers` | Clientes | `customer.py` |
-| `products` | Productos | `product.py` |
-| `categories` | Categorías | `category.py` |
-| `sales` | Cabecera de venta | `sale.py` |
-| `sale_details` | Detalle de productos vendidos | `sale_detail.py` |
-| `payments` | Pagos | `payment.py` |
-| `inventory` | Existencias | `inventory.py` |
-| `inventory_movements` | Entradas y salidas | `inventory_movement.py` |
-| `employees` | Personal / vendedores | `employee.py` |
-| `datasets` | Conjuntos de datos para análisis | `dataset.py` |
-| `dataset_variables` | Variables estadísticas | `dataset_variable.py` |
-| `observations` | Observaciones/datos analizados | `observation.py` |
-| `statistical_analyses` | Historial de análisis | `statistical_analysis.py` |
-| `statistical_results` | Resultados calculados | `statistical_result.py` |
-| `bayes_analyses` | Resultados de Bayes | `bayes_analysis.py` |
-| `random_variables` | Configuraciones de variables aleatorias | `random_variable.py` |
-| `insights` | Conclusiones generadas por reglas | `insight.py` |
-| `reports` | Reportes | `report.py` |
-| `audit_logs` | Auditoría | `audit_log.py` |
+| `empresas` | Empresa propietaria de los datos | `company.py` |
+| `clientes` | Clientes | `customer.py` |
+| `productos` | Productos | `product.py` |
+| `categorias` | Categorías | `category.py` |
+| `ventas` | Cabecera de venta | `sale.py` |
+| `detalle_ventas` | Detalle de productos vendidos | `sale_detail.py` |
+| `pagos` | Pagos | `payment.py` |
+| `inventario` | Existencias | `inventory.py` |
+| `movimientos_inventario` | Entradas y salidas | `inventory_movement.py` |
+| `empleados` | Personal / vendedores | `employee.py` |
+| `conjuntos_datos` | Conjuntos de datos para análisis | `dataset.py` |
+| `variables_conjunto` | Variables estadísticas | `dataset_variable.py` |
+| `observaciones` | Observaciones/datos analizados | `observation.py` |
+| `analisis_estadisticos` | Historial de análisis | `statistical_analysis.py` |
+| `resultados_estadisticos` | Resultados calculados | `statistical_result.py` |
+| `analisis_bayes` | Resultados de Bayes | `bayes_analysis.py` |
+| `variables_aleatorias` | Configuraciones de variables aleatorias | `random_variable.py` |
+| `hallazgos` | Conclusiones generadas por reglas | `insight.py` |
+| `reportes` | Reportes | `report.py` |
+| `registros_auditoria` | Auditoría | `audit_log.py` |
 
 **Relaciones principales:**
 
 ```
-companies
- ├── users
- ├── customers
- ├── products ── categories
- ├── employees
- └── sales ── sale_details ── products
+empresas
+ ├── usuarios
+ ├── clientes
+ ├── productos ── categorias
+ ├── empleados
+ └── ventas ── detalle_ventas ── productos
               │
-              └── payments
+              └── pagos
 
-sales / customers / products
+ventas / clientes / productos
         │
         ▼
-     datasets
+     conjuntos_datos
         │
         ▼
-  dataset_variables
+  variables_conjunto
         │
         ▼
-   observations
+   observaciones
         │
         ▼
- statistical_analyses
-        ├── statistical_results
-        ├── bayes_analyses
-        └── insights
+ analisis_estadisticos
+        ├── resultados_estadisticos
+        ├── analisis_bayes
+        └── hallazgos
 ```
 
 ### 6.2 Fuentes y variables
 
 | Fuente | Campos clave aportados |
 |---|---|
-| `sales` / `sale_details` | fecha, total, cantidad, precio, descuento, estado, **vendedor** |
-| `payments` | monto, método de pago, fecha, estado |
-| `inventory` / `inventory_movements` | stock, costo, tipo de movimiento, fecha |
-| `customers` | fecha de alta, segmento, antigüedad, frecuencia |
-| `products` / `categories` | precio, costo, categoría, SKU |
-| `employees` | vendedor, métricas comerciales |
-| `datasets` / `dataset_variables` / `observations` | datos cargados para análisis libre |
+| `ventas` / `detalle_ventas` | fecha, total, cantidad, precio, descuento, estado, **vendedor** |
+| `pagos` | monto, método de pago, fecha, estado |
+| `inventario` / `movimientos_inventario` | stock, costo, tipo de movimiento, fecha |
+| `clientes` | fecha de alta, segmento, antigüedad, frecuencia |
+| `productos` / `categorias` | precio, costo, categoría, SKU |
+| `empleados` | vendedor, métricas comerciales |
+| `conjuntos_datos` / `variables_conjunto` / `observaciones` | datos cargados para análisis libre |
 
 **Variables cuantitativas continuas:** `monto_venta`, `ticket_promedio`, `margen_unitario`, `tiempo_entrega`, `dias_entre_compras`.
 
@@ -484,7 +484,7 @@ sales / customers / products
 | CU-09 | Buscar y filtrar clientes | Cualquier rol con acceso | Sesión iniciada | 1. Nombre/DNI/filtro → 2. Resultados | Cliente localizado |
 | CU-10 | Crear producto | Administrador / Gerente | Sesión con permiso | 1. SKU, nombre, precio, costo, categoría, stock mínimo → 2. Guarda | Producto activo |
 | CU-11 | Gestionar categorías | Administrador / Gerente | Sesión con permiso | 1. Lista → 2. Crea/edita → 3. Guarda | Categoría vigente |
-| CU-12 | Gestionar vendedores | Administrador | Sesión Administrador | 1. CRUD de `employees` → 2. Asigna a usuarios → 3. Guarda | Vendedor registrado (RF-05) |
+| CU-12 | Gestionar vendedores | Administrador | Sesión Administrador | 1. CRUD de `empleados` → 2. Asigna a usuarios → 3. Guarda | Vendedor registrado (RF-05) |
 
 ### 8.3 Ventas, pagos e inventario
 
@@ -543,7 +543,7 @@ sales / customers / products
 | RN-04 | Solo es vendible un producto con `estado = ACTIVO` y `stock > 0`. |
 | RN-05 | `precio_venta ≥ precio_costo`; vender a costo requiere aprobación de Administrador. |
 | RN-06 | Cada producto pertenece a **una y solo una** categoría. |
-| RN-07 | Un vendedor (`employees`) debe estar activo para operar ventas. |
+| RN-07 | Un vendedor (`empleados`) debe estar activo para operar ventas. |
 | RN-08 | Las métricas de vendedor se calculan solo sobre ventas no anuladas. |
 
 ### 9.2 Ventas y pagos
@@ -579,7 +579,7 @@ sales / customers / products
 | RN-31 | Tras 5 intentos fallidos la cuenta se bloquea 15 minutos. |
 | RN-32 | Los tokens expiran en 8 horas y no son reutilizables. |
 | RN-33 | Un usuario no modifica su propio rol ni eleva sus permisos. |
-| RN-34 | Toda escritura sobre datos sensibles genera registro en `audit_logs` (RF-22). |
+| RN-34 | Toda escritura sobre datos sensibles genera registro en `registros_auditoria` (RF-22). |
 | RN-35 | Un usuario desactivado pierde el acceso de inmediato. |
 | RN-36 | Los secretos se gestionan por variables de entorno, nunca en el código (RNF-10). |
 

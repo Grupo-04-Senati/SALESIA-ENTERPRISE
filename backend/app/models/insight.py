@@ -19,17 +19,17 @@ SEVERITIES = ('info', 'success', 'warning', 'critical')
 
 
 class Insight(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'insights'
+    __tablename__ = 'hallazgos'
     __table_args__ = (
         CheckConstraint("severity IN ('info','success','warning','critical')", name='ck_insights_severity'),
     )
 
     company_id: Mapped[int] = mapped_column(BigInteger, index=True)
     analysis_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('statistical_analyses.id', ondelete='SET NULL'), nullable=True, index=True
+        BigInteger, ForeignKey('analisis_estadisticos.id', ondelete='SET NULL'), nullable=True, index=True
     )
     dataset_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('datasets.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('conjuntos_datos.id', ondelete='SET NULL'), nullable=True
     )
     rule_code: Mapped[str] = mapped_column(String(50), index=True)
     severity: Mapped[str] = mapped_column(String(20), default='info', index=True)

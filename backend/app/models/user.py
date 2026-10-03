@@ -17,10 +17,10 @@ if TYPE_CHECKING:
 
 
 class User(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'users'
+    __tablename__ = 'usuarios'
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     role_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('roles.id'))
     full_name: Mapped[str] = mapped_column(String(150))

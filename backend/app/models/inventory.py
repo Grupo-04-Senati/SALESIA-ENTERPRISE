@@ -16,11 +16,11 @@ if TYPE_CHECKING:
 
 
 class Inventory(IDMixin, Base):
-    __tablename__ = 'inventory'
+    __tablename__ = 'inventario'
     __table_args__ = (CheckConstraint('stock >= 0', name='ck_inventory_stock_non_negative'),)
 
     product_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('products.id', ondelete='CASCADE'), unique=True, index=True
+        BigInteger, ForeignKey('productos.id', ondelete='CASCADE'), unique=True, index=True
     )
     stock: Mapped[int] = mapped_column(Integer, default=0)
     min_stock: Mapped[int] = mapped_column(Integer, default=0)

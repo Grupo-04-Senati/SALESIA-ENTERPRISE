@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Plus, TrendingDown, TrendingUp } from 'lucide-react'
-import Table, { TableRow, TableCell, TableStateRow } from '@/components/ui/Table'
-import Pagination from '@/components/ui/Pagination'
+import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
+import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Checkbox, Input } from '@/components/ui/form'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
 import type { InventoryMovement } from '@/types/sale'
@@ -158,14 +160,14 @@ export default function InventoryPage() {
 
             {loading && stock.length === 0 ? (
               <div className="card">
-                <Table headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
                   <TableStateRow colSpan={5}>
                     <span className="inline-flex items-center gap-2">
                       <Spinner size={16} className="text-loading" />
                       Cargando inventario…
                     </span>
                   </TableStateRow>
-                </Table>
+                </DataTable>
               </div>
             ) : filtered.length === 0 ? (
               <div className="card">
@@ -173,7 +175,7 @@ export default function InventoryPage() {
               </div>
             ) : (
               <>
-                <Table headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
                   {visible.map((row) => {
                     const isEmpty = row.current_stock === 0
                     const isLow = !isEmpty && isLowStock(row)
@@ -202,7 +204,7 @@ export default function InventoryPage() {
                       </TableRow>
                     )
                   })}
-                </Table>
+                </DataTable>
                 <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} total={filtered.length} pageSize={PAGE_SIZE} />
               </>
             )}
@@ -216,7 +218,7 @@ export default function InventoryPage() {
                 <EmptyState title="Sin movimientos" description="Aún no hay entradas ni salidas registradas." />
               </div>
             ) : (
-              <Table headers={['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock resultante', 'Motivo', 'Usuario']}>
+              <DataTable headers={['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock resultante', 'Motivo', 'Usuario']}>
                 {movements.slice(0, 8).map((movement) => {
                   const isIn = movement.type === 'IN' || movement.type === 'RETURN'
                   const Icon = isIn ? TrendingUp : TrendingDown
@@ -242,7 +244,7 @@ export default function InventoryPage() {
                     </TableRow>
                   )
                 })}
-              </Table>
+              </DataTable>
             )}
           </section>
         </>

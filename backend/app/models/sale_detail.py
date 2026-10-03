@@ -18,16 +18,16 @@ if TYPE_CHECKING:
 
 
 class SaleDetail(IDMixin, Base):
-    __tablename__ = 'sale_details'
+    __tablename__ = 'detalle_ventas'
     __table_args__ = (
         CheckConstraint('quantity > 0', name='ck_sale_details_quantity_positive'),
         CheckConstraint('subtotal >= 0', name='ck_sale_details_subtotal_positive'),
     )
 
     sale_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('sales.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('ventas.id', ondelete='CASCADE'), index=True
     )
-    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('products.id'), index=True)
+    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('productos.id'), index=True)
     quantity: Mapped[int] = mapped_column(Integer)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     discount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal('0.00'))

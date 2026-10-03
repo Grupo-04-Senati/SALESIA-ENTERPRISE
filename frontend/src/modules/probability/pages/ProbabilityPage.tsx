@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Activity, ListChecks, Percent } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import Tabs, { TabPanel } from '@/components/ui/Tabs'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Badge from '@/components/ui/Badge'
-import { Select } from '@/components/ui/form'
+import BayesChart from '@/components/charts/BayesChart'
+import BayesForm from '../components/BayesForm'
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID, compareMeanMedian } from '@/data/analytics'
 import {
@@ -30,17 +32,35 @@ import type { AnalysisRecord } from '@/types/statistics'
  * misma trazabilidad (RN-40, RN-43, RF-21).
  */
 
-const PERIOD_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: '3', label: 'Últimos 3 meses' },
-  { value: '6', label: 'Últimos 6 meses' },
-  { value: '12', label: 'Últimos 12 meses' },
+const TAB_ITEMS = [
+  { id: 'media', label: 'Media y mediana' },
+  { id: 'bayes', label: 'Bayes' },
+  { id: 'variables', label: 'Variables' },
+  { id: 'historial', label: 'Historial' },
 ]
+
+/** Mensaje de la regla RN-40 cuando el periodo no alcanza observaciones. */
+function Rn40Message() {
+  return (
+    <div className="card">
+      <p className="text-body-sm text-gray-600">
+        La regla RN-40 exige al menos {minObservations()} observaciones y el periodo seleccionado
+        no tiene suficientes datos. Amplía el periodo o registra más ventas en{' '}
+        <Link to="/ventas" className="font-medium text-primary hover:underline">
+          Ventas
+        </Link>
+        .
+      </p>
+    </div>
+  )
+}
 
 export default function ProbabilityPage() {
   const [months, setMonths] = useState<PeriodMonths>(12)
   const [datasetId, setDatasetId] = useState('total')
   const [scenarioId, setScenarioId] = useState('recurrente-ticket')
   const [history, setHistory] = useState<AnalysisRecord[]>([])
+  const [tab, setTab] = useState('media')
   const version = useDataVersion()
 
   const filters = useMemo(() => ({ months, seller: '', category: '' }), [months])
@@ -123,59 +143,25 @@ export default function ProbabilityPage() {
       </div>
 
       {/* Filtros: eligen qué datos se analizan, sin escribirlos */}
-      <div className="card flex flex-col gap-3 md:flex-row md:items-end">
-        <Select
-          label="Periodo analizado"
-          value={String(months)}
-          onChange={(event) => setMonths(Number(event.target.value) as PeriodMonths)}
-          className="md:w-52"
-        >
-          {PERIOD_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Variable numérica a analizar"
-          value={dataset.id}
-          onChange={(event) => setDatasetId(event.target.value)}
-          className="md:w-64"
-        >
-          {datasets.map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Escenario de Bayes"
-          value={scenario.id}
-          onChange={(event) => setScenarioId(event.target.value)}
-          className="md:w-72"
-        >
-          {scenarios.map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.eventA} → {entry.eventB}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <BayesForm
+        months={months}
+        datasetId={dataset.id}
+        scenarioId={scenario.id}
+        datasets={datasets}
+        scenarios={scenarios}
+        onMonthsChange={setMonths}
+        onDatasetChange={setDatasetId}
+        onScenarioChange={setScenarioId}
+      />
 
-      {faltaDatos ? (
-        <div className="card">
-          <p className="text-body-sm text-gray-600">
-            La regla RN-40 exige al menos {minObservations()} observaciones y el periodo seleccionado
-            no tiene suficientes datos. Amplía el periodo o registra más ventas en{' '}
-            <Link to="/ventas" className="font-medium text-primary hover:underline">
-              Ventas
-            </Link>
-            .
-          </p>
-        </div>
-      ) : (
-        estadistico &&
-        posterior && (
+      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="probabilidad" />
+
+      <TabPanel tabId="media" active={tab === 'media'}>
+        {faltaDatos ? (
+          <Rn40Message />
+        ) : (
+          estadistico &&
+          posterior && (
         <>
           {/* Media y mediana automáticas */}
           <section className="card space-y-4">
@@ -184,7 +170,12 @@ export default function ProbabilityPage() {
                 <Activity aria-hidden="true" className="h-5 w-5 text-primary" />
                 <h2 className="text-h4 text-gray-800">Media y mediana automáticas</h2>
               </div>
-              <span className="text-caption text-gray-500">{dataset.description}</span>
+              <span className="text-caption text-gray-500">
+                {dataset.description} ·{' '}
+                <Link to="/ventas" className="font-medium text-primary hover:underline">
+                  ver ventas
+                </Link>
+              </span>
             </div>
 
             <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -229,7 +220,18 @@ export default function ProbabilityPage() {
               Línea azul: media · línea cyan: mediana · {estadistico.interpretacion}
             </p>
           </section>
+        </>
+          )
+        )}
+      </TabPanel>
 
+      <TabPanel tabId="bayes" active={tab === 'bayes'}>
+        {faltaDatos ? (
+          <Rn40Message />
+        ) : (
+          estadistico &&
+          posterior && (
+        <>
           {/* Bayes automático */}
           <section className="card space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -238,7 +240,10 @@ export default function ProbabilityPage() {
                 <h2 className="text-h4 text-gray-800">Teorema de Bayes automático</h2>
               </div>
               <span className="text-caption text-gray-500">
-                A: {scenario.eventA} · B: {scenario.eventB}
+                A: {scenario.eventA} · B: {scenario.eventB} ·{' '}
+                <Link to="/ventas" className="font-medium text-primary hover:underline">
+                  ver ventas
+                </Link>
               </span>
             </div>
 
@@ -274,35 +279,21 @@ export default function ProbabilityPage() {
                 </ol>
               </div>
 
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { name: 'P(A)', valor: scenario.prior },
-                      { name: 'P(B|A)', valor: scenario.likelihood },
-                      { name: 'P(B)', valor: scenario.evidence },
-                      { name: 'P(A|B)', valor: posterior.posterior },
-                    ]}
-                    margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
-                  >
-                    <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
-                    <YAxis hide domain={[0, 1]} />
-                    <Tooltip
-                      formatter={(value) => formatPercent(Number(value))}
-                      contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
-                    />
-                    <Bar dataKey="valor" fill="#10B981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <BayesChart
+                prior={scenario.prior}
+                likelihood={scenario.likelihood}
+                evidence={scenario.evidence}
+                posterior={posterior.posterior}
+              />
             </div>
           </section>
         </>
-        )
-      )}
+          )
+        )}
+      </TabPanel>
 
       {/* Clasificación automática de variables */}
+      <TabPanel tabId="variables" active={tab === 'variables'}>
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -311,11 +302,14 @@ export default function ProbabilityPage() {
           </div>
           <span className="text-caption text-gray-500">
             El sistema detecta cuáles variables son cuantitativas y cuáles cualitativas, con sus
-            frecuencias.
+            frecuencias.{' '}
+            <Link to="/productos" className="font-medium text-primary hover:underline">
+              ver productos
+            </Link>
           </span>
         </div>
 
-        <Table headers={['Variable', 'Tipo', 'Subtipo', 'Observaciones', 'Detalle']}>
+        <DataTable headers={['Variable', 'Tipo', 'Subtipo', 'Observaciones', 'Detalle']}>
           {variables.map((variable) => (
             <TableRow key={variable.name}>
               <TableCell className="font-medium text-gray-900">{variable.name}</TableCell>
@@ -343,10 +337,12 @@ export default function ProbabilityPage() {
               </TableCell>
             </TableRow>
           ))}
-        </Table>
+        </DataTable>
       </section>
+      </TabPanel>
 
       {/* Historial de cálculos automáticos */}
+      <TabPanel tabId="historial" active={tab === 'historial'}>
       <section className="space-y-4">
         <h2 className="text-h3 text-gray-800">Historial de análisis automáticos</h2>
         <p className="text-body-sm text-gray-600">
@@ -356,7 +352,7 @@ export default function ProbabilityPage() {
           </Link>
           .
         </p>
-        <Table headers={['Fecha', 'Tipo', 'Análisis', 'Resultado']}>
+        <DataTable headers={['Fecha', 'Tipo', 'Análisis', 'Resultado']}>
           {history.slice(0, 12).map((entry) => (
             <TableRow key={`${entry.id}-${entry.label}`}>
               <TableCell className="text-gray-600">
@@ -369,7 +365,7 @@ export default function ProbabilityPage() {
               <TableCell>{entry.result}</TableCell>
             </TableRow>
           ))}
-        </Table>
+        </DataTable>
         <Button
           variant="outline"
           onClick={() => {
@@ -379,6 +375,7 @@ export default function ProbabilityPage() {
           Actualizar historial
         </Button>
       </section>
+      </TabPanel>
     </div>
   )
 }

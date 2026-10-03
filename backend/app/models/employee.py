@@ -17,13 +17,13 @@ if TYPE_CHECKING:
 
 
 class Employee(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'employees'
+    __tablename__ = 'empleados'
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     user_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True
     )
     full_name: Mapped[str] = mapped_column(String(150))
     document: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)

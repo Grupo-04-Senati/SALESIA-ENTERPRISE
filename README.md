@@ -51,7 +51,7 @@ SALESIA-ENTERPRISE/
 | [01_requisitos.md](docs/01_requisitos.md) | Problema, objetivos, alcance, roles, RF/RNF, criterios de aceptación |
 | [02_arquitectura.md](docs/02_arquitectura.md) | Arquitectura, estructura, contratos, seguridad, ambientes, despliegue |
 | [03_ux_ui.md](docs/03_ux_ui.md) | Sistema de diseño, layout, componentes, estados, responsive |
-| [04_modelo_er.md](docs/04_modelo_er.md) | Modelo de datos (22 entidades), restricciones, índices, seed |
+| [04_modelo_er.md](docs/04_modelo_er.md) | Modelo de datos (54 entidades), restricciones, índices, seed |
 | [05_api.md](docs/05_api.md) | API REST: endpoints, formatos, ejemplos, errores |
 | [06_motor_estadistico.md](docs/06_motor_estadistico.md) | Media, mediana, variables, probabilidad, Bayes, pruebas |
 | [07_manual_usuario.md](docs/07_manual_usuario.md) | Manual de usuario por rol |

@@ -4,8 +4,14 @@ Genera una empresa con sus roles, usuarios (uno por rol), vendedores,
 catálogo de productos, clientes y ~50 ventas repartidas en los últimos
 12 meses, con pagos y kardex consistente (stock final = stock actual).
 
+También siembra las extensiones de la migración 0002 (sucursales,
+proveedores, cotizaciones, almacenes, seguridad y analítica):
+`seed_extensions` es idempotente y también se puede ejecutar solo.
+
 Uso:
-    python -m app.seeds.seed            # si la base está vacía
+    python -m app.seeds.seed            # si la base está vacía (demo completa)
+    python -m app.seeds.seed --login     # solo empresa + roles + admin
+    python -m app.seeds.seed --extend   # solo las tablas de la 0002
     python -m app.seeds.seed --force     # limpia y vuelve a sembrar
 """
 
@@ -22,18 +28,29 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.core.security import hash_password
+from app.models.analytics_extra import AutomationRule, DataExport, KpiSnapshot, ScheduledReport
+from app.models.branch import Branch
 from app.models.category import Category
 from app.models.company import Company
+from app.models.crm import CustomerInteraction, CustomerSegment
 from app.models.customer import Customer
 from app.models.employee import Employee
 from app.models.inventory import Inventory
 from app.models.inventory_movement import InventoryMovement
 from app.models.payment import Payment
+from app.models.pricing import PriceList, PriceListItem, ProductPromotion, Promotion, Unit
 from app.models.product import Product
+from app.models.purchase import PurchaseOrder, PurchaseOrderDetail
+from app.models.quote import Quote, QuoteDetail
 from app.models.role import Role
 from app.models.sale import Sale
 from app.models.sale_detail import SaleDetail
+from app.models.sales_return import SalesReturn, SalesReturnDetail
+from app.models.security import LoginAttempt, PasswordReset, Permission, RefreshToken, RolePermission
+from app.models.supplier import Supplier
+from app.models.system import AppEvent, Notification, SystemSetting
 from app.models.user import User
+from app.models.warehouse import Shipment, StockCount, StockCountDetail, Warehouse, WarehouseStock
 
 TWO = Decimal('0.01')
 TAX_RATE = Decimal('0.18')
@@ -207,6 +224,361 @@ def build_sales(rng: random.Random, products: List[Product], customers: List[Cus
     return specs
 
 
+def seed_extensions(db: Session) -> None:
+    """Siembra las 32 tablas de la migración 0002 (idempotente)."""
+    if db.execute(select(Branch.id)).scalars().first():
+        print('Extensiones 0002 ya sembradas; nada que hacer.')
+        return
+
+    company = db.execute(select(Company)).scalars().first()
+    if company is None:
+        print('No hay empresa; ejecuta el seed base primero.')
+        return
+
+    roles = {role.name: role for role in db.execute(select(Role)).scalars()}
+    users = db.execute(select(User)).scalars().all()
+    admin = users[0]
+    products = db.execute(select(Product).order_by(Product.id)).scalars().all()
+    active_products = [product for product in products if product.is_active]
+    customers = db.execute(select(Customer).order_by(Customer.id)).scalars().all()
+    sales = db.execute(
+        select(Sale).where(Sale.status != 'cancelled').order_by(Sale.id)
+    ).scalars().all()
+    now = datetime.now(timezone.utc)
+
+    # --- Operación: sucursales, proveedores, compras, cotizaciones, devoluciones ---
+    branches = [
+        Branch(company_id=company.id, name='Lima Centro', code='LIM',
+               address='Av. República de Panamá 3591, San Isidro', is_active=True),
+        Branch(company_id=company.id, name='Arequipa', code='ARE',
+               address='Av. Ejército 780, Yanahuara', is_active=True),
+    ]
+    db.add_all(branches)
+
+    suppliers = [
+        Supplier(company_id=company.id, ruc='20456789012', name='Distribuidora Andina S.A.C.',
+                 email='ventas@andina.pe', phone='+5116102040',
+                 address='Av. Argentina 2890, Callao', is_active=True),
+        Supplier(company_id=company.id, ruc='20567890123', name='Insumos del Sur E.I.R.L.',
+                 email='contacto@insumossur.pe', phone='+5154234567',
+                 address='Av. Ejército 410, Arequipa', is_active=True),
+        Supplier(company_id=company.id, ruc='20678901234', name='Importadora Pacífico S.A.',
+                 email='pedidos@pacificoimp.pe', phone='+5117203040',
+                 address='Jr. Camaná 455, Cercado, Lima', is_active=True),
+    ]
+    db.add_all(suppliers)
+    db.flush()
+
+    purchase_orders = []
+    for index, supplier in enumerate(suppliers[:2]):
+        order = PurchaseOrder(
+            company_id=company.id, supplier_id=supplier.id, created_by=admin.id,
+            order_number=f'OC-2026-{index + 1:04d}',
+            status='received' if index == 0 else 'pending',
+            notes='Orden de compra de demostración',
+        )
+        db.add(order)
+        db.flush()
+        subtotal = Decimal('0')
+        for product in active_products[index * 3:index * 3 + 3]:
+            quantity = 10 + index
+            unit_cost = money(product.cost_price)
+            line = money(quantity * unit_cost)
+            subtotal += line
+            db.add(PurchaseOrderDetail(purchase_order_id=order.id, product_id=product.id,
+                                       quantity=quantity, unit_cost=unit_cost, subtotal=line))
+        purchase_orders.append(order)
+        order.total = money(subtotal)
+
+    quotes = []
+    quote_status = ['sent', 'accepted', 'draft']
+    for index, customer in enumerate(customers[:3]):
+        quote = Quote(
+            company_id=company.id, customer_id=customer.id, created_by=admin.id,
+            quote_number=f'COT-2026-{index + 1:04d}', status=quote_status[index],
+            valid_until=now + timedelta(days=15 - index * 5),
+            notes='Cotización de demostración',
+        )
+        db.add(quote)
+        db.flush()
+        lines = []
+        for product in active_products[index * 2:index * 2 + 2]:
+            quantity = 5 + index
+            line_discount = money(0)
+            lines.append({'quantity': quantity, 'unit_price': money(product.price),
+                          'discount': line_discount})
+            db.add(QuoteDetail(quote_id=quote.id, product_id=product.id,
+                               quantity=quantity, unit_price=money(product.price),
+                               discount=line_discount,
+                               subtotal=money(quantity * money(product.price))))
+        totals = compute_totals(lines)
+        quote.subtotal, quote.discount = totals['subtotal'], totals['discount']
+        quote.tax, quote.total = totals['tax'], totals['total']
+        quotes.append(quote)
+
+    returned = SalesReturn(
+        company_id=company.id, sale_id=sales[0].id, created_by=admin.id,
+        return_number='NC-2026-0001', status='completed',
+        reason='Producto con defecto de empaque (demo)',
+    )
+    db.add(returned)
+    db.flush()
+    first_line = db.execute(
+        select(SaleDetail).where(SaleDetail.sale_id == sales[0].id).limit(1)
+    ).scalars().first()
+    return_qty = 1
+    return_amount = money(first_line.unit_price * return_qty)
+    db.add(SalesReturnDetail(return_id=returned.id, product_id=first_line.product_id,
+                             quantity=return_qty, unit_price=first_line.unit_price,
+                             subtotal=return_amount))
+    returned.total = return_amount
+
+    # --- Precios: unidades, listas, promociones ---
+    units = [
+        Unit(company_id=company.id, name='Unidad', symbol='UND', is_active=True),
+        Unit(company_id=company.id, name='Kilo', symbol='KG', is_active=True),
+        Unit(company_id=company.id, name='Litro', symbol='LT', is_active=True),
+        Unit(company_id=company.id, name='Caja', symbol='CJ', is_active=True),
+    ]
+    db.add_all(units)
+    db.flush()
+
+    price_list = PriceList(company_id=company.id, name='Lista mayorista 2026',
+                           currency='PEN', is_active=True)
+    db.add(price_list)
+    db.flush()
+    for product in active_products[:6]:
+        db.add(PriceListItem(price_list_id=price_list.id, product_id=product.id,
+                             price=money(product.price * Decimal('0.9'))))
+
+    promotions = [
+        Promotion(company_id=company.id, name='Semana de bebidas', kind='percent',
+                  value=Decimal('10'), starts_at=now - timedelta(days=14),
+                  ends_at=now + timedelta(days=14), is_active=True),
+        Promotion(company_id=company.id, name='Descuento de caja', kind='fixed',
+                  value=Decimal('5'), starts_at=now - timedelta(days=7),
+                  ends_at=now + timedelta(days=30), is_active=True),
+    ]
+    db.add_all(promotions)
+    db.flush()
+    for product in active_products[:4]:
+        db.add(ProductPromotion(product_id=product.id, promotion_id=promotions[0].id))
+    for product in active_products[4:6]:
+        db.add(ProductPromotion(product_id=product.id, promotion_id=promotions[1].id))
+
+    # --- CRM: segmentos e interacciones ---
+    segments = [
+        CustomerSegment(company_id=company.id, name='Frecuentes',
+                        description='Más de 5 compras en el año', min_purchases=5,
+                        min_total=Decimal('500'), is_active=True),
+        CustomerSegment(company_id=company.id, name='Recurrentes',
+                        description='De 2 a 4 compras en el año', min_purchases=2,
+                        min_total=Decimal('150'), is_active=True),
+        CustomerSegment(company_id=company.id, name='Nuevos',
+                        description='Primera compra en el último mes', min_purchases=1,
+                        min_total=Decimal('0'), is_active=True),
+    ]
+    db.add_all(segments)
+
+    interactions = [
+        ('call', 'Llamada de seguimiento', 'Llamada de seguimiento post-venta'),
+        ('email', 'Catálogo actualizado', 'Envío de catálogo actualizado'),
+        ('visit', 'Visita comercial', 'Visita comercial trimestral'),
+        ('note', 'Facturación', 'Solicita factura electrónica'),
+    ]
+    for index, (kind, subject, notes) in enumerate(interactions):
+        db.add(CustomerInteraction(
+            company_id=company.id, customer_id=customers[index % len(customers)].id,
+            performed_by=admin.id, kind=kind, subject=subject, notes=notes,
+            occurred_at=now - timedelta(days=15 - index * 3),
+        ))
+
+    # --- Almacenes: bodegas, stock, conteos, envíos ---
+    warehouses = [
+        Warehouse(company_id=company.id, name='Almacén central', code='ALM-CEN',
+                  address='Av. República de Panamá 3591, San Isidro', is_active=True),
+        Warehouse(company_id=company.id, name='Almacén sur', code='ALM-SUR',
+                  address='Av. Ejército 410, Yanahuara, Arequipa', is_active=True),
+    ]
+    db.add_all(warehouses)
+    db.flush()
+    for product in active_products[:8]:
+        db.add(WarehouseStock(warehouse_id=warehouses[0].id, product_id=product.id,
+                              stock=product.min_stock * 2, min_stock=product.min_stock))
+    for product in active_products[8:12]:
+        db.add(WarehouseStock(warehouse_id=warehouses[1].id, product_id=product.id,
+                              stock=product.min_stock, min_stock=product.min_stock))
+
+    stock_count = StockCount(company_id=company.id, warehouse_id=warehouses[0].id,
+                             count_number='CC-2026-0001', status='done',
+                             counted_by=admin.id, notes='Conteo cíclico demo')
+    db.add(stock_count)
+    db.flush()
+    for index, product in enumerate(active_products[:3]):
+        expected = product.min_stock * 2
+        counted = expected - (2 if index == 1 else 0)
+        db.add(StockCountDetail(stock_count_id=stock_count.id, product_id=product.id,
+                                expected_qty=expected, counted_qty=counted,
+                                difference=counted - expected))
+
+    for index, sale in enumerate(sales[:2]):
+        db.add(Shipment(company_id=company.id, sale_id=sale.id,
+                        tracking_code=f'TRK-{2026}{index + 1:06d}',
+                        carrier='Shalom' if index == 0 else 'Olva',
+                        status='delivered' if index == 0 else 'in_transit',
+                        shipped_at=sale.sold_at + timedelta(days=1)))
+
+    # --- Seguridad: permisos, intentos, tokens ---
+    modules = sorted({module for _, _, perms in ROLES for module in perms})
+    permission_by_module: Dict[str, Permission] = {}
+    for module in modules:
+        permission = Permission(code=f'module.{module}',
+                                name=f'Módulo {module.capitalize()}',
+                                description=f'Acceso al módulo {module}')
+        db.add(permission)
+        permission_by_module[module] = permission
+    db.flush()
+    for role_key, _, perms in ROLES:
+        for module in perms:
+            db.add(RolePermission(role_id=roles[role_key].id,
+                                  permission_id=permission_by_module[module].id, granted=True))
+
+    for index, (email, success) in enumerate([
+        ('admin@salesia.com', True), ('admin@salesia.com', False),
+        ('gerente@salesia.com', True), ('hacker@ejemplo.com', False),
+    ]):
+        db.add(LoginAttempt(user_id=admin.id if success else None,
+                            email=email, success=success,
+                            ip=f'192.168.1.{10 + index}',
+                            attempted_at=now - timedelta(hours=6 - index)))
+
+    for index, user in enumerate(users[:2]):
+        db.add(RefreshToken(user_id=user.id, token_hash=f'demo-token-hash-{index + 1}',
+                            expires_at=now + timedelta(days=7), revoked_at=None))
+
+    db.add(PasswordReset(user_id=admin.id, token_hash='demo-reset-hash-1',
+                         expires_at=now + timedelta(hours=1), used_at=None))
+
+    # --- Analítica: KPIs, reportes, exportaciones, reglas ---
+    for months_ago in (2, 1, 0):
+        period_start = (now.replace(day=1) - timedelta(days=31 * months_ago)).replace(day=1)
+        period_end = period_start + timedelta(days=30)
+        base = Decimal(str(10000 - months_ago * 1200))
+        for kpi_code, factor, suffix in [
+            ('ingresos', Decimal('1'), ''),
+            ('transacciones', Decimal('0.05'), ''),
+            ('ticket_promedio', Decimal('0.12'), ''),
+        ]:
+            db.add(KpiSnapshot(company_id=company.id, kpi_code=kpi_code, value=money(base * factor),
+                               period_start=period_start, period_end=period_end))
+
+    for index, (report_type, fmt) in enumerate([('sales_summary', 'xlsx'),
+                                                ('inventory_status', 'csv')]):
+        db.add(ScheduledReport(company_id=company.id, title=f'Reporte {report_type}',
+                               report_type=report_type, parameters={'format': fmt},
+                               frequency='monthly', is_active=True,
+                               created_by=admin.id,
+                               next_run_at=now + timedelta(days=30 - index * 7)))
+
+    for index, (export_type, fmt, rows) in enumerate([('ventas', 'xlsx', 50),
+                                                      ('clientes', 'csv', 24)]):
+        db.add(DataExport(company_id=company.id, export_type=export_type, format=fmt,
+                          status='done', requested_by=admin.id, row_count=rows))
+
+    automation_rules = [
+        ('ALERTA_STOCK', 'Alerta de stock mínimo', 'Aviso cuando un producto baja del stock mínimo',
+         'warning', {'operator': '<=', 'source': 'stock_actual'},
+         {'type': 'notification', 'title': 'Stock bajo'}),
+        ('RN-40_MINIMO_DATOS', 'Mínimo de observaciones', 'Exigir n>=10 antes de concluir la distribución',
+         'block', {'operator': '>=', 'source': 'n_observaciones', 'value': 10},
+         {'type': 'message', 'code': 'RN-40'}),
+        ('REG-01_TENDENCIA', 'Detección de tendencia', 'Marca regímenes crecientes o decrecientes',
+         'info', {'operator': '>', 'source': 'pendiente_tendencia', 'value': 0},
+         {'type': 'insight', 'kind': 'tendencia'}),
+        ('REG-07_STOCK_INSIGHT', 'Insight de cobertura de stock', 'Genera insight si la cobertura es baja',
+         'warning', {'operator': '<', 'source': 'cobertura_dias', 'value': 15},
+         {'type': 'insight', 'kind': 'stock'}),
+        ('RF-21_HISTORIAL', 'Historial de ventas', 'Exigir historial para comparativos',
+         'block', {'operator': '>=', 'source': 'ventas_historicas', 'value': 5},
+         {'type': 'message', 'code': 'RF-21'}),
+        ('RN-10_STOCK_INSUFICIENTE', 'Stock insuficiente en venta', 'Bloquear venta sin stock',
+         'block', {'operator': '<', 'source': 'stock_disponible', 'value': 0},
+         {'type': 'message', 'code': 'RN-10'}),
+    ]
+    for index, (code, name, description, severity, condition, action) in enumerate(automation_rules):
+        db.add(AutomationRule(company_id=company.id, code=code, name=name,
+                              description=description, severity=severity,
+                              condition=condition, action=action, is_active=index % 3 != 2))
+
+    notifications = [
+        ('Stock bajo', 'Stock bajo en 3 productos', 'warning'),
+        ('Reportes', 'Reporte mensual generado', 'success'),
+        ('Seguridad', '2 intentos de acceso fallidos', 'danger'),
+        ('Sistema', 'Respaldo diario completado', 'info'),
+    ]
+    for index, (title, message, level) in enumerate(notifications):
+        db.add(Notification(company_id=company.id, user_id=admin.id, title=title,
+                            level=level, message=message,
+                            read_at=now - timedelta(hours=1) if index == 0 else None,
+                            created_at=now - timedelta(hours=5 - index)))
+
+    settings = [
+        ('tax_rate', {'value': 0.18}),
+        ('currency', {'code': 'PEN', 'symbol': 'S/' }),
+        ('min_observations', {'value': 10}),
+        ('timezone', {'value': 'America/Lima'}),
+    ]
+    for key, value in settings:
+        db.add(SystemSetting(company_id=company.id, key=key, value=value))
+
+    events = [
+        ('seed.completed', 'Seed base completado'),
+        ('sale.paid', 'Venta pagada de demostración'),
+        ('report.exported', 'Exportación de reporte'),
+        ('user.login', 'Inicio de sesión demo'),
+        ('stock.adjusted', 'Ajuste de stock demo'),
+        ('settings.updated', 'Configuración inicial'),
+    ]
+    for index, (event_type, detail) in enumerate(events):
+        db.add(AppEvent(company_id=company.id, event_type=event_type, entity='system',
+                        payload={'detail': detail, 'n': index}))
+
+    db.commit()
+    print('Extensiones 0002 sembradas: 2 sucursales · 3 proveedores · 2 órdenes de compra · '
+          '3 cotizaciones · 1 devolución · 4 unidades · 1 lista de precios · 2 promociones · '
+          '3 segmentos · 4 interacciones · 2 almacenes · 1 conteo · 2 envíos · '
+          f'{len(modules)} permisos · intentos/tokens · KPIs/reportes/reglas/notificaciones/configuración.')
+
+
+def seed_login(db: Session) -> None:
+    """Deja solo lo mínimo para entrar: 1 empresa, 5 roles y el admin (idempotente)."""
+    if db.execute(select(User.id)).scalars().first():
+        print('Ya hay usuarios; nada que hacer (usa --force para el seed completo).')
+        return
+
+    company = Company(name='SalesIA Enterprise', ruc='20123456789',
+                      address='Av. República de Panamá 3591, San Isidro, Lima',
+                      phone='+5116102030', email='contacto@salesia.pe')
+    db.add(company)
+    db.flush()
+
+    admin_role = None
+    for key, description, permissions in ROLES:
+        role = Role(name=key, description=description, permissions=permissions)
+        db.add(role)
+        if key == 'admin':
+            admin_role = role
+    db.flush()
+
+    db.add(User(company_id=company.id, role_id=admin_role.id,
+                full_name='Administrador del Sistema',
+                email='admin@salesia.com', password_hash=hash_password(DEMO_PASSWORD),
+                is_active=True))
+    db.commit()
+    print('Login listo: 1 empresa · 5 roles · 1 usuario admin.')
+    print(f'Acceso: admin@salesia.com / {DEMO_PASSWORD}')
+
+
 def seed(db: Session, force: bool = False) -> None:
     existing = db.execute(select(User.id)).scalars().first()
     if existing and not force:
@@ -345,6 +717,7 @@ def seed(db: Session, force: bool = False) -> None:
                            paid_at=spec['sold_at']))
 
     db.commit()
+    seed_extensions(db)
 
     ventas = sum(1 for spec in sale_specs if spec['status'] != 'cancelled')
     print(f'Seed completado: 1 empresa · {len(ROLES)} roles · {len(USERS)} usuarios · '
@@ -356,9 +729,16 @@ def seed(db: Session, force: bool = False) -> None:
 
 def main() -> None:
     force = '--force' in sys.argv
+    extend_only = '--extend' in sys.argv
+    login_only = '--login' in sys.argv
     db = SessionLocal()
     try:
-        seed(db, force=force)
+        if login_only:
+            seed_login(db)
+        elif extend_only:
+            seed_extensions(db)
+        else:
+            seed(db, force=force)
     finally:
         db.close()
 

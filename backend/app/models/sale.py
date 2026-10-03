@@ -22,16 +22,16 @@ SALE_STATUSES = ('pending', 'partial', 'paid', 'cancelled')
 
 
 class Sale(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'sales'
+    __tablename__ = 'ventas'
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     customer_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('customers.id', ondelete='SET NULL'), nullable=True, index=True
+        BigInteger, ForeignKey('clientes.id', ondelete='SET NULL'), nullable=True, index=True
     )
     seller_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('employees.id', ondelete='SET NULL'), nullable=True, index=True
+        BigInteger, ForeignKey('empleados.id', ondelete='SET NULL'), nullable=True, index=True
     )
     sale_number: Mapped[str] = mapped_column(String(30), unique=True, index=True)
     sold_at: Mapped[datetime] = mapped_column(

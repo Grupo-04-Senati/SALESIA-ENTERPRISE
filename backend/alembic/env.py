@@ -1,7 +1,7 @@
 """Entorno de Alembic — conecta con Supabase usando app.core.database.
 
 Uso:
-    alembic upgrade head      # crea el esquema completo (22 tablas)
+    alembic upgrade head      # crea el esquema completo (54 tablas: 0001=22, 0002=32)
     alembic downgrade base    # elimina las tablas del esquema
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.core.database import Base
-import app.models  # noqa: F401 — registra los 22 modelos en Base.metadata
+import app.models  # noqa: F401 — registra los 54 modelos en Base.metadata
 
 config = context.config
 

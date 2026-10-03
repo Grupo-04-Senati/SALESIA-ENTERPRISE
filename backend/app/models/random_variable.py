@@ -18,12 +18,12 @@ if TYPE_CHECKING:
 
 
 class RandomVariable(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'random_variables'
+    __tablename__ = 'variables_aleatorias'
     __table_args__ = (CheckConstraint("distribution IN ('discrete','continuous')", name='ck_rv_distribution'),)
 
     company_id: Mapped[int] = mapped_column(BigInteger, index=True)
     analysis_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('statistical_analyses.id', ondelete='CASCADE'), nullable=True, index=True
+        BigInteger, ForeignKey('analisis_estadisticos.id', ondelete='CASCADE'), nullable=True, index=True
     )
     variable_name: Mapped[str] = mapped_column(String(120))
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -32,5 +32,5 @@ class RandomVariable(IDMixin, TimestampMixin, Base):
     expected_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 4), nullable=True)
     variance: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 4), nullable=True)
     created_by: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True
     )

@@ -12,11 +12,11 @@ from app.core.database import Base
 
 
 class Category(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'categories'
-    __table_args__ = (UniqueConstraint('company_id', 'name', name='uq_categories_company_name'),)
+    __tablename__ = 'categorias'
+    __table_args__ = (UniqueConstraint('company_id', 'name', name='uq_categorias_company_name'),)
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     name: Mapped[str] = mapped_column(String(100))
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

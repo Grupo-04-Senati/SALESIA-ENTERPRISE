@@ -16,7 +16,7 @@ from alembic import op
 import sqlalchemy as sa
 
 from app.core.database import Base
-import app.models  # noqa: F401 — registra los 22 modelos
+import app.models  # noqa: F401 — registra los modelos en Base.metadata
 
 revision: str = '0001'
 down_revision: Union[str, None] = None

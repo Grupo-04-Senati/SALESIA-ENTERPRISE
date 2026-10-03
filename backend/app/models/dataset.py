@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
 
 class Dataset(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'datasets'
+    __tablename__ = 'conjuntos_datos'
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     name: Mapped[str] = mapped_column(String(150))
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -29,7 +29,7 @@ class Dataset(IDMixin, TimestampMixin, Base):
     filters: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     row_count: Mapped[int] = mapped_column(Integer, default=0)
     created_by: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True
     )
 
     variables: Mapped[list['DatasetVariable']] = relationship(

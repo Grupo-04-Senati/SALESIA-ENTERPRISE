@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import HotZone from './HotZone'
 import Sidebar from './Sidebar'
-import Topbar from '@/layouts/Topbar'
+import Topbar from './Topbar'
 
 /** Delay de cierre para evitar parpadeos si el cursor pasa rápido (txt). */
 const CLOSE_DELAY_MS = 250

@@ -12,7 +12,7 @@ from app.core.database import Base
 
 
 class Company(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'companies'
+    __tablename__ = 'empresas'
 
     name: Mapped[str] = mapped_column(String(150))
     ruc: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)

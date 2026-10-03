@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def _first_product(client, headers):
-    response = client.get('/api/v1/products?page=1&page_size=1', headers=headers)
+    response = client.get('/api/v1/products?page=1&page_size=1&status=active', headers=headers)
     assert response.status_code == 200
     return response.json()['items'][0]
 

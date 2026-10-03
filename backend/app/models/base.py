@@ -1,4 +1,4 @@
-"""Modelos SQLAlchemy — 22 entidades (docs/04_modelo_er.md)."""
+"""Modelos SQLAlchemy — 54 entidades (docs/04_modelo_er.md)."""
 
 from __future__ import annotations
 

@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 
 
 class DatasetVariable(IDMixin, Base):
-    __tablename__ = 'dataset_variables'
+    __tablename__ = 'variables_conjunto'
     __table_args__ = (
-        UniqueConstraint('dataset_id', 'name', name='uq_dataset_variables_dataset_name'),
+        UniqueConstraint('dataset_id', 'name', name='uq_variables_conjunto_dataset_name'),
         CheckConstraint("stat_type IN ('qualitative','quantitative')", name='ck_variables_stat_type'),
         CheckConstraint(
             "scale IN ('nominal','ordinal','discrete','continuous')", name='ck_variables_scale'
@@ -26,7 +26,7 @@ class DatasetVariable(IDMixin, Base):
     )
 
     dataset_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('datasets.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('conjuntos_datos.id', ondelete='CASCADE'), index=True
     )
     name: Mapped[str] = mapped_column(String(100))
     label: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)

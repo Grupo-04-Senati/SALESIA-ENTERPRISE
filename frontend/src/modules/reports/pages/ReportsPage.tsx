@@ -3,8 +3,10 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Download, FileText, Printer, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
@@ -190,7 +192,7 @@ export default function ReportsPage() {
             </div>
           )}
 
-          <Table headers={report.columns.map((column) => column.label)}>
+          <DataTable headers={report.columns.map((column) => column.label)}>
             {report.rows.map((row, index) => (
               <TableRow key={index}>
                 {report.columns.map((column) => {
@@ -209,7 +211,7 @@ export default function ReportsPage() {
                 })}
               </TableRow>
             ))}
-          </Table>
+          </DataTable>
 
           <p className="text-caption text-gray-400">
             {report.rows.length} registros · SalesIA Enterprise · {formatDateTime(report.generated_at)}

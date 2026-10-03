@@ -1,7 +1,11 @@
 /**
  * Cliente HTTP para la API de SalesIA (docs/05_api.md).
- * Token Bearer + manejo del formato de error estándar (docs/05 §3).
+ * Instancia Axios con interceptores: token Bearer en cada petición,
+ * cierre de sesión automático en 401 y errores normalizados al
+ * formato estándar {code, message, detail} (docs/05 §3).
  */
+
+import axios, { AxiosError, type AxiosInstance } from 'axios'
 
 export class ApiError extends Error {
   constructor(
@@ -27,40 +31,74 @@ export const clearToken = (): void => {
   localStorage.removeItem(USER_KEY)
 }
 
-/** GET/POST/PUT/PATCH/DELETE genérico con token Bearer. */
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken()
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  })
+interface ApiErrorBody {
+  code?: string
+  message?: string
+  detail?: string
+}
 
-  if (!response.ok) {
-    let code = 'INTERNAL_ERROR'
-    let message = `Error ${response.status}`
-    try {
-      const body = (await response.json()) as { code?: string; message?: string; detail?: string }
-      code = body.code ?? code
-      message = body.message ?? (typeof body.detail === 'string' ? body.detail : message)
-    } catch {
-      // Respuesta sin cuerpo JSON — se conserva el mensaje genérico.
-    }
+/** Instancia Axios compartida (baseURL + Content-Type JSON). */
+const http: AxiosInstance = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+/** Interceptor de petición: adjunta el token Bearer cuando existe. */
+http.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+/** Convierte un error de Axios al formato de error estándar de la API. */
+function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error
+
+  const axiosError = error as AxiosError<ApiErrorBody>
+  const status = axiosError.response?.status ?? 0
+  const body = axiosError.response?.data
+  const code = body?.code ?? (status ? 'INTERNAL_ERROR' : 'NETWORK_ERROR')
+  const message =
+    body?.message ?? (typeof body?.detail === 'string' ? body.detail : undefined) ??
+    axiosError.message ?? `Error ${status}`
+  return new ApiError(message, status, code)
+}
+
+/** Interceptor de respuesta: cierra la sesión en 401 y normaliza errores. */
+http.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    const axiosError = error as AxiosError<ApiErrorBody>
+    const status = axiosError.response?.status
+    const path = axiosError.config?.url ?? ''
 
     // Sesión vencida o inválida: se cierra y se vuelve al login (docs/05 §2.1).
-    if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
+    if (status === 401 && !path.startsWith('/api/v1/auth/')) {
       clearToken()
       if (!window.location.pathname.startsWith('/login')) {
         window.location.replace('/login')
       }
     }
 
-    throw new ApiError(message, response.status, code)
-  }
+    return Promise.reject(toApiError(error))
+  },
+)
 
-  if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+/** GET/POST/PUT/PATCH/DELETE genérico con token Bearer. */
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  try {
+    const response = await http.request<T>({
+      url: path,
+      method: init.method ?? 'GET',
+      data: init.body,
+      ...(init.headers ? { headers: init.headers as Record<string, string> } : {}),
+    })
+
+    if (response.status === 204 || response.data === ('' as unknown as T)) {
+      return undefined as T
+    }
+    return response.data
+  } catch (error) {
+    throw toApiError(error)
+  }
 }

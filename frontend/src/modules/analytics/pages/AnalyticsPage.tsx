@@ -15,10 +15,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, DollarSign, Info, Receipt, ShoppingCart, TrendingUp, XCircle } from 'lucide-react'
+import { AlertTriangle, DollarSign, Info, Lightbulb, Package, Percent, Receipt, ShoppingCart, TrendingUp, Users, Warehouse, XCircle } from 'lucide-react'
 import { Select } from '@/components/ui/form'
 import KpiCard from '@/modules/dashboard/components/KpiCard'
 import { formatCurrency, formatNumber } from '@/utils/formatters'
+import { useDataVersion } from '@/data/DataProvider'
+import { getState } from '@/data/store'
 import {
   CATEGORY_NAMES,
   CHART_AXIS,
@@ -66,6 +68,20 @@ export default function AnalyticsPage() {
 
   // Alertas que el sistema calcula solo, con las reglas de Automatizaciones.
   const alerts = useMemo(() => getSystemAlerts({ months, seller, category }), [months, seller, category, dataset])
+
+  // Módulos que alimentan estos cálculos: se recalculan con cada cambio (RF-21).
+  const version = useDataVersion()
+  const moduleLinks = useMemo(() => {
+    const state = getState()
+    return [
+      { label: 'Ventas', detail: `${state.sales.length} ventas → KPIs, media y mediana`, to: '/ventas', icon: ShoppingCart },
+      { label: 'Productos', detail: `${state.products.length} productos → ventas por producto y categoría`, to: '/productos', icon: Package },
+      { label: 'Inventario', detail: `${state.movements.length} movimientos → alertas y rotación`, to: '/inventario', icon: Warehouse },
+      { label: 'Clientes', detail: `${state.customers.length} clientes → frecuencia y recompra`, to: '/clientes', icon: Users },
+      { label: 'Probabilidad', detail: 'Bayes y variables calculados con estos mismos datos', to: '/probabilidad', icon: Percent },
+      { label: 'Insights', detail: 'Observaciones automáticas sobre la operación', to: '/insights', icon: Lightbulb },
+    ]
+  }, [version])
 
   return (
     <div className="space-y-6">
@@ -161,7 +177,7 @@ export default function AnalyticsPage() {
       {/* Evolución temporal */}
       <section className="card">
         <h2 className="text-h4 text-gray-800">Ventas por periodo</h2>
-        <p className="mt-1 text-caption text-gray-500">Evolución mensual de ingresos y transacciones (txt §6.2 LineChart).</p>
+        <p className="mt-1 text-caption text-gray-500">Evolución mensual de ingresos y transacciones (txt §6.2 LineChart). {' '}<Link to="/ventas" className="font-medium text-primary hover:underline">Ver ventas</Link></p>
         <div className="mt-4 h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthly} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
@@ -183,7 +199,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card">
           <h2 className="text-h4 text-gray-800">Ventas por producto</h2>
-          <p className="mt-1 text-caption text-gray-500">Top productos por ingresos (txt §6.2 BarChart).</p>
+          <p className="mt-1 text-caption text-gray-500">Top productos por ingresos (txt §6.2 BarChart). {' '}<Link to="/productos" className="font-medium text-primary hover:underline">Ver productos</Link></p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={byProduct} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
@@ -199,7 +215,7 @@ export default function AnalyticsPage() {
 
         <section className="card">
           <h2 className="text-h4 text-gray-800">Ventas por vendedor</h2>
-          <p className="mt-1 text-caption text-gray-500">Ingresos atribuidos por vendedor (RF-10).</p>
+          <p className="mt-1 text-caption text-gray-500">Ingresos atribuidos por vendedor (RF-10). {' '}<Link to="/ventas" className="font-medium text-primary hover:underline">Ver ventas</Link></p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bySeller} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
@@ -218,7 +234,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card">
           <h2 className="text-h4 text-gray-800">Participación por categoría</h2>
-          <p className="mt-1 text-caption text-gray-500">Distribución de ingresos por categoría (txt §6.2 PieChart).</p>
+          <p className="mt-1 text-caption text-gray-500">Distribución de ingresos por categoría (txt §6.2 PieChart). {' '}<Link to="/productos" className="font-medium text-primary hover:underline">Ver productos</Link></p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -236,7 +252,7 @@ export default function AnalyticsPage() {
 
         <section className="card">
           <h2 className="text-h4 text-gray-800">Distribución de tickets</h2>
-          <p className="mt-1 text-caption text-gray-500">Frecuencias por rango de ticket promedio (txt §6.2 Histogram).</p>
+          <p className="mt-1 text-caption text-gray-500">Frecuencias por rango de ticket promedio (txt §6.2 Histogram). {' '}<Link to="/ventas" className="font-medium text-primary hover:underline">Ver ventas</Link></p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distribution} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
@@ -255,14 +271,49 @@ export default function AnalyticsPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-h3 text-gray-800">Estadística descriptiva</h2>
-          <p className="mt-1 text-body-sm text-gray-600">
-            Media, mediana y comparación sobre {formatNumber(dataset.length)} tickets del periodo filtrado.
+          <p className="text-body-sm text-gray-600">
+            Media, mediana y comparación sobre {formatNumber(dataset.length)} tickets del periodo
+            filtrado.{' '}
+            <Link to="/probabilidad" className="font-medium text-primary hover:underline">
+              Continuar en Probabilidad
+            </Link>
+            .
           </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
           <MeanPanel values={dataset} />
           <MedianPanel values={dataset} />
           <ComparePanel values={dataset} />
+        </div>
+      </section>
+
+      {/* Conexión con los módulos */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-h3 text-gray-800">Conexión con los módulos</h2>
+          <p className="text-body-sm text-gray-600">
+            Todo este análisis se calcula solo sobre la operación: registra una venta, un movimiento
+            o un cliente y las gráficas, la estadística, Probabilidad e Insights se actualizan
+            automáticamente.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {moduleLinks.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="card flex items-start gap-3 transition-colors hover:border-primary"
+              >
+                <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="text-body-sm font-semibold text-gray-900">{item.label}</p>
+                  <p className="mt-0.5 text-caption text-gray-500">{item.detail}</p>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       </section>
     </div>

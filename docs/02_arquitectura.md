@@ -34,7 +34,7 @@
 | P-04 | **El servidor manda** | Totales, stock y cálculos estadísticos se resuelven siempre en el backend (RN-11, RN-23). |
 | P-05 | **API primero** | [`05_api.md`](05_api.md) es la frontera oficial entre frontend y backend; versionada en `/api/v1`. |
 | P-06 | **Configuración por entorno** | Ningún secreto en el código; todo por variables de entorno (RNF-10, RN-36). |
-| P-07 | **Trazabilidad por defecto** | Escrituras críticas generan `audit_logs`; errores generan `trace_id` en logs. |
+| P-07 | **Trazabilidad por defecto** | Escrituras críticas generan `registros_auditoria`; errores generan `trace_id` en logs. |
 | P-08 | **Despliegue reproducible** | Un solo comando para levantar el entorno local completo. |
 
 ---
@@ -112,11 +112,11 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    O[Operación comercial<br/>sales, payments,<br/>inventory, customers] --> P[(PostgreSQL<br/>Supabase)]
-    P --> DS[Dataset analítico<br/>datasets · dataset_variables · observations]
+    O[Operación comercial<br/>ventas, pagos,<br/>inventario, clientes] --> P[(PostgreSQL<br/>Supabase)]
+    P --> DS[Dataset analítico<br/>conjuntos_datos · variables_conjunto · observaciones]
     DS --> SVC[StatisticsService ·<br/>ProbabilityService ·<br/>RandomVariableService]
     ENG["app/analytics<br/>mean · median · compare<br/>variables · probability<br/>random_variables · bayes"] --> SVC
-    SVC --> RES[statistical_analyses ·<br/>statistical_results ·<br/>bayes_analyses]
+    SVC --> RES[analisis_estadisticos ·<br/>resultados_estadisticos ·<br/>analisis_bayes]
     RES --> INS[insight_service<br/>reglas determinísticas]
     RES --> REP[report_service]
     INS --> API["/api/v1/insights · /reports · /dashboard/"]
@@ -181,7 +181,7 @@ SALESIA-ENTERPRISE/
 │   │   ├── api/v1/routers/      # Un router por dominio
 │   │   ├── api/deps.py          # get_current_user, require_role
 │   │   ├── core/                # config, database, security, logging, exceptions
-│   │   ├── models/              # Modelos SQLAlchemy (22 entidades)
+│   │   ├── models/              # Modelos SQLAlchemy (54 entidades)
 │   │   ├── schemas/             # DTOs Pydantic (request/response)
 │   │   ├── services/            # Lógica de negocio transaccional
 │   │   ├── analytics/           # Motor estadístico puro (media, mediana, Bayes…)
@@ -445,7 +445,7 @@ flowchart LR
 | M-02 | Cada migración es **inmutable** una vez mergeada; los cambios se hacen con una nueva. |
 | M-03 | Toda migración destructiva requiere `downgrade()` funcional y prueba de rollback. |
 | M-04 | Índices y constraints se crean **en la migración**, no solo en el modelo. |
-| M-05 | La migración inicial crea las **22 tablas** de `04_modelo_er.md`. |
+| M-05 | Las migraciones crean las **54 tablas** de `04_modelo_er.md` (0001 = 22 base, 0002 = 32 extensiones). |
 | M-06 | Los seeds (`database/seeds/`) son **idempotentes**: roles, categorías, usuario admin, productos de demo. Nunca van dentro de `upgrade()`. |
 | M-07 | **Nunca editar datos ni esquema manualmente en el panel de Supabase.** |
 | M-08 | `dev` y `test` corren migraciones automáticamente; `producción` las corre como paso explícito del despliegue, con respaldo previo. |

@@ -17,14 +17,14 @@ if TYPE_CHECKING:
 
 
 class Product(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'products'
-    __table_args__ = (UniqueConstraint('company_id', 'sku', name='uq_products_company_sku'),)
+    __tablename__ = 'productos'
+    __table_args__ = (UniqueConstraint('company_id', 'sku', name='uq_productos_company_sku'),)
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     category_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('categories.id', ondelete='SET NULL'), nullable=True, index=True
+        BigInteger, ForeignKey('categorias.id', ondelete='SET NULL'), nullable=True, index=True
     )
     sku: Mapped[str] = mapped_column(String(50), index=True)
     name: Mapped[str] = mapped_column(String(150))

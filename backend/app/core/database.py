@@ -11,7 +11,7 @@ from app.core.config import settings
 
 
 class Base(DeclarativeBase):
-    """Base declarativa de todos los modelos (22 entidades de docs/04)."""
+    """Base declarativa de todos los modelos (54 entidades de docs/04)."""
 
 
 engine = create_engine(

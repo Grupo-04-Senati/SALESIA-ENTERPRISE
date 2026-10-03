@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Eye, Plus } from 'lucide-react'
-import Table, { TableRow, TableCell, TableStateRow } from '@/components/ui/Table'
-import Pagination from '@/components/ui/Pagination'
+import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
+import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Input, Select } from '@/components/ui/form'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
 import type { Sale, SaleInput } from '@/types/sale'
@@ -143,14 +145,14 @@ export default function SalesPage() {
         </div>
       ) : loading && sales.length === 0 ? (
         <div className="card">
-          <Table headers={['Venta', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado', '']}>
+          <DataTable headers={['Venta', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado', '']}>
             <TableStateRow colSpan={7}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
                 Cargando ventas…
               </span>
             </TableStateRow>
-          </Table>
+          </DataTable>
         </div>
       ) : sales.length === 0 ? (
         <div className="card">
@@ -167,7 +169,7 @@ export default function SalesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <Table headers={['Venta', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado', '']}>
+          <DataTable headers={['Venta', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado', '']}>
             {visible.map((sale) => {
               const statusLabel = SALE_STATUS_LABELS[sale.status]
               return (
@@ -198,7 +200,7 @@ export default function SalesPage() {
                 </TableRow>
               )
             })}
-          </Table>
+          </DataTable>
 
           <Pagination
             page={currentPage}

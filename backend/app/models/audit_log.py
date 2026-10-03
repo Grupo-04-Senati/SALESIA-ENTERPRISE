@@ -18,14 +18,14 @@ if TYPE_CHECKING:
 
 
 class AuditLog(IDMixin, TimestampMixin, Base):
-    __tablename__ = 'audit_logs'
-    __table_args__ = (Index('ix_audit_logs_company_created', 'company_id', 'created_at'),)
+    __tablename__ = 'registros_auditoria'
+    __table_args__ = (Index('ix_registros_auditoria_company_created', 'company_id', 'created_at'),)
 
     company_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), nullable=True, index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), nullable=True, index=True
     )
     user_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True
+        BigInteger, ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True, index=True
     )
     action: Mapped[str] = mapped_column(String(100), index=True)
     entity: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)

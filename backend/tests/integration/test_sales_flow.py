@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 
-def _first(client, path, headers):
-    response = client.get(f'{path}?page=1&page_size=1', headers=headers)
+def _first(client, path, headers, query=''):
+    response = client.get(f'{path}?page=1&page_size=1{query}', headers=headers)
     assert response.status_code == 200, response.text
     items = response.json()['items']
     assert items, f'La semilla no dejó datos en {path}'
@@ -12,8 +12,8 @@ def _first(client, path, headers):
 
 
 def _payload(client, headers, quantity=2, amount=5.0):
-    product = _first(client, '/api/v1/products', headers)
-    customer = _first(client, '/api/v1/customers', headers)
+    product = _first(client, '/api/v1/products', headers, '&status=active')
+    customer = _first(client, '/api/v1/customers', headers, '&status=active')
     employees = client.get('/api/v1/employees', headers=headers).json()
     seller = employees[0] if isinstance(employees, list) else employees['items'][0]
     return product, {
@@ -87,18 +87,21 @@ def test_analista_no_puede_registrar_ventas(client, admin_headers, vendedor_head
 
 
 def test_vendedor_si_puede_registrar_ventas(client, admin_headers, vendedor_headers):
-    product = _first(client, '/api/v1/products', vendedor_headers)
-    customer = _first(client, '/api/v1/customers', vendedor_headers)
+    product = _first(client, '/api/v1/products', vendedor_headers, '&status=active')
+    customer = _first(client, '/api/v1/customers', vendedor_headers, '&status=active')
     # El rol Vendedor no lee vendedores (docs/01 §4.1): se toma el vendedor con admin.
     employees = client.get('/api/v1/employees', headers=admin_headers).json()
     seller = employees[0] if isinstance(employees, list) else employees['items'][0]
 
+    # RN-11: total = subtotal + ROUND(subtotal * 0.18, 2) — igual que el backend.
+    unit = float(product['sale_price'])
+    total = round(unit + round(unit * 0.18, 2), 2)
     response = client.post('/api/v1/sales', headers=vendedor_headers, json={
         'customer_id': customer['id'],
         'seller_id': seller['id'],
         'items': [{'product_id': product['id'], 'quantity': 1,
-                   'unit_price': float(product['sale_price']), 'discount': 0}],
-        'payment': {'method': 'cash', 'amount': float(product['sale_price']) * 1.18},
+                   'unit_price': unit, 'discount': 0}],
+        'payment': {'method': 'cash', 'amount': total},
     })
     assert response.status_code == 201, response.text
     assert response.json()['status'] == 'paid'

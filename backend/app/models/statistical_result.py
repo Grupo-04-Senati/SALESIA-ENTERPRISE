@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
 
 class StatisticalResult(IDMixin, Base):
-    __tablename__ = 'statistical_results'
+    __tablename__ = 'resultados_estadisticos'
 
     analysis_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('statistical_analyses.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('analisis_estadisticos.id', ondelete='CASCADE'), index=True
     )
     metric: Mapped[str] = mapped_column(String(40))
     value: Mapped[Decimal] = mapped_column(Numeric(14, 4))

@@ -16,13 +16,13 @@ if TYPE_CHECKING:
 
 
 class Customer(IDMixin, UpdatedAtMixin, Base):
-    __tablename__ = 'customers'
+    __tablename__ = 'clientes'
     __table_args__ = (
-        UniqueConstraint('company_id', 'document_number', name='uq_customers_company_document'),
+        UniqueConstraint('company_id', 'document_number', name='uq_clientes_company_document'),
     )
 
     company_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('companies.id', ondelete='CASCADE'), index=True
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
     )
     name: Mapped[str] = mapped_column(String(150))
     document_type: Mapped[str] = mapped_column(String(10), default='DNI')
@@ -32,7 +32,7 @@ class Customer(IDMixin, UpdatedAtMixin, Base):
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     segment: Mapped[str] = mapped_column(String(30), default='Nuevo')
     seller_id: Mapped[Optional[int]] = mapped_column(
-        BigInteger, ForeignKey('employees.id', ondelete='SET NULL'), nullable=True
+        BigInteger, ForeignKey('empleados.id', ondelete='SET NULL'), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 

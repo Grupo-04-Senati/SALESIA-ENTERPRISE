@@ -33,10 +33,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   // --- Operación ---
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, group: 'operacion' },
-  { label: 'Clientes', path: '/clientes', icon: Users, group: 'operacion' },
-  { label: 'Productos', path: '/productos', icon: Package, group: 'operacion' },
   { label: 'Ventas', path: '/ventas', icon: ShoppingCart, group: 'operacion' },
   { label: 'Inventario', path: '/inventario', icon: Warehouse, group: 'operacion' },
+  { label: 'Clientes', path: '/clientes', icon: Users, group: 'operacion' },
+  { label: 'Productos', path: '/productos', icon: Package, group: 'operacion' },
   // --- Analítica ---
   { label: 'Analytics', path: '/analytics', icon: TrendingUp, group: 'analitica' },
   { label: 'Probabilidad', path: '/probabilidad', icon: Percent, group: 'analitica' },

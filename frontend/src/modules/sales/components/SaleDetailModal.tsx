@@ -1,6 +1,6 @@
 import type { Sale } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Badge from '@/components/ui/Badge'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
 
@@ -49,7 +49,7 @@ export default function SaleDetailModal({ sale, onClose }: SaleDetailModalProps)
           </div>
         </div>
 
-        <Table headers={['Producto', 'Cantidad', 'Precio', 'Descuento', 'Subtotal']}>
+        <DataTable headers={['Producto', 'Cantidad', 'Precio', 'Descuento', 'Subtotal']}>
           {sale.items.map((item) => (
             <TableRow key={item.product_id}>
               <TableCell>
@@ -64,7 +64,7 @@ export default function SaleDetailModal({ sale, onClose }: SaleDetailModalProps)
               </TableCell>
             </TableRow>
           ))}
-        </Table>
+        </DataTable>
 
         <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
           <div className="flex justify-between py-1">

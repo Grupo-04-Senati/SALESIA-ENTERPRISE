@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/utils/cn'
-import { Spinner } from './states'
+import { Spinner } from '@/components/feedback/Loader'
 
 /**
  * Botón del sistema de diseño (txt §5.1):

@@ -17,7 +17,7 @@ interface TableProps {
   className?: string
 }
 
-export default function Table({ headers, children, className }: TableProps) {
+export default function DataTable({ headers, children, className }: TableProps) {
   return (
     <div
       className={cn(

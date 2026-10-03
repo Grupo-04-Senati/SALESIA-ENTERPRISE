@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { Lightbulb, ListTree, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
-import Table, { TableRow, TableCell } from '@/components/ui/Table'
+import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import { Input, Select } from '@/components/ui/form'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { formatDateTime } from '@/utils/formatters'
 import { SEVERITY_LABELS } from '@/types/insight'
 import type { InsightSeverity } from '@/types/insight'
@@ -198,7 +200,7 @@ export default function InsightsPage() {
           </Link>
           .
         </p>
-        <Table headers={['Código', 'Descripción', 'Severidad base', 'Configurable']}>
+        <DataTable headers={['Código', 'Descripción', 'Severidad base', 'Configurable']}>
           {getActiveRules().map((rule) => (
             <TableRow key={rule.code}>
               <TableCell className="font-mono text-caption">{rule.code}</TableCell>
@@ -217,7 +219,7 @@ export default function InsightsPage() {
               </TableCell>
             </TableRow>
           ))}
-        </Table>
+        </DataTable>
       </section>
     </div>
   )

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Power } from 'lucide-react'
-import Table, { TableRow, TableCell, TableStateRow } from '@/components/ui/Table'
-import Pagination from '@/components/ui/Pagination'
+import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
+import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Checkbox, Input, Select } from '@/components/ui/form'
-import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
+import { Spinner } from '@/components/feedback/Loader'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/formatters'
 import {
@@ -201,14 +203,14 @@ export default function ProductsPage() {
         </div>
       ) : loading && products.length === 0 ? (
         <div className="card">
-          <Table headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', '']}>
+          <DataTable headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', '']}>
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
                 Cargando productos…
               </span>
             </TableStateRow>
-          </Table>
+          </DataTable>
         </div>
       ) : products.length === 0 ? (
         <div className="card">
@@ -225,7 +227,7 @@ export default function ProductsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <Table headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', 'Acciones']}>
+          <DataTable headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', 'Acciones']}>
             {visible.map((product) => {
               const stock = stockBadge(product)
               return (
@@ -288,7 +290,7 @@ export default function ProductsPage() {
                 </TableRow>
               )
             })}
-          </Table>
+          </DataTable>
 
           <Pagination
             page={currentPage}
