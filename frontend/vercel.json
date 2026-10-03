@@ -4,9 +4,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
-  "engines": {
-    "node": "20.x"
-  },
   "rewrites": [
     {
       "source": "/(.*)",

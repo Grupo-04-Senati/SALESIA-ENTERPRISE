@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     cors_origins: str = 'http://localhost:5173'
+    cors_origin_regex: str = ''
     api_base_url: str = 'http://localhost:8000'
     vite_api_base_url: str = 'http://localhost:8000/api/v1'
 
@@ -66,6 +67,10 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> List[str]:
         """CORS_ORIGINS como lista: 'http://a, http://b' → ['http://a', 'http://b']."""
         return [origin.strip() for origin in self.cors_origins.split(',') if origin.strip()]
+
+    def cors_origin_regex_pattern(self) -> str | None:
+        """CORS_ORIGIN_REGEX (p. ej. previews de Vercel) o None si está vacío."""
+        return self.cors_origin_regex.strip() or None
 
     def model_post_init(self, __context: object) -> None:
         if self.environment == 'production' and self.debug:
