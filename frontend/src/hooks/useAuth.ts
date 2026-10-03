@@ -1,25 +1,24 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User } from '@/types/auth'
-import { getCurrentUser, login as loginDemo, logout as logoutDemo } from '@/modules/auth/services/authService'
+import { getCurrentUser, login as loginApi, logout as logoutApi } from '@/modules/auth/services/authService'
 
 /**
- * Estado de sesión del usuario (Fase 03 — modo demostración).
- * TODO(Fase 05): leer el token de /api/v1/auth/login, refrescarlo y
- * proteger las rutas con los roles de docs/05_api.md §2.2.
+ * Estado de sesión del usuario (Fase 05 — API FastAPI, docs/05 §2.1).
+ * El token y el usuario se guardan en services/api.ts y authService.ts.
  */
 export function useAuth() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await loginDemo({ email, password })
+    const response = await loginApi({ email, password })
     setUser(response.user)
     return response.user
   }, [])
 
   const logout = useCallback(() => {
-    logoutDemo()
+    logoutApi()
     setUser(null)
     navigate('/login', { replace: true })
   }, [navigate])

@@ -1,7 +1,6 @@
 /**
  * Rutas de la API (docs/05_api.md §2).
- * TODO(Fase 05): se consumirán cuando el backend FastAPI esté desplegado;
- * de momento los módulos usan datos mock con esta misma forma.
+ * Todas las rutas son relativas a API_BASE (services/api.ts).
  */
 
 export const ENDPOINTS = {
@@ -19,6 +18,7 @@ export const ENDPOINTS = {
 
   // §2.2 Usuarios y roles
   users: '/api/v1/users',
+  userStatus: (id: number) => `/api/v1/users/${id}/status`,
   roles: '/api/v1/roles',
 
   // §2.3 Clientes
@@ -53,4 +53,26 @@ export const ENDPOINTS = {
     analyses: '/api/v1/statistics/analyses',
     datasets: '/api/v1/statistics/datasets',
   },
+
+  // §2.9 Probabilidad
+  probability: {
+    basic: '/api/v1/probability/basic',
+    bayes: '/api/v1/probability/bayes',
+    events: '/api/v1/probability/events',
+  },
+  randomVariables: '/api/v1/random-variables',
+
+  // §2.7 Dashboard, insights, reportes y auditoría
+  dashboard: {
+    summary: '/api/v1/dashboard/summary',
+    timeseries: '/api/v1/dashboard/timeseries',
+    top: '/api/v1/dashboard/top',
+    stockAlerts: '/api/v1/dashboard/stock-alerts',
+  },
+  insights: '/api/v1/insights',
+  insightRules: '/api/v1/insights/rules',
+  reports: '/api/v1/reports',
+  reportExport: (id: number) => `/api/v1/reports/${id}/export`,
+  reportPrint: (id: number) => `/api/v1/reports/${id}/print`,
+  audit: '/api/v1/audit-logs',
 } as const

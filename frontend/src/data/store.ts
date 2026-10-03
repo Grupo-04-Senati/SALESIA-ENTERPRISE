@@ -58,6 +58,21 @@ export function getState(): StoreState {
   return state
 }
 
+/**
+ * Sustituye uno o varios fragmentos del estado con los datos reales de la
+ * API (hidratación Fase 05). Lanza la suscripción para que las vistas
+ * que leen del almacén se recalculen.
+ */
+export function hydrate(partial: Partial<SeedState>): void {
+  state = { ...state, ...partial }
+  commit()
+}
+
+/** Registra una traza de proceso devuelta por el backend (RF trazabilidad). */
+export function logProcessTrace(title: string, steps: TraceStep[]): ProcessTrace {
+  return logTrace(title, steps)
+}
+
 /** Trazas de los últimos procesos ejecutados. */
 export function getTraces(): ProcessTrace[] {
   return state.traces

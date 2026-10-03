@@ -1,15 +1,18 @@
-import type { Sale, SaleInput, SaleStatus } from '@/types/sale'
+import type { Sale, SaleCreated, SaleInput, SaleStatus } from '@/types/sale'
 import type { Customer } from '@/types/customer'
 import type { Seller } from '@/types/sale'
-import { getState, insertSale } from '@/data/store'
-import type { SaleProcessResult } from '@/data/store'
+import { apiFetch } from '@/services/api'
+import { ENDPOINTS } from '@/services/endpoints'
+import { getState, logProcessTrace } from '@/data/store'
+import type { ProcessTrace, SaleProcessResult } from '@/data/store'
+import { hydrateStore } from '@/services/hydrate'
 import { DEFAULT_TAX_RATE, computeTotals } from '@/data/seed'
 
 /**
- * Servicio de ventas (RF-06, RF-07) sobre el almacén compartido.
- * Registrar una venta actualiza en cascada el inventario, el historial del
- * cliente y los indicadores de analítica, y devuelve la traza del proceso.
- * TODO(Fase 05): POST/GET /api/v1/sales (docs/05_api.md §2.6).
+ * Servicio de ventas (RF-06, RF-07) contra la API (Fase 05 · docs/05 §2.6).
+ * Registrar una venta descuenta stock, genera el kardex y actualiza el
+ * historial del cliente en el backend; después se refresca el almacén y
+ * se devuelve la traza de pasos que devuelve el servidor (RF trazabilidad).
  */
 
 export { DEFAULT_TAX_RATE, computeTotals }
@@ -23,7 +26,7 @@ export interface SaleProduct {
   stock: number
 }
 
-/** Clientes y vendedores vigentes, leídos del almacén. */
+/** Clientes y vendedores vigentes, leídos del almacén hidratado. */
 export const getSaleCustomers = (): Pick<Customer, 'id' | 'name'>[] =>
   getState()
     .customers.filter((customer) => customer.status === 'active')
@@ -47,24 +50,48 @@ export interface SaleFilters {
   search?: string
 }
 
-const delay = (ms = 250): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+interface Page<T> {
+  items: T[]
+}
 
 export async function listSales(filters: SaleFilters = {}): Promise<Sale[]> {
-  await delay()
-  const search = filters.search?.trim().toLowerCase() ?? ''
-  return getState()
-    .sales.filter(
+  const search = filters.search?.trim() ?? ''
+  const params = new URLSearchParams({ page: '1', page_size: '100' })
+  if (filters.status) params.set('status', filters.status)
+  if (search) params.set('q', search)
+
+  const page = await apiFetch<Page<Sale>>(`${ENDPOINTS.sales}?${params}`)
+  const term = search.toLowerCase()
+  return page.items
+    .filter(
       (sale) =>
         (!filters.status || sale.status === filters.status) &&
-        (search === '' ||
-          sale.sale_number.toLowerCase().includes(search) ||
-          sale.customer.name.toLowerCase().includes(search) ||
-          sale.seller.name.toLowerCase().includes(search)),
+        (term === '' ||
+          sale.sale_number.toLowerCase().includes(term) ||
+          sale.customer.name.toLowerCase().includes(term) ||
+          sale.seller.name.toLowerCase().includes(term)),
     )
     .sort((a, b) => b.issued_at.localeCompare(a.issued_at))
 }
 
-/** Registra la venta y devuelve el proceso ejecutado (traza de pasos). */
+/** Registra la venta en el backend y devuelve el proceso ejecutado. */
 export async function createSale(input: SaleInput): Promise<SaleProcessResult> {
-  return insertSale(input)
+  const created = await apiFetch<SaleCreated & { trace?: ProcessTrace['steps'] }>(ENDPOINTS.sales, {
+    method: 'POST',
+    body: JSON.stringify({ ...input, tax_rate: input.tax_rate ?? DEFAULT_TAX_RATE }),
+  })
+
+  await hydrateStore(['sales', 'products', 'movements', 'customers'])
+  const sale = await apiFetch<Sale>(`${ENDPOINTS.sales}/${created.id}`)
+  const trace = logProcessTrace(
+    `Venta ${created.sale_number}`,
+    created.trace ?? [
+      {
+        module: 'ventas',
+        label: 'Venta registrada',
+        detail: `${created.sale_number} · total S/ ${created.total.toFixed(2)} · estado ${created.status}`,
+      },
+    ],
+  )
+  return { sale, trace }
 }

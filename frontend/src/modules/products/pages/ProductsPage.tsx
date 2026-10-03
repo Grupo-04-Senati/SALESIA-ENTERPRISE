@@ -9,8 +9,8 @@ import { EmptyState, ErrorState, Spinner } from '@/components/ui/states'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/formatters'
 import {
-  PRODUCT_CATEGORIES,
   createProduct,
+  getProductCategories,
   listProducts,
   toggleProductStatus,
   updateProduct,
@@ -164,7 +164,7 @@ export default function ProductsPage() {
           className="lg:w-48"
         >
           <option value="">Todas las categorías</option>
-          {PRODUCT_CATEGORIES.map((category) => (
+          {getProductCategories().map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>

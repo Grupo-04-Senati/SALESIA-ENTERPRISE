@@ -1,17 +1,13 @@
 import type { Customer, CustomerInput } from '@/types/customer'
 import type { Sale } from '@/types/sale'
-import {
-  getState,
-  insertCustomer,
-  modifyCustomer,
-  setCustomerStatus,
-} from '@/data/store'
+import { apiFetch } from '@/services/api'
+import { ENDPOINTS } from '@/services/endpoints'
+import { hydrateStore } from '@/services/hydrate'
 
 /**
- * Servicio de clientes (RF-03) sobre el almacén compartido.
- * El historial se calcula con las ventas reales del sistema: al registrar
- * una venta, el cliente aparece con una compra más.
- * TODO(Fase 05): GET/POST/PUT/DELETE /api/v1/customers (docs/05_api.md §2.3).
+ * Servicio de clientes (RF-03) contra la API (Fase 05 · docs/05 §2.3).
+ * El historial de compras se consulta en GET /customers/{id}/history y
+ * las altas/ediciones se reflejan en los cálculos del almacén hidratado.
  */
 
 /** Segmentos comerciales. */
@@ -23,35 +19,57 @@ export interface CustomerFilters {
   status?: 'active' | 'inactive' | ''
 }
 
-const delay = (ms = 250): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+interface Page<T> {
+  items: T[]
+}
 
 export async function listCustomers(filters: CustomerFilters = {}): Promise<Customer[]> {
-  await delay()
-  const search = filters.search?.trim().toLowerCase() ?? ''
-  return getState()
-    .customers.filter(
+  const search = filters.search?.trim() ?? ''
+  const params = new URLSearchParams({ page: '1', page_size: '100' })
+  if (search) params.set('q', search)
+  if (filters.segment) params.set('segment', filters.segment)
+  if (filters.status) params.set('status', filters.status)
+
+  const page = await apiFetch<Page<Customer>>(`${ENDPOINTS.customers}?${params}`)
+  const term = search.toLowerCase()
+  return page.items
+    .filter(
       (customer) =>
         (!filters.status || customer.status === filters.status) &&
         (!filters.segment || customer.segment === filters.segment) &&
-        (search === '' ||
-          customer.name.toLowerCase().includes(search) ||
-          customer.document_number.includes(search) ||
-          customer.email.toLowerCase().includes(search)),
+        (term === '' ||
+          customer.name.toLowerCase().includes(term) ||
+          customer.document_number.includes(term) ||
+          customer.email.toLowerCase().includes(term)),
     )
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
-  return insertCustomer(input)
+  const customer = await apiFetch<Customer>(ENDPOINTS.customers, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  await hydrateStore(['customers'])
+  return customer
 }
 
 export async function updateCustomer(id: number, input: CustomerInput): Promise<Customer> {
-  return modifyCustomer(id, input)
+  const customer = await apiFetch<Customer>(`${ENDPOINTS.customers}/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+  await hydrateStore(['customers'])
+  return customer
 }
 
-/** Baja lógica (RF-03): el historial de compras se conserva. */
+/** Baja lógica (RF-03 · RN-02): el historial de compras se conserva. */
 export async function deactivateCustomer(id: number): Promise<Customer> {
-  return setCustomerStatus(id, 'inactive')
+  const customer = await apiFetch<Customer>(`${ENDPOINTS.customers}/${id}`, {
+    method: 'DELETE',
+  })
+  await hydrateStore(['customers'])
+  return customer
 }
 
 export interface CustomerPurchase {
@@ -61,16 +79,10 @@ export interface CustomerPurchase {
   status: Sale['status']
 }
 
-/** Historial real de compras del cliente (GET /customers/{id}/history). */
+/** Historial de compras del cliente (GET /customers/{id}/history). */
 export async function getCustomerHistory(customer: Customer): Promise<CustomerPurchase[]> {
-  await delay(200)
-  return getState()
-    .sales.filter((sale) => sale.customer.id === customer.id)
-    .sort((a, b) => b.issued_at.localeCompare(a.issued_at))
-    .map((sale) => ({
-      sale_number: sale.sale_number,
-      issued_at: sale.issued_at,
-      total: sale.total,
-      status: sale.status,
-    }))
+  const response = await apiFetch<{ history: CustomerPurchase[] }>(
+    ENDPOINTS.customerHistory(customer.id),
+  )
+  return [...response.history].sort((a, b) => b.issued_at.localeCompare(a.issued_at))
 }

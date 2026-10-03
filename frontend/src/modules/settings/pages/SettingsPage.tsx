@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Palette, RotateCcw, Save, Server, UserCog, Users, Database } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -7,9 +7,11 @@ import Table, { TableRow, TableCell } from '@/components/ui/Table'
 import { Input, Select } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
-import { MANAGED_USERS, ROLES } from '@/modules/auth/services/authService'
+import { ROLES, listManagedUsers } from '@/modules/auth/services/authService'
+import type { ManagedUser } from '@/modules/auth/services/authService'
 import { useAuth } from '@/hooks/useAuth'
-import { getState, resetDemoData } from '@/data/store'
+import { getState } from '@/data/store'
+import { hydrateStore } from '@/services/hydrate'
 
 /**
  * Configuración del sistema (Fase 06 · RF-02):
@@ -32,6 +34,7 @@ export default function SettingsPage() {
   const toast = useToast()
   const { user } = useAuth()
 
+  const [users, setUsers] = useState<ManagedUser[]>([])
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [currency, setCurrency] = useState('PEN')
@@ -39,6 +42,13 @@ export default function SettingsPage() {
   const [pageSize, setPageSize] = useState('10')
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingParams, setSavingParams] = useState(false)
+
+  useEffect(() => {
+    // GET /api/v1/users (solo Admin) — Fase 05.
+    listManagedUsers()
+      .then(setUsers)
+      .catch(() => setUsers([]))
+  }, [])
 
   const handleProfile = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -134,7 +144,7 @@ export default function SettingsPage() {
           <h2 className="text-h3 text-gray-800">Usuarios y roles</h2>
         </div>
         <Table headers={['Usuario', 'Correo', 'Rol', 'Estado']}>
-          {MANAGED_USERS.map((managed) => (
+          {users.map((managed) => (
             <TableRow key={managed.id}>
               <TableCell className="font-medium text-gray-900">{managed.name}</TableCell>
               <TableCell className="text-gray-600">{managed.email}</TableCell>
@@ -188,12 +198,20 @@ export default function SettingsPage() {
           <Button
             variant="outline"
             onClick={() => {
-              resetDemoData()
-              toast.success('Datos restablecidos', 'Se restauró el conjunto de demostración inicial.')
+              hydrateStore()
+                .then(() =>
+                  toast.success('Datos sincronizados', 'Se recargaron los datos desde la API.'),
+                )
+                .catch((reason: unknown) =>
+                  toast.error(
+                    'No se pudo sincronizar',
+                    reason instanceof Error ? reason.message : 'Error inesperado',
+                  ),
+                )
             }}
           >
             <RotateCcw aria-hidden="true" className="h-4 w-4" />
-            Restablecer datos demo
+            Sincronizar con la API
           </Button>
           <Button
             variant="secondary"

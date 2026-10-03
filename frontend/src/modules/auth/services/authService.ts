@@ -1,70 +1,65 @@
+import { apiFetch, clearToken, getToken, setToken } from '@/services/api'
+import { ENDPOINTS } from '@/services/endpoints'
 import type { LoginResponse, Role, User } from '@/types/auth'
 
 /**
- * Servicio de autenticación en modo demostración (Fase 03).
- * TODO(Fase 05): sustituir por POST /api/v1/auth/login y guardar el
- * access token (docs/05_api.md §2.1). Hasta entonces cualquier correo
- * y contraseña válidos abren la sesión.
+ * Servicio de autenticación contra la API (Fase 05 · docs/05_api.md §2.1).
+ * El access token queda en localStorage y se adjunta en cada petición
+ * (services/api.ts); el usuario de la sesión se conserva para el encabezado.
  */
 
-const SESSION_KEY = 'salesia_demo_user'
-
-/** Usuario demo por defecto (rol Admin para poder revisar todo el sistema). */
-export const DEMO_USER: User = {
-  id: 1,
-  name: 'Ana Torres',
-  email: 'ana@salesia.pe',
-  role: 'Admin',
-}
-
-const delay = (ms = 350): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+const USER_KEY = 'salesia_user'
 
 export interface DemoLogin {
   email: string
   password: string
 }
 
-export async function login({ email }: DemoLogin): Promise<LoginResponse> {
-  await delay()
-  const user: User = { ...DEMO_USER, email: email.trim() || DEMO_USER.email }
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(user))
-  return {
-    access_token: 'demo-token',
-    refresh_token: 'demo-refresh',
-    token_type: 'bearer',
-    expires_in: 1800,
-    user,
-  }
+/** POST /auth/login — guarda token y usuario de la sesión. */
+export async function login({ email, password }: DemoLogin): Promise<LoginResponse> {
+  const response = await apiFetch<LoginResponse>(ENDPOINTS.auth.login, {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim(), password }),
+  })
+  setToken(response.access_token)
+  localStorage.setItem(USER_KEY, JSON.stringify(response.user))
+  return response
 }
 
+/** POST /auth/logout (best effort) y cierre de la sesión local. */
 export function logout(): void {
-  sessionStorage.removeItem(SESSION_KEY)
+  const token = getToken()
+  if (token) {
+    apiFetch(ENDPOINTS.auth.logout, { method: 'POST' }).catch(() => {
+      // El JWT es stateless: si el backend no responde se cierra igual.
+    })
+  }
+  clearToken()
 }
 
-/** Usuario de la sesión actual; por defecto el usuario demo. */
-export function getCurrentUser(): User {
-  const stored = sessionStorage.getItem(SESSION_KEY)
-  if (!stored) return DEMO_USER
+/** Usuario de la sesión actual (null si no hay sesión iniciada). */
+export function getCurrentUser(): User | null {
+  const stored = localStorage.getItem(USER_KEY)
+  if (!stored) return null
   try {
     return JSON.parse(stored) as User
   } catch {
-    return DEMO_USER
+    return null
   }
 }
 
 /** Roles del sistema (docs/05_api.md §2.2). */
 export const ROLES: Role[] = ['Admin', 'Gerente', 'Vendedor', 'Analista', 'Almacén']
 
-/** Usuarios de demostración para la vista de gestión (baja lógica, RF-02). */
+/** Usuarios de la gestión de usuarios (RF-02 · GET /users, solo Admin). */
 export interface ManagedUser extends User {
   status: 'active' | 'inactive'
+  last_login?: string | null
 }
 
-export const MANAGED_USERS: ManagedUser[] = [
-  { id: 1, name: 'Ana Torres', email: 'ana@salesia.pe', role: 'Admin', status: 'active' },
-  { id: 2, name: 'Luis Ríos', email: 'luis.rios@salesia.pe', role: 'Vendedor', status: 'active' },
-  { id: 3, name: 'Carlos Peña', email: 'carlos.pena@salesia.pe', role: 'Almacén', status: 'active' },
-  { id: 4, name: 'Rosa Huamán', email: 'rosa.huaman@salesia.pe', role: 'Analista', status: 'active' },
-  { id: 5, name: 'Jorge Ramírez', email: 'jorge.ramirez@salesia.pe', role: 'Vendedor', status: 'inactive' },
-  { id: 6, name: 'Elena Quispe', email: 'elena.quispe@salesia.pe', role: 'Gerente', status: 'active' },
-]
+export async function listManagedUsers(): Promise<ManagedUser[]> {
+  const page = await apiFetch<{ items: ManagedUser[] }>(
+    `${ENDPOINTS.users}?page=1&page_size=100`,
+  )
+  return page.items
+}

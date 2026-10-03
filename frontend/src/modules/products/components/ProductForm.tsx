@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/form'
 import { minNumber, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
-import { PRODUCT_CATEGORIES } from '../services/productService'
+import { getProductCategories } from '../services/productService'
 
 /**
  * Formulario de producto crear/editar en modal (RF-04).
@@ -156,7 +156,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           onChange={setValue('category_id')}
           error={errors.category_id}
         >
-          {PRODUCT_CATEGORIES.map((category) => (
+          {getProductCategories().map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>

@@ -1,23 +1,33 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 
 /**
- * Página de Login (Fase 03 — sistema de diseño).
- *
- * MODO DEMO: la autenticación real contra la API se implementa en la
- * Fase 05 (POST /api/v1/auth/login). Mientras tanto, cualquier correo
- * y contraseña abren la aplicación para poder revisar el diseño.
+ * Página de Login (Fase 05 — autenticación real contra la API).
+ * POST /api/v1/auth/login (docs/05_api.md §2.1); el token queda guardado
+ * y la guardia RequireAuth hidrata los datos antes de entrar al sistema.
  */
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    // TODO(Fase 05): sustituir por llamada real a la API de autenticación.
-    navigate('/', { replace: true })
+    setError('')
+    setLoading(true)
+    try {
+      await login(email, password)
+      navigate('/', { replace: true })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo iniciar sesión.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -62,14 +72,21 @@ export default function LoginPage() {
         />
       </div>
 
-      <button type="submit" className="btn-primary w-full">
-        Iniciar sesión
+      {error && (
+        <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
+          {error}
+        </p>
+      )}
+
+      <button type="submit" className="btn-primary w-full" disabled={loading}>
+        {loading ? 'Ingresando…' : 'Iniciar sesión'}
       </button>
 
       <p className="rounded-md border border-info bg-info-bg px-3 py-2 text-center text-caption text-info-fg">
-        Modo demo: cualquier correo y contraseña abren la aplicación.
+        Usuarios de demostración: admin@salesia.com · gerente@salesia.com ·
+        vendedor@salesia.com · analista@salesia.com · almacen@salesia.com
         <br />
-        La autenticación real se conecta en la Fase 05 (API FastAPI).
+        Contraseña: admin123
       </p>
 
       <p className="text-center text-caption text-gray-500">
