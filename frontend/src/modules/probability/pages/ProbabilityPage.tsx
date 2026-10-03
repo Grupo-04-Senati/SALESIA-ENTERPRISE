@@ -55,6 +55,23 @@ function Rn40Message() {
   )
 }
 
+/** Mensaje de la regla RN-43 cuando P(B) = 0 bloquea el cálculo. */
+function Rn43Message({ message }: { message: string }) {
+  return (
+    <div className="card space-y-2">
+      <p className="text-body-sm font-semibold text-gray-900">Cálculo bloqueado por una regla</p>
+      <p className="text-body-sm text-gray-600">{message}</p>
+      <p className="text-body-sm text-gray-600">
+        Registra ventas en{' '}
+        <Link to="/ventas" className="font-medium text-primary hover:underline">
+          Ventas
+        </Link>{' '}
+        para que la evidencia sea distinta de cero.
+      </p>
+    </div>
+  )
+}
+
 export default function ProbabilityPage() {
   const [months, setMonths] = useState<PeriodMonths>(12)
   const [datasetId, setDatasetId] = useState('total')
@@ -88,14 +105,28 @@ export default function ProbabilityPage() {
     }
   }, [dataset, version])
 
-  const posterior = useMemo(() => {
-    if (!scenario) return null
-    return bayes({ prior: scenario.prior, likelihood: scenario.likelihood, evidence: scenario.evidence })
+  const bayesCalc = useMemo(() => {
+    if (!scenario) return { result: null, error: null }
+    // RN-43 puede bloquear el cálculo: no se lanza durante el render,
+    // se muestra como estado de la pestaña (BD vacía = P(B) = 0).
+    try {
+      return {
+        result: bayes({ prior: scenario.prior, likelihood: scenario.likelihood, evidence: scenario.evidence }),
+        error: null,
+      }
+    } catch (reason) {
+      return {
+        result: null,
+        error: reason instanceof Error ? reason.message : 'No se pudo calcular el posterior.',
+      }
+    }
   }, [scenario, version])
+  const posterior = bayesCalc.result
+  const bayesError = bayesCalc.error
 
   /* Cada cálculo automático queda registrado en el historial (RF-21). */
   useEffect(() => {
-    if (!estadistico || !posterior) return
+    if (!estadistico) return
     registerAnalysis({
       kind: 'media',
       label: `Media automática · ${dataset.label}`,
@@ -111,11 +142,13 @@ export default function ProbabilityPage() {
       label: `Comparación automática · ${dataset.label}`,
       result: `Diferencia ${formatCurrency(Math.abs(estadistico.diferencia))} (${formatPercent(estadistico.diferenciaPct / 100)})`,
     })
-    registerAnalysis({
-      kind: 'bayes',
-      label: `Bayes automático · ${scenario.eventA} → ${scenario.eventB}`,
-      result: `P(A|B) = ${posterior.posterior}`,
-    })
+    if (posterior && scenario) {
+      registerAnalysis({
+        kind: 'bayes',
+        label: `Bayes automático · ${scenario.eventA} → ${scenario.eventB}`,
+        result: `P(A|B) = ${posterior.posterior}`,
+      })
+    }
     setHistory(listAnalyses())
   }, [estadistico, posterior, dataset, scenario, version])
 
@@ -129,7 +162,8 @@ export default function ProbabilityPage() {
     [dataset, version],
   )
 
-  const faltaDatos = !estadistico || !posterior
+  const faltaDatosMedia = !estadistico
+  const faltaDatosBayes = !posterior
 
   return (
     <div className="space-y-6">
@@ -157,11 +191,10 @@ export default function ProbabilityPage() {
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="probabilidad" />
 
       <TabPanel tabId="media" active={tab === 'media'}>
-        {faltaDatos ? (
+        {faltaDatosMedia ? (
           <Rn40Message />
         ) : (
-          estadistico &&
-          posterior && (
+          estadistico && (
         <>
           {/* Media y mediana automáticas */}
           <section className="card space-y-4">
@@ -226,11 +259,13 @@ export default function ProbabilityPage() {
       </TabPanel>
 
       <TabPanel tabId="bayes" active={tab === 'bayes'}>
-        {faltaDatos ? (
+        {bayesError ? (
+          <Rn43Message message={bayesError} />
+        ) : faltaDatosBayes ? (
           <Rn40Message />
         ) : (
-          estadistico &&
-          posterior && (
+          posterior &&
+          scenario && (
         <>
           {/* Bayes automático */}
           <section className="card space-y-4">

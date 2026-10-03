@@ -34,7 +34,7 @@ interface FormValues extends Record<string, string> {
 const EMPTY: FormValues = {
   sku: '',
   name: '',
-  category_id: '1',
+  category_id: '',
   cost_price: '',
   sale_price: '',
   min_stock: '10',
@@ -60,9 +60,11 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
             min_stock: String(product.min_stock),
             unit: product.unit,
           }
-        : EMPTY,
+        : { ...EMPTY, category_id: String(getProductCategories()[0]?.id ?? '') },
     )
   }, [open, product])
+
+  const categories = getProductCategories()
 
   const setValue = (key: keyof FormValues) => (event: { target: { value: string } }) => {
     const value = event.target.value
@@ -155,8 +157,13 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           value={values.category_id}
           onChange={setValue('category_id')}
           error={errors.category_id}
+          hint={
+            categories.length === 0
+              ? 'No hay categorías: créalas primero en el menú Categorías.'
+              : undefined
+          }
         >
-          {getProductCategories().map((category) => (
+          {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>

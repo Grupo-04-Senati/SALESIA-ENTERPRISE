@@ -22,10 +22,10 @@ import { formatCurrency, formatNumber } from '@/utils/formatters'
 import { useDataVersion } from '@/data/DataProvider'
 import { getState } from '@/data/store'
 import {
-  CATEGORY_NAMES,
   CHART_AXIS,
   CHART_GRID,
-  SELLER_NAMES,
+  getCategoryNames,
+  getSellerNames,
 } from '../services/statisticsService'
 import { getSystemAlerts } from '@/data/analytics'
 import type { PeriodMonths } from '../services/statisticsService'
@@ -71,6 +71,8 @@ export default function AnalyticsPage() {
 
   // Módulos que alimentan estos cálculos: se recalculan con cada cambio (RF-21).
   const version = useDataVersion()
+  const sellerNames = useMemo(() => getSellerNames(), [version])
+  const categoryNames = useMemo(() => getCategoryNames(), [version])
   const moduleLinks = useMemo(() => {
     const state = getState()
     return [
@@ -108,7 +110,7 @@ export default function AnalyticsPage() {
         </Select>
         <Select label="Vendedor" value={seller} onChange={(event) => setSeller(event.target.value)} className="md:w-48">
           <option value="">Todos los vendedores</option>
-          {SELLER_NAMES.map((name) => (
+          {sellerNames.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>
@@ -116,7 +118,7 @@ export default function AnalyticsPage() {
         </Select>
         <Select label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)} className="md:w-52">
           <option value="">Todas las categorías</option>
-          {CATEGORY_NAMES.map((name) => (
+          {categoryNames.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>

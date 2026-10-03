@@ -175,6 +175,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             required
             value={customerId}
             onChange={(event) => setCustomerId(event.target.value)}
+            hint={customers.length === 0 ? 'Crea clientes en el menú Clientes.' : undefined}
           >
             <option value="">Selecciona un cliente…</option>
             {customers.map((customer) => (
@@ -183,7 +184,12 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
               </option>
             ))}
           </Select>
-          <Select label="Vendedor" value={effectiveSellerId} onChange={(event) => setSellerId(event.target.value)}>
+          <Select
+            label="Vendedor"
+            value={effectiveSellerId}
+            onChange={(event) => setSellerId(event.target.value)}
+            hint={sellers.length === 0 ? 'Crea vendedores en el menú Vendedores.' : undefined}
+          >
             {sellers.map((seller) => (
               <option key={seller.id} value={seller.id}>
                 {seller.name}
@@ -197,7 +203,12 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
           <p className="mb-3 text-body-sm font-semibold text-gray-700">Agregar producto</p>
           <div className="grid gap-3 sm:grid-cols-12">
             <div className="sm:col-span-6">
-              <Select aria-label="Producto" value={productId} onChange={(event) => setProductId(event.target.value)}>
+              <Select
+                aria-label="Producto"
+                value={productId}
+                onChange={(event) => setProductId(event.target.value)}
+                hint={products.length === 0 ? 'Crea productos en el menú Productos.' : undefined}
+              >
                 <option value="">Producto…</option>
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>

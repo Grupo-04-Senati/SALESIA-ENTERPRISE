@@ -9,6 +9,8 @@ import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
 import CustomersPage from '@/modules/customers/pages/CustomersPage'
 import ProductsPage from '@/modules/products/pages/ProductsPage'
+import CategoriesPage from '@/modules/categories/pages/CategoriesPage'
+import EmployeesPage from '@/modules/employees/pages/EmployeesPage'
 import SalesPage from '@/modules/sales/pages/SalesPage'
 import InventoryPage from '@/modules/inventory/pages/InventoryPage'
 import AnalyticsPage from '@/modules/analytics/pages/AnalyticsPage'
@@ -63,6 +65,8 @@ function GuestOnly({ children }: { children: ReactNode }) {
 const MODULE_ROUTES: Record<string, ReactNode> = {
   '/clientes': <CustomersPage />,
   '/productos': <ProductsPage />,
+  '/categorias': <CategoriesPage />,
+  '/vendedores': <EmployeesPage />,
   '/ventas': <SalesPage />,
   '/inventario': <InventoryPage />,
   '/analytics': <AnalyticsPage />,

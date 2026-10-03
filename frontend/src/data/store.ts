@@ -84,7 +84,7 @@ function logTrace(title: string, steps: TraceStep[]): ProcessTrace {
   return trace
 }
 
-/** Restaura los datos de demostración (Configuración → restablecer demo). */
+/** Vacía el almacén y conserva las trazas y reglas activas. */
 export function resetDemoData(): void {
   state = { ...createSeedState(), traces: state.traces, rules: state.rules }
   commit()

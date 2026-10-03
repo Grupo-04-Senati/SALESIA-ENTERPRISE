@@ -182,17 +182,17 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Datos de demostración */}
+      {/* Datos del sistema */}
       <section className="card space-y-3">
         <div className="flex items-center gap-2">
           <Database aria-hidden="true" className="h-5 w-5 text-primary" />
-          <h2 className="text-h4 text-gray-800">Datos de demostración</h2>
+          <h2 className="text-h4 text-gray-800">Datos del sistema</h2>
         </div>
         <p className="text-body-sm text-gray-600">
           Todos los módulos (Clientes, Productos, Ventas, Inventario, Analytics, Probabilidad,
-          Insights, Reportes y Dashboard) leen y escriben sobre el mismo almacén en memoria: al
-          registrar una venta se actualizan el stock, el kardex, el historial del cliente y los
-          indicadores, y queda registrada la traza del proceso.
+          Insights, Reportes y Dashboard) leen y escriben sobre el mismo almacén: se carga desde la
+          API al iniciar sesión y con cada registro nuevo, de modo que el stock, el kardex, el
+          historial del cliente y los indicadores quedan actualizados con tus datos.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button

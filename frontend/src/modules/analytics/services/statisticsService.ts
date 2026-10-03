@@ -9,7 +9,7 @@
  * /api/v1/statistics (docs/05_api.md §2.8).
  */
 
-import { CATEGORIES, SELLERS } from '@/data/seed'
+import { getState } from '@/data/store'
 
 export {
   CHART_AXIS,
@@ -40,7 +40,11 @@ export type {
 } from '@/data/analytics'
 
 /** Vendedores disponibles para los filtros (docs/05_api.md §2.5). */
-export const SELLER_NAMES: string[] = SELLERS.map((seller) => seller.name)
+export function getSellerNames(): string[] {
+  return getState().sellers.map((seller) => seller.name)
+}
 
 /** Categorías disponibles para los filtros (docs/05_api.md §2.4). */
-export const CATEGORY_NAMES: string[] = CATEGORIES.map((category) => category.name)
+export function getCategoryNames(): string[] {
+  return getState().categories.map((category) => category.name)
+}

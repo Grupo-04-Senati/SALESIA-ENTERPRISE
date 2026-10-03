@@ -5,7 +5,14 @@
 export interface Category {
   id: number
   name: string
+  description?: string | null
   status?: 'active' | 'inactive'
+}
+
+/** Datos para crear/editar categoría (POST/PUT /api/v1/categories). */
+export interface CategoryInput {
+  name: string
+  description?: string | null
 }
 
 export interface Product {

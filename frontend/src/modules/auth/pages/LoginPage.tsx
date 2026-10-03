@@ -83,8 +83,7 @@ export default function LoginPage() {
       </button>
 
       <p className="rounded-md border border-info bg-info-bg px-3 py-2 text-center text-caption text-info-fg">
-        Usuarios de demostración: admin@salesia.com · gerente@salesia.com ·
-        vendedor@salesia.com · analista@salesia.com · almacen@salesia.com
+        Acceso de administrador: admin@salesia.com
         <br />
         Contraseña: admin123
       </p>

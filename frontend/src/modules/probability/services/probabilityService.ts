@@ -69,19 +69,11 @@ export function bayes(input: BayesInput): BayesResult {
 }
 
 /* ------------------------------------------------------------------
-   Historial de análisis (RF-21) — se mantiene en memoria
+   Historial de análisis (RF-21) — se mantiene en memoria.
+   Arranca vacío: solo se registran los cálculos del sistema real.
    ------------------------------------------------------------------ */
 
-const SEED_HISTORY: AnalysisRecord[] = [
-  { id: 1, kind: 'media', label: 'Media · tickets de septiembre', result: 'S/ 118.40', created_at: '2026-09-30T17:10:00Z' },
-  { id: 2, kind: 'mediana', label: 'Mediana · tickets de septiembre', result: 'S/ 104.20', created_at: '2026-09-30T17:12:00Z' },
-  { id: 3, kind: 'comparacion', label: 'Media vs. mediana · septiembre', result: 'Diferencia S/ 14.20 (13.6%)', created_at: '2026-09-30T17:15:00Z' },
-  { id: 4, kind: 'bayes', label: 'Bayes · cliente fiel', result: 'P(A|B) = 0.72', created_at: '2026-09-29T10:05:00Z' },
-  { id: 5, kind: 'variable', label: 'Variable · categoría de producto', result: 'Cualitativa nominal (8 valores)', created_at: '2026-09-28T14:40:00Z' },
-  { id: 6, kind: 'media', label: 'Media · ventas de agosto', result: 'S/ 132.75', created_at: '2026-08-31T18:20:00Z' },
-]
-
-let history: AnalysisRecord[] = [...SEED_HISTORY]
+let history: AnalysisRecord[] = []
 
 export function listAnalyses(): AnalysisRecord[] {
   return [...history].sort((a, b) => b.created_at.localeCompare(a.created_at))

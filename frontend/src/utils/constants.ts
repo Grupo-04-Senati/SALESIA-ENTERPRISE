@@ -10,6 +10,8 @@ import {
   Lightbulb,
   FileText,
   Settings,
+  Tag,
+  UserPlus,
   Zap,
 } from 'lucide-react'
 
@@ -37,6 +39,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Inventario', path: '/inventario', icon: Warehouse, group: 'operacion' },
   { label: 'Clientes', path: '/clientes', icon: Users, group: 'operacion' },
   { label: 'Productos', path: '/productos', icon: Package, group: 'operacion' },
+  { label: 'Categorías', path: '/categorias', icon: Tag, group: 'operacion' },
+  { label: 'Vendedores', path: '/vendedores', icon: UserPlus, group: 'operacion' },
   // --- Analítica ---
   { label: 'Analytics', path: '/analytics', icon: TrendingUp, group: 'analitica' },
   { label: 'Probabilidad', path: '/probabilidad', icon: Percent, group: 'analitica' },
@@ -58,6 +62,8 @@ export const PATH_TITLES: Record<string, string> = {
   '/': 'Dashboard',
   '/clientes': 'Clientes',
   '/productos': 'Productos',
+  '/categorias': 'Categorías',
+  '/vendedores': 'Vendedores',
   '/ventas': 'Ventas',
   '/inventario': 'Inventario',
   '/analytics': 'Analytics',
