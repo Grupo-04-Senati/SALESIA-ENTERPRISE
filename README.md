@@ -78,9 +78,18 @@ SALESIA-ENTERPRISE/
 ## Estado actual
 
 - ✅ Estructura del repositorio
-- ✅ Documentación de arquitectura (`docs/01…07`)
-- ⬜ Código backend / frontend (pendiente por fases)
-- ⬜ Despliegues (Vercel · Railway · Supabase)
+- ✅ Documentación de arquitectura (`docs/01…08`)
+- ✅ Backend FastAPI (54 tablas, migraciones Alembic, 45 pruebas)
+- ✅ Frontend React + TypeScript (integrado con la API)
+- ✅ Despliegues
+
+| Capa | URL |
+|---|---|
+| Frontend (Vercel) | https://salesia-frontend.vercel.app |
+| API (Railway) | https://api-production-60ffe.up.railway.app · `/health` · `/docs` |
+| Base de datos | Supabase (pooler `aws-0-us-east-2`) |
+
+> Acceso demo: `admin@salesia.com` / `admin123`. Pasos y variables: [`docs/08_despliegue.md`](docs/08_despliegue.md).
 
 ---
 

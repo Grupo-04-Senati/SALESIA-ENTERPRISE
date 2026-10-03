@@ -13,9 +13,9 @@ React + Vite (frontend)  →  Vercel  ──HTTPS──►  FastAPI (Railway)  �
 
 | Capa | Servicio | Estado |
 |---|---|---|
-| Frontend (React + Vite + Tailwind) | **Vercel** | ✅ listo para publicar |
-| API (FastAPI) | **Railway** | ⏳ Fase 05 |
-| Base de datos (PostgreSQL 16) | **Supabase** | ⏳ Fase 04 |
+| Frontend (React + Vite + Tailwind) | **Vercel** | ✅ publicado: https://salesia-frontend.vercel.app |
+| API (FastAPI) | **Railway** | ✅ publicado: https://api-production-60ffe.up.railway.app |
+| Base de datos (PostgreSQL 16) | **Supabase** | ✅ conectada (pooler `aws-0-us-east-2`) |
 
 Orden obligatorio de publicación (plan §12): **base de datos → backend con `/health` → frontend → integración**.
 
@@ -27,9 +27,10 @@ Orden obligatorio de publicación (plan §12): **base de datos → backend con `
 
 | Archivo | Para qué sirve |
 |---|---|
-| `frontend/vercel.json` | Framework `vite`, `npm run build`, salida `dist`, Node 20 y **rewrite SPA** |
-| `frontend/.env.example` | Plantilla de variables (`VITE_API_BASE_URL`) |
-| `.gitignore` → `.vercel/` | Evita versionar el enlace del proyecto |
+| `frontend/vercel.json` | Framework `vite`, `npm run build`, salida `dist`, `npm ci` y **rewrite SPA** |
+| `frontend/package.json` → `engines` | Versión de Node (`>=20.19`) — Vercel la lee de `package.json`, **no** de `vercel.json` |
+| `frontend/.env.example` | Plantilla de variables (`VITE_API_URL`) |
+| `.gitignore` → `.vercel/` · `.env.local` | Evita versionar el enlace del proyecto y los tokens |
 
 El **rewrite SPA** es lo que permite que rutas como `/clientes`, `/ventas` o
 `/automatizaciones` funcionen al recargar la página: Vercel sirve
@@ -62,11 +63,17 @@ O bien, en un solo paso: doble clic en **`Desplegar-Frontend.bat`** de la raíz
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
    - **Install Command:** `npm ci`
-3. En **Environment Variables** añadir (Fase 05, cuando exista la API):
+3. En **Environment Variables** añadir:
 
    | Variable | Valor | Visible |
    |---|---|---|
-   | `VITE_API_BASE_URL` | `https://<tu-api>.up.railway.app/api/v1` | pública |
+   | `VITE_API_URL` | `https://api-production-60ffe.up.railway.app` (**sin** `/api/v1`) | pública |
+
+   > El nombre debe coincidir con `frontend/src/services/api.ts`; los endpoints
+   > de `frontend/src/services/endpoints.ts` ya llevan el prefijo `/api/v1`.
+
+   Proyecto actual: `salesia-frontend` (team `grupo-4-5c32`), ya vinculado con
+   `vercel link`; variable dada de alta para *Production* y *Preview*.
 
 4. Cada `push` a `main` publica automáticamente; cada **Pull Request** genera
    una *preview* con URL propia, sin afectar producción (plan §12).
@@ -87,19 +94,63 @@ O bien, en un solo paso: doble clic en **`Desplegar-Frontend.bat`** de la raíz
 
 ---
 
-## 3. Backend en Railway (Fase 05)
+## 3. Backend en Railway
 
-1. `railway init` y `railway up` desde `backend/`.
-2. Variables (plan §11), **solo en Railway**:
+### 3.1 Despliegue con la CLI (así se publicó)
 
-   | Variable | Origen |
-   |---|---|
-   | `DATABASE_URL` | Supabase (usar el *pooler* en producción) |
-   | `SECRET_KEY` | `openssl rand -hex 32` |
-   | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1800` |
-   | `CORS_ORIGINS` | Dominio de Vercel (producción + previews) |
+```powershell
+# Desde backend/ (la CLI enlaza el directorio actual al proyecto)
+railway init --name salesia-api     # crea proyecto y lo enlaza
+railway variable set KEY=value --service api   # ver §3.2
+railway up -y -d                    # sube el código y construye con el Dockerfile
+railway domain -s api               # genera la URL pública
+```
 
-3. Verificar `GET /health` antes de tocar el frontend.
+- Railway **detecta automáticamente** `backend/Dockerfile` (builder: Dockerfile),
+  así que no hace falta configurar build ni start: el `CMD` corre
+  `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`.
+- **Opcional:** en *Service → Settings → Healthcheck Path* poner `/health` para
+  que Railway solo enrute tráfico cuando la API responda. (La Config as Code
+  `railway.json` está deprecada y **no** se aplica a servicios nuevos.)
+- Redesplegar tras un `git push` o un cambio de código: `railway up -y -d`.
+
+### 3.2 Variables (solo en Railway)
+
+| Variable | Valor |
+|---|---|
+| `ENVIRONMENT` | `production` |
+| `DEBUG` | `false` (**obligatorio** con `ENVIRONMENT=production`, ver `config.py`) |
+| `DATABASE_URL` | Supabase por **pooler** (`postgresql+psycopg://…:5432/postgres`) |
+| `SECRET_KEY` | `openssl rand -hex 32` (nunca en el repo ni en Vercel) |
+| `ALGORITHM` | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` |
+| `CORS_ORIGINS` | `https://salesia-frontend.vercel.app` (+ localhost en dev) |
+| `CORS_ORIGIN_REGEX` | `https://salesia-frontend-.*\.vercel\.app` (previews de Vercel) |
+| `API_BASE_URL` | `https://api-production-60ffe.up.railway.app` |
+
+> `DATABASE_URL` y `SECRET_KEY` **no tienen valor por defecto**: si faltan, la
+> app muere al importar `app/core/config.py`. `CORS_ORIGINS` es por coincidencia
+> exacta; para las previews se usa `CORS_ORIGIN_REGEX` (soportado por
+> `allow_origin_regex` en `app/main.py`).
+
+### 3.3 Seed de la base de datos
+
+Las migraciones crean las 54 tablas pero **no usuarios**. La primera vez:
+
+```powershell
+python -m app.seeds.seed --login    # mínimo: empresa + roles + admin
+python -m app.seeds.seed            # demo completa (si la base está vacía)
+python -m app.seeds.seed --force    # limpia y vuelve a sembrar
+```
+
+Acceso: `admin@salesia.com` / `admin123`.
+
+### 3.4 Verificación
+
+1. `GET /health` → `{"status":"ok", …, "environment":"production"}`.
+2. `POST /api/v1/auth/login` con `admin@salesia.com` → `200`.
+3. Preflight `OPTIONS` con `Origin: https://salesia-frontend.vercel.app` →
+   `Access-Control-Allow-Origin` presente (y **ausente** para orígenes ajenos).
 
 ## 4. Base de datos en Supabase (Fase 04)
 
