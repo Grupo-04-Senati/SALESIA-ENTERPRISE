@@ -1,15 +1,27 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User } from '@/types/auth'
-import { getCurrentUser, login as loginApi, logout as logoutApi } from '@/modules/auth/services/authService'
+import {
+  clearCurrentUser,
+  getCurrentUser,
+  login as loginApi,
+  logout as logoutApi,
+} from '@/modules/auth/services/authService'
 
 /**
  * Estado de sesión del usuario (Fase 05 — API FastAPI, docs/05 §2.1).
- * El token y el usuario se guardan en services/api.ts y authService.ts.
+ * El token y el usuario se guardan en services/api.ts y authService.ts;
+ * el evento 'salesia:user' mantiene el estado sincronizado con localStorage.
  */
 export function useAuth() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
+
+  useEffect(() => {
+    const sync = () => setUser(getCurrentUser())
+    window.addEventListener('salesia:user', sync)
+    return () => window.removeEventListener('salesia:user', sync)
+  }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await loginApi({ email, password })
@@ -19,6 +31,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     logoutApi()
+    clearCurrentUser()
     setUser(null)
     navigate('/login', { replace: true })
   }, [navigate])

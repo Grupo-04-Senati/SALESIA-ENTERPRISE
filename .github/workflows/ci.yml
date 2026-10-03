@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Instala dependencias
+        run: pip install -r backend/requirements.txt
+
+      - name: Valida migraciones (cadena Alembic)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://u:p@localhost:5432/db
+          SECRET_KEY: ci-dummy
+          ENVIRONMENT: development
+        run: alembic history
+
+      - name: Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://u:p@localhost:5432/db
+          SECRET_KEY: ci-dummy
+          ENVIRONMENT: development
+        run: python -m pytest tests -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instala dependencias
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build (typecheck + bundle)
+        working-directory: frontend
+        run: npm run build

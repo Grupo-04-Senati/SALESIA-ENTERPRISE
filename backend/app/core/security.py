@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
@@ -59,3 +60,8 @@ def create_reset_token(user_id: int) -> str:
 def decode_token(token: str) -> Dict[str, Any]:
     """Decodifica y valida; lanza `jwt.PyJWTError` si es inválido o expiró."""
     return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+
+
+def hash_token(token: str) -> str:
+    """Hash SHA-256 de un token para poder almacenarlo sin revelarlo."""
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()

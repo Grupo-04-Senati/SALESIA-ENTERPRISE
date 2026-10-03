@@ -211,8 +211,9 @@ export default function AutomationPage() {
 
       <p className="flex items-start gap-2 rounded-lg bg-info-bg px-4 py-3 text-caption text-info-fg">
         <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        Las reglas se guardan en memoria durante la sesión. En la Fase 05 pasarán a la base de datos y
-        quedarán registradas en la auditoría del sistema (RF-22).
+        Estas preferencias se guardan en tu navegador (localStorage) y rigen la simulación de este
+        módulo. El backend no las ejecuta: cuando el API gestione las reglas, quedarán registradas en
+        la auditoría del sistema (RF-22).
       </p>
     </div>
   )

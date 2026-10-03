@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import MainLayout from '@/layouts/MainLayout'
@@ -7,25 +7,35 @@ import PlaceholderPage from './PlaceholderPage'
 import NotFoundPage from './NotFoundPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
-import CustomersPage from '@/modules/customers/pages/CustomersPage'
-import ProductsPage from '@/modules/products/pages/ProductsPage'
-import CategoriesPage from '@/modules/categories/pages/CategoriesPage'
-import EmployeesPage from '@/modules/employees/pages/EmployeesPage'
-import SalesPage from '@/modules/sales/pages/SalesPage'
-import InventoryPage from '@/modules/inventory/pages/InventoryPage'
-import AnalyticsPage from '@/modules/analytics/pages/AnalyticsPage'
-import ProbabilityPage from '@/modules/probability/pages/ProbabilityPage'
-import InsightsPage from '@/modules/insights/pages/InsightsPage'
-import ReportsPage from '@/modules/reports/pages/ReportsPage'
-import SettingsPage from '@/modules/settings/pages/SettingsPage'
-import AutomationPage from '@/modules/automation/pages/AutomationPage'
 import { NAV_ITEMS } from '@/utils/constants'
 import { getToken } from '@/services/api'
 import { hydrateStore } from '@/services/hydrate'
+import { fetchMe } from '@/modules/auth/services/authService'
+
+const CustomersPage = lazy(() => import('@/modules/customers/pages/CustomersPage'))
+const ProductsPage = lazy(() => import('@/modules/products/pages/ProductsPage'))
+const CategoriesPage = lazy(() => import('@/modules/categories/pages/CategoriesPage'))
+const EmployeesPage = lazy(() => import('@/modules/employees/pages/EmployeesPage'))
+const SalesPage = lazy(() => import('@/modules/sales/pages/SalesPage'))
+const InventoryPage = lazy(() => import('@/modules/inventory/pages/InventoryPage'))
+const AnalyticsPage = lazy(() => import('@/modules/analytics/pages/AnalyticsPage'))
+const ProbabilityPage = lazy(() => import('@/modules/probability/pages/ProbabilityPage'))
+const InsightsPage = lazy(() => import('@/modules/insights/pages/InsightsPage'))
+const ReportsPage = lazy(() => import('@/modules/reports/pages/ReportsPage'))
+const SettingsPage = lazy(() => import('@/modules/settings/pages/SettingsPage'))
+const AutomationPage = lazy(() => import('@/modules/automation/pages/AutomationPage'))
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-body text-gray-500">
+      Cargando…
+    </div>
+  )
+}
 
 /**
- * Guarda de sesión: exige token (docs/05 §2.1) y, antes de mostrar las
- * vistas, hidrata el almacén con los datos reales de la API.
+ * Guarda de sesión: exige token (docs/05 §2.1), valida la sesión contra la
+ * API (GET /auth/me) y hidrata el almacén con los datos reales.
  */
 function RequireAuth({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -35,6 +45,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
       setReady(true)
       return
     }
+    fetchMe().catch(() => {
+      // Un 401 ya redirige al login (interceptor de services/api.ts).
+    })
     hydrateStore()
       .catch((error: unknown) => console.error('No se pudieron cargar los datos de la API', error))
       .finally(() => setReady(true))
@@ -63,18 +76,18 @@ function GuestOnly({ children }: { children: ReactNode }) {
  * PlaceholderPage; las rutas desconocidas muestran la página 404.
  */
 const MODULE_ROUTES: Record<string, ReactNode> = {
-  '/clientes': <CustomersPage />,
-  '/productos': <ProductsPage />,
-  '/categorias': <CategoriesPage />,
-  '/vendedores': <EmployeesPage />,
-  '/ventas': <SalesPage />,
-  '/inventario': <InventoryPage />,
-  '/analytics': <AnalyticsPage />,
-  '/probabilidad': <ProbabilityPage />,
-  '/insights': <InsightsPage />,
-  '/reportes': <ReportsPage />,
-  '/configuracion': <SettingsPage />,
-  '/automatizaciones': <AutomationPage />,
+  '/clientes': <Suspense fallback={<PageLoader />}><CustomersPage /></Suspense>,
+  '/productos': <Suspense fallback={<PageLoader />}><ProductsPage /></Suspense>,
+  '/categorias': <Suspense fallback={<PageLoader />}><CategoriesPage /></Suspense>,
+  '/vendedores': <Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>,
+  '/ventas': <Suspense fallback={<PageLoader />}><SalesPage /></Suspense>,
+  '/inventario': <Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>,
+  '/analytics': <Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>,
+  '/probabilidad': <Suspense fallback={<PageLoader />}><ProbabilityPage /></Suspense>,
+  '/insights': <Suspense fallback={<PageLoader />}><InsightsPage /></Suspense>,
+  '/reportes': <Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>,
+  '/configuracion': <Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>,
+  '/automatizaciones': <Suspense fallback={<PageLoader />}><AutomationPage /></Suspense>,
 }
 
 export const router = createBrowserRouter([

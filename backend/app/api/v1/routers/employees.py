@@ -1,11 +1,11 @@
-"""Vendedores / empleados y sus métricas comerciales (RF-05 · RN-07)."""
+﻿"""Vendedores / empleados y sus mÃ©tricas comerciales (RF-05 Â· RN-07)."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import company_id_of, require_role
+from app.api.deps import client_ip, company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
@@ -15,10 +15,6 @@ router = APIRouter(prefix='/employees', tags=['employees'])
 
 read_roles = ('Admin', 'Gerente', 'Analista')
 admin_only = require_role('Admin')
-
-
-def _ip(request: Request) -> str:
-    return request.client.host if request.client else ''
 
 
 @router.get('')
@@ -60,7 +56,7 @@ def create_employee(
     actor: User = Depends(admin_only),
 ):
     return employee_service.create_employee(
-        db, company_id_of(actor), payload, actor=actor, ip=_ip(request)
+        db, company_id_of(actor), payload, actor=actor, ip=client_ip(request)
     )
 
 
@@ -73,5 +69,18 @@ def update_employee(
     actor: User = Depends(admin_only),
 ):
     return employee_service.update_employee(
-        db, company_id_of(actor), employee_id, payload, actor=actor, ip=_ip(request)
+        db, company_id_of(actor), employee_id, payload, actor=actor, ip=client_ip(request)
+    )
+
+
+@router.delete('/{employee_id}')
+def delete_employee(
+    employee_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    """Baja lÃ³gica del vendedor (conserva su historial de ventas)."""
+    return employee_service.delete_employee(
+        db, company_id_of(actor), employee_id, actor=actor, ip=client_ip(request)
     )

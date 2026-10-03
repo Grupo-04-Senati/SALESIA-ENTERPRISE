@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import Conflict, NotFound, ValidationAppError
@@ -220,7 +220,9 @@ def list_categories(db: Session, company_id: int) -> dict:
     return paginate(items, 1, max(len(items), 1))
 
 
-def create_category(db: Session, company_id: int, payload: CategoryCreate) -> dict:
+def create_category(
+    db: Session, company_id: int, payload: CategoryCreate, actor=None, ip: Optional[str] = None
+) -> dict:
     duplicated = db.execute(
         select(Category).where(Category.company_id == company_id, Category.name == payload.name)
     ).scalar_one_or_none()
@@ -229,11 +231,19 @@ def create_category(db: Session, company_id: int, payload: CategoryCreate) -> di
 
     row = Category(company_id=company_id, **payload.model_dump())
     db.add(row)
+    db.flush()
+    write_audit(
+        db, user=actor, action='category.create', entity='categories', entity_id=row.id,
+        ip_address=ip,
+    )
     db.commit()
     return {'id': row.id, 'name': row.name, 'description': row.description, 'status': 'active'}
 
 
-def update_category(db: Session, company_id: int, category_id: int, payload: CategoryUpdate) -> dict:
+def update_category(
+    db: Session, company_id: int, category_id: int, payload: CategoryUpdate,
+    actor=None, ip: Optional[str] = None,
+) -> dict:
     row = db.execute(
         select(Category).where(Category.id == category_id, Category.company_id == company_id)
     ).scalar_one_or_none()
@@ -241,5 +251,37 @@ def update_category(db: Session, company_id: int, category_id: int, payload: Cat
         raise NotFound('Categoría no encontrada.')
     row.name = payload.name
     row.description = payload.description
+    write_audit(
+        db, user=actor, action='category.update', entity='categories', entity_id=row.id,
+        ip_address=ip,
+    )
     db.commit()
     return {'id': row.id, 'name': row.name, 'description': row.description, 'status': 'active'}
+
+
+def delete_category(
+    db: Session, company_id: int, category_id: int, actor=None, ip: Optional[str] = None
+) -> dict:
+    """Elimina la categoría si ningún producto la referencia (RN-04)."""
+    row = db.execute(
+        select(Category).where(Category.id == category_id, Category.company_id == company_id)
+    ).scalar_one_or_none()
+    if row is None:
+        raise NotFound('Categoría no encontrada.')
+
+    in_use = db.execute(
+        select(func.count(Product.id)).where(Product.category_id == category_id)
+    ).scalar_one()
+    if in_use:
+        raise Conflict(
+            f'La categoría tiene {in_use} producto(s) asociado(s): reasigna o '
+            'desactiva esos productos antes de eliminarla.'
+        )
+
+    write_audit(
+        db, user=actor, action='category.delete', entity='categories', entity_id=row.id,
+        ip_address=ip,
+    )
+    db.delete(row)
+    db.commit()
+    return {'id': row.id, 'deleted': True}

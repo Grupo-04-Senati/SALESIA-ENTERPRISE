@@ -31,14 +31,14 @@
 ## 3. Guía por rol
 
 ### 3.1 Administrador
-- **Usuarios:** menú Configuración → Usuarios → *Crear usuario*, asignar rol y estado.
-- **Productos y categorías:** alta, edición y baja de productos (SKU, precio, categoría, stock mínimo).
-- **Auditoría:** Configuración → Auditoría para revisar quién hizo qué y cuándo.
+- **Usuarios:** Configuración → *Usuarios y roles* muestra el listado con su rol y estado (solo lectura; el alta y los cambios de rol llegan con la Fase 13).
+- **Productos, categorías y vendedores:** alta, edición y baja (SKU, precio, categoría, stock mínimo, vendedores).
+- **Auditoría:** las operaciones sensibles quedan registradas en `registros_auditoria` y se consultan por la API (`GET /api/v1/audit-logs`); la pantalla de auditoría aún no está en el menú.
 
 ### 3.2 Gerente
 - **Dashboard:** KPIs de ventas, ingresos, transacciones y clientes del periodo.
 - **Analytics:** filtros por periodo/vendedor/categoría, media vs. mediana, gráficos.
-- **Reportes:** generar y exportar reportes (CSV/PDF).
+- **Reportes:** generar y exportar reportes en CSV.
 
 ### 3.3 Vendedor
 - **Clientes:** *Crear cliente* con nombre, documento, contacto y dirección.
@@ -55,7 +55,7 @@
 - **Analytics:** elegir dataset y periodo → ejecutar **media**, **mediana** o **comparación**.
 - **Probabilidad:** registrar P(A), P(B|A) y P(B) → el sistema calcula **P(A|B)** y explica el resultado en lenguaje claro.
 - **Variables aleatorias:** analizar la distribución de una variable (p. ej. cantidad de productos por venta).
-- **Historial de análisis:** reabrir análisis anteriores con sus parámetros y resultados.
+- **Historial de análisis:** los análisis se ejecutan sobre los datos actuales; todavía no se guardan para reabrirse.
 - **Insights:** revisar observaciones con su evidencia numérica y el análisis que las originó.
 
 ### 3.5 Almacén
@@ -89,7 +89,7 @@
 2. Elegir tipo: ventas, estadístico, productos, clientes o vendedores.
 3. Seleccionar periodo y filtros.
 4. **Generar** → el reporte queda en el historial.
-5. **Exportar** en CSV o PDF, o usar la vista imprimible.
+5. **Exportar** en CSV o usar la vista imprimible.
 
 ---
 
@@ -108,7 +108,7 @@
 | Pregunta | Respuesta |
 |---|---|
 | No puedo iniciar sesión | Verifica correo/contraseña. Si el problema persiste, el administrador debe revisar que tu usuario esté activo. |
-| No veo un módulo | Tu rol no tiene permiso (ver matriz de acceso en `02_arquitectura.md`). |
+| No puedo ver o usar algo | El backend responde «Rol sin permiso» (403) si tu rol no está autorizado para esa operación (ver matriz de acceso en `02_arquitectura.md`). |
 | La venta no guarda | Suele ser stock insuficiente o un campo obligatorio vacío; el mensaje lo indica. |
 | ¿El promedio no coincide con lo esperado? | Compara media y mediana: valores extremos alteran la media (sección 4). |
 | ¿Se pueden editar análisis ya guardados? | No; se re-ejecutan como un análisis nuevo para conservar el historial. |

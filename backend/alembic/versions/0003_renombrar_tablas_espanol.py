@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Sequence, Union
 
 from alembic import op
+import sqlalchemy as sa
 
 revision: str = '0003'
 down_revision: Union[str, None] = '5071c4b02dbd'
@@ -20,6 +21,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Si el esquema ya está en español (creado por 0001 con los modelos
+    # actuales), no hay nada que renombrar.
+    inspector = sa.inspect(op.get_bind())
+    if inspector.has_table('eventos_app') and not inspector.has_table('app_events'):
+        return
     op.rename_table('app_events', 'eventos_app')
     op.rename_table('audit_logs', 'registros_auditoria')
     op.rename_table('automation_rules', 'reglas_automatizacion')

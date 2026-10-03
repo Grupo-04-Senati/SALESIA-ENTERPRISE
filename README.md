@@ -36,8 +36,8 @@ SALESIA-ENTERPRISE/
 ├── frontend/    React + TypeScript (módulos por dominio)
 ├── backend/     FastAPI (api/ · core/ · models/ · schemas/ · services/ · analytics/ · tests/)
 ├── database/    SQL de referencia y seeds
-├── docs/        Documentación de arquitectura (01…07)
-├── docker-compose.yml
+├── docs/        Documentación de arquitectura (01…08)
+├── .github/     CI: pruebas (pytest) y build del frontend en cada push/PR
 ├── .env.example
 └── .gitignore
 ```
@@ -55,6 +55,7 @@ SALESIA-ENTERPRISE/
 | [05_api.md](docs/05_api.md) | API REST: endpoints, formatos, ejemplos, errores |
 | [06_motor_estadistico.md](docs/06_motor_estadistico.md) | Media, mediana, variables, probabilidad, Bayes, pruebas |
 | [07_manual_usuario.md](docs/07_manual_usuario.md) | Manual de usuario por rol |
+| [08_despliegue.md](docs/08_despliegue.md) | Despliegue en Vercel + Railway + Supabase y automatizaciones |
 
 ---
 
@@ -79,9 +80,9 @@ SALESIA-ENTERPRISE/
 
 - ✅ Estructura del repositorio
 - ✅ Documentación de arquitectura (`docs/01…08`)
-- ✅ Backend FastAPI (54 tablas, migraciones Alembic, 45 pruebas)
+- ✅ Backend FastAPI (54 tablas, migraciones Alembic no destructivas, 45 pruebas)
 - ✅ Frontend React + TypeScript (integrado con la API)
-- ✅ Despliegues
+- ✅ Despliegues automáticos (Vercel + Railway) y CI (pytest + build) en cada push
 
 | Capa | URL |
 |---|---|
@@ -89,7 +90,8 @@ SALESIA-ENTERPRISE/
 | API (Railway) | https://api-production-60ffe.up.railway.app · `/health` · `/docs` |
 | Base de datos | Supabase (pooler `aws-0-us-east-2`) |
 
-> Acceso demo: `admin@salesia.com` / `admin123`. Pasos y variables: [`docs/08_despliegue.md`](docs/08_despliegue.md).
+> Acceso: `admin@salesia.com` / `admin123` (cambiar la contraseña tras el primer ingreso).
+> Pasos y variables: [`docs/08_despliegue.md`](docs/08_despliegue.md).
 
 ---
 
@@ -97,6 +99,7 @@ SALESIA-ENTERPRISE/
 
 1. Un **commit = un cambio pequeño y verificable**; mensaje en formato `tipo(ámbito): descripción`
    (`docs:`, `feat(backend):`, `feat(frontend):`, `db:`, `chore:`, `fix:`).
-2. El código se verifica antes de subir: `pytest` (backend) · `npm run build` (frontend).
+2. El código se verifica antes de subir: `pytest` (backend) · `npm run build` (frontend);
+   ambos corren automáticamente en CI (`.github/workflows/ci.yml`) antes del despliegue.
 3. **Nunca** subir secrets: solo `.env.example` con nombres de variables.
 4. Si algo falla, se revierte **ese** commit, no el trabajo anterior.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Tags } from 'lucide-react'
+import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
-import { createCategory, listCategories, updateCategory } from '../services/categoryService'
+import { createCategory, deleteCategory, listCategories, updateCategory } from '../services/categoryService'
 import type { Category, CategoryInput } from '@/types/product'
 
 /**
@@ -36,6 +36,8 @@ export default function CategoriesPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<Category | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -101,6 +103,19 @@ export default function CategoriesPage() {
       setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la categoría.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleting) return
+    setDeleteError(null)
+    try {
+      await deleteCategory(deleting.id)
+      toast.success('Categoría eliminada', `${deleting.name} se quitó del catálogo.`)
+      setDeleting(null)
+      reload()
+    } catch (reason: unknown) {
+      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar la categoría.')
     }
   }
 
@@ -179,7 +194,7 @@ export default function CategoriesPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-1">
                     <button
                       type="button"
                       onClick={() => openEdit(category)}
@@ -188,6 +203,18 @@ export default function CategoriesPage() {
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null)
+                        setDeleting(category)
+                      }}
+                      aria-label={`Eliminar ${category.name}`}
+                      title="Eliminar"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
+                    >
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </button>
                   </div>
                 </TableCell>
@@ -230,6 +257,32 @@ export default function CategoriesPage() {
             placeholder="Ej. Bebidas frías y gaseosas"
           />
         </div>
+      </Modal>
+
+      <Modal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        title="Eliminar categoría"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Eliminar
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-sm text-gray-700">
+          ¿Eliminar la categoría <strong>{deleting?.name}</strong>? Solo es posible si ningún producto
+          la está usando.
+        </p>
+        {deleteError && (
+          <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
+            {deleteError}
+          </p>
+        )}
       </Modal>
     </div>
   )

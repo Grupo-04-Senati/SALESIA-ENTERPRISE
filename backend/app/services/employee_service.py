@@ -113,3 +113,27 @@ def update_employee(
     )
     db.commit()
     return _serialize(employee, _metrics(db, company_id, employee.id))
+
+
+def delete_employee(
+    db: Session,
+    company_id: int,
+    employee_id: int,
+    actor=None,
+    ip: Optional[str] = None,
+) -> dict:
+    """Baja lógica del vendedor: conserva su historial de ventas (RN-07)."""
+    employee = db.execute(
+        select(Employee).where(Employee.id == employee_id, Employee.company_id == company_id)
+    ).scalar_one_or_none()
+    if employee is None:
+        raise NotFound('Vendedor no encontrado.')
+    if not employee.is_active:
+        raise Conflict('El vendedor ya está desactivado.')
+
+    employee.is_active = False
+    write_audit(
+        db, user=actor, action='employee.delete', entity='employees', entity_id=employee.id, ip_address=ip
+    )
+    db.commit()
+    return {'id': employee.id, 'deleted': True}

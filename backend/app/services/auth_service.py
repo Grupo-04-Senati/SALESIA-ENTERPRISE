@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import role_display
@@ -18,54 +17,54 @@ from app.core.security import (
     decode_token,
     verify_password,
 )
+from app.models.security import LoginAttempt
 from app.models.user import User
 from app.services.audit_service import write_audit
 
-# RN-31: 5 intentos fallidos → bloqueo temporal.
+# RN-31: 5 intentos fallidos → bloqueo temporal. Los intentos se persisten en
+# `intentos_login` (no en memoria): sobreviven reinicios y funcionan con
+# varias instancias detrás del proxy de Railway.
 _MAX_ATTEMPTS = 5
 _LOCK_SECONDS = 15 * 60
-_attempts: dict[str, list[float]] = {}
 
 
-def _attempt_key(email: str, ip: Optional[str]) -> str:
-    return f'{email.lower()}|{ip or "-"}'
+def _register_failure(db: Session, email: str, ip: Optional[str]) -> None:
+    db.add(LoginAttempt(email=email.lower().strip(), success=False, ip=ip))
 
 
-def _register_failure(key: str) -> None:
-    now = time.monotonic()
-    hits = [moment for moment in _attempts.get(key, []) if now - moment < _LOCK_SECONDS]
-    hits.append(now)
-    _attempts[key] = hits
-
-
-def _check_locked(key: str) -> None:
-    now = time.monotonic()
-    hits = [moment for moment in _attempts.get(key, []) if now - moment < _LOCK_SECONDS]
-    _attempts[key] = hits
-    if len(hits) >= _MAX_ATTEMPTS:
+def _check_locked(db: Session, email: str) -> None:
+    since = datetime.now(timezone.utc) - timedelta(seconds=_LOCK_SECONDS)
+    failures = db.execute(
+        select(func.count(LoginAttempt.id)).where(
+            LoginAttempt.email == email.lower().strip(),
+            LoginAttempt.success.is_(False),
+            LoginAttempt.attempted_at >= since,
+        )
+    ).scalar_one()
+    if failures >= _MAX_ATTEMPTS:
         raise RateLimited(
             'Demasiados intentos fallidos: la cuenta queda bloqueada 15 minutos (RN-31).'
         )
 
 
 def login(db: Session, email: str, password: str, ip: Optional[str] = None) -> dict:
-    key = _attempt_key(email, ip)
-    _check_locked(key)
+    _check_locked(db, email)
 
     user: Optional[User] = db.execute(
         select(User).where(User.email == email.lower().strip())
     ).scalar_one_or_none()
 
     if user is None or not verify_password(password, user.password_hash):
-        _register_failure(key)
+        _register_failure(db, email, ip)
+        db.commit()
         raise Unauthenticated('Correo o contraseña incorrectos.')
 
     if not user.is_active:
         raise Forbidden('El usuario está desactivado (RN-35).')
 
-    _attempts.pop(key, None)
     role = user.role.name
     user.last_login = datetime.now(timezone.utc)
+    db.add(LoginAttempt(user_id=user.id, email=user.email, success=True, ip=ip))
     write_audit(db, user=user, action='auth.login', entity='users', entity_id=user.id, ip_address=ip)
     db.commit()
 

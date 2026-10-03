@@ -1,4 +1,4 @@
-"""Productos y categorías (RF-04 · RN-03…RN-06)."""
+﻿"""Productos y categorÃ­as (RF-04 Â· RN-03â€¦RN-06)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import company_id_of, require_role
+from app.api.deps import client_ip, company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.product import CategoryCreate, CategoryUpdate, ProductCreate, ProductUpdate
@@ -15,12 +15,8 @@ from app.services import product_service
 
 router = APIRouter(tags=['products'])
 
-read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista', 'Almacén')
+read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista', 'AlmacÃ©n')
 admin_only = require_role('Admin')
-
-
-def _ip(request: Request) -> str:
-    return request.client.host if request.client else ''
 
 
 @router.get('/products')
@@ -57,7 +53,7 @@ def create_product(
     actor: User = Depends(admin_only),
 ):
     return product_service.create_product(
-        db, company_id_of(actor), payload, actor=actor, ip=_ip(request)
+        db, company_id_of(actor), payload, actor=actor, ip=client_ip(request)
     )
 
 
@@ -70,7 +66,7 @@ def update_product(
     actor: User = Depends(admin_only),
 ):
     return product_service.update_product(
-        db, company_id_of(actor), product_id, payload, actor=actor, ip=_ip(request)
+        db, company_id_of(actor), product_id, payload, actor=actor, ip=client_ip(request)
     )
 
 
@@ -84,7 +80,7 @@ def patch_status(
 ):
     return product_service.set_product_status(
         db, company_id_of(actor), product_id, payload.get('status', 'active'),
-        actor=actor, ip=_ip(request),
+        actor=actor, ip=client_ip(request),
     )
 
 
@@ -95,13 +91,13 @@ def delete_product(
     db: Session = Depends(get_db),
     actor: User = Depends(admin_only),
 ):
-    """Baja lógica del producto (los productos con ventas nunca se borran)."""
+    """Baja lÃ³gica del producto (los productos con ventas nunca se borran)."""
     return product_service.set_product_status(
-        db, company_id_of(actor), product_id, 'inactive', actor=actor, ip=_ip(request)
+        db, company_id_of(actor), product_id, 'inactive', actor=actor, ip=client_ip(request)
     )
 
 
-# ---------------------------------------------------------------- categorías
+# ---------------------------------------------------------------- categorÃ­as
 
 @router.get('/categories')
 def list_categories(
@@ -114,17 +110,36 @@ def list_categories(
 @router.post('/categories', status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: CategoryCreate,
+    request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(admin_only),
 ):
-    return product_service.create_category(db, company_id_of(actor), payload)
+    return product_service.create_category(
+        db, company_id_of(actor), payload, actor=actor, ip=client_ip(request)
+    )
 
 
 @router.put('/categories/{category_id}')
 def update_category(
     category_id: int,
     payload: CategoryUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(admin_only),
 ):
-    return product_service.update_category(db, company_id_of(actor), category_id, payload)
+    return product_service.update_category(
+        db, company_id_of(actor), category_id, payload, actor=actor, ip=client_ip(request)
+    )
+
+
+@router.delete('/categories/{category_id}')
+def delete_category(
+    category_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    """Elimina la categorÃ­a si ningÃºn producto la referencia."""
+    return product_service.delete_category(
+        db, company_id_of(actor), category_id, actor=actor, ip=client_ip(request)
+    )

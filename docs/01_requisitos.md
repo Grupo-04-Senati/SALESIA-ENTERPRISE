@@ -780,7 +780,7 @@ ventas / clientes / productos
 | # | Plan v1.0 | Repositorio actual | Impacto |
 |---|---|---|---|
 | D-01 | `backend/app/statistics/`, `probability/`, `reports/` | Unificado en `backend/app/analytics/` (+ `services/report_service.py`) | Bajo — funcionalmente equivalente; confirmar en FASE 02 |
-| D-02 | `database/migrations/` y `database/seeds/` | `backend/alembic/versions/` (carpeta vacía), sin `seeds/` | Medio — FASE 04 debe decidir ubicación definitiva |
+| D-02 | `database/migrations/` y `database/seeds/` | `backend/alembic/versions/` (3 migraciones) + `backend/app/seeds/seed.py` | Bajo — ubicación definitiva implementada |
 | D-03 | `frontend/src/components/` | Existe pero **vacío** | Bajo — se llena en FASE 06 |
 | D-04 | RF-05 *Gestión de vendedores* | Solo existe `models/employee.py`; **sin router, schema, service ni módulo frontend** | **Alto — requisito con brecha de implementación** |
 | D-05 | Arquitectura: "las ventas generan los datos" | Cadena de datos confirmada por estructura de modelos analíticos | Sin desviación |

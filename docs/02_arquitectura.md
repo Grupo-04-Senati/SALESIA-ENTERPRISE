@@ -448,7 +448,7 @@ flowchart LR
 | M-05 | Las migraciones crean las **54 tablas** de `04_modelo_er.md` (0001 = 22 base, 0002 = 32 extensiones). |
 | M-06 | Los seeds (`database/seeds/`) son **idempotentes**: roles, categorías, usuario admin, productos de demo. Nunca van dentro de `upgrade()`. |
 | M-07 | **Nunca editar datos ni esquema manualmente en el panel de Supabase.** |
-| M-08 | `dev` y `test` corren migraciones automáticamente; `producción` las corre como paso explícito del despliegue, con respaldo previo. |
+| M-08 | `alembic upgrade head` se ejecuta en el arranque del contenedor (Dockerfile) en **todos** los ambientes. Las migraciones son **no destructivas**: no contienen `DROP` y solo crean lo que falta, de modo que reejecutarlas nunca borra datos. Antes de cualquier cambio de esquema en producción hay que respaldar en Supabase. |
 
 ### 10.1 Ambientes
 

@@ -15,6 +15,12 @@ export interface DemoLogin {
   password: string
 }
 
+/** Guarda el usuario de sesión y notifica a la app (header, perfil, etc.). */
+export function setCurrentUser(user: User): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+  window.dispatchEvent(new Event('salesia:user'))
+}
+
 /** POST /auth/login — guarda token y usuario de la sesión. */
 export async function login({ email, password }: DemoLogin): Promise<LoginResponse> {
   const response = await apiFetch<LoginResponse>(ENDPOINTS.auth.login, {
@@ -22,8 +28,25 @@ export async function login({ email, password }: DemoLogin): Promise<LoginRespon
     body: JSON.stringify({ email: email.trim(), password }),
   })
   setToken(response.access_token)
-  localStorage.setItem(USER_KEY, JSON.stringify(response.user))
+  setCurrentUser(response.user)
   return response
+}
+
+/** GET /auth/me — valida la sesión contra la API y actualiza el usuario. */
+export async function fetchMe(): Promise<User> {
+  const me = await apiFetch<User>(ENDPOINTS.auth.me)
+  setCurrentUser(me)
+  return me
+}
+
+/** PUT /users/{id} — actualiza el nombre del propio perfil (RF-02). */
+export async function updateProfileName(userId: number, fullName: string): Promise<User> {
+  const updated = await apiFetch<User>(`${ENDPOINTS.users}/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ full_name: fullName }),
+  })
+  setCurrentUser(updated)
+  return updated
 }
 
 /** POST /auth/logout (best effort) y cierre de la sesión local. */
@@ -46,6 +69,12 @@ export function getCurrentUser(): User | null {
   } catch {
     return null
   }
+}
+
+/** Cierra la sesión local y notifica a la app. */
+export function clearCurrentUser(): void {
+  localStorage.removeItem(USER_KEY)
+  window.dispatchEvent(new Event('salesia:user'))
 }
 
 /** Roles del sistema (docs/05_api.md §2.2). */

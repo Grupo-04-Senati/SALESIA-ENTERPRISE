@@ -35,3 +35,9 @@ export async function updateCategory(id: number, input: CategoryInput): Promise<
   await hydrateStore(['categories'])
   return category
 }
+
+/** DELETE /categories/{id} — el backend rechaza el borrado si hay productos. */
+export async function deleteCategory(id: number): Promise<void> {
+  await apiFetch(`${ENDPOINTS.categories}/${id}`, { method: 'DELETE' })
+  await hydrateStore(['categories'])
+}

@@ -7,18 +7,17 @@ import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import { Input, Select } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
-import { ROLES, listManagedUsers } from '@/modules/auth/services/authService'
+import { ROLES, listManagedUsers, updateProfileName } from '@/modules/auth/services/authService'
 import type { ManagedUser } from '@/modules/auth/services/authService'
 import { useAuth } from '@/hooks/useAuth'
 import { getState } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
+import { API_BASE } from '@/services/api'
 
 /**
- * Configuración del sistema (Fase 06 · RF-02):
- * perfil del usuario, parámetros de operación, usuarios y roles,
- * paleta corporativa y estado de la integración con la API.
- * TODO(Fase 05): los usuarios, roles y auditoría vienen del
- * backend (GET /api/v1/users, /roles y /audit).
+ * Configuración del sistema (RF-02): perfil del usuario (PUT /users/{id}),
+ * parámetros de operación del navegador, usuarios y roles, paleta
+ * corporativa y estado de la integración con la API.
  */
 
 const PALETTE = [
@@ -30,32 +29,62 @@ const PALETTE = [
   { token: 'gray-50', hex: '#F9FAFB', uso: 'Fondo de contenido' },
 ]
 
+const PREFS_KEY = 'salesia_prefs'
+
+interface Prefs {
+  currency: string
+  taxRate: string
+  pageSize: string
+}
+
+const DEFAULT_PREFS: Prefs = { currency: 'PEN', taxRate: '18', pageSize: '10' }
+
+function loadPrefs(): Prefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY)
+    if (raw) return { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<Prefs>) }
+  } catch {
+    // Si las preferencias están corruptas se usan los valores por defecto.
+  }
+  return DEFAULT_PREFS
+}
+
 export default function SettingsPage() {
   const toast = useToast()
   const { user } = useAuth()
 
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [name, setName] = useState(user?.name ?? '')
-  const [email, setEmail] = useState(user?.email ?? '')
-  const [currency, setCurrency] = useState('PEN')
-  const [taxRate, setTaxRate] = useState('18')
-  const [pageSize, setPageSize] = useState('10')
+  const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [savingProfile, setSavingProfile] = useState(false)
-  const [savingParams, setSavingParams] = useState(false)
+  const [apiStatus, setApiStatus] = useState<'checking' | 'up' | 'down'>('checking')
 
   useEffect(() => {
-    // GET /api/v1/users (solo Admin) — Fase 05.
+    // GET /api/v1/users (solo Admin).
     listManagedUsers()
       .then(setUsers)
       .catch(() => setUsers([]))
   }, [])
 
-  const handleProfile = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    // Estado real del backend (GET /health).
+    fetch(`${API_BASE}/health`)
+      .then((response) => setApiStatus(response.ok ? 'up' : 'down'))
+      .catch(() => setApiStatus('down'))
+  }, [])
+
+  const handleProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!user) return
     setSavingProfile(true)
     try {
-      // TODO(Fase 05): PUT /api/v1/users/{id}
-      toast.success('Perfil actualizado', 'Los cambios se guardarán en el backend en la Fase 05.')
+      await updateProfileName(user.id, name.trim())
+      toast.success('Perfil actualizado', 'El nombre de tu cuenta se guardó en el backend.')
+    } catch (reason) {
+      toast.error(
+        'No se pudo actualizar',
+        reason instanceof Error ? reason.message : 'Error inesperado',
+      )
     } finally {
       setSavingProfile(false)
     }
@@ -63,13 +92,11 @@ export default function SettingsPage() {
 
   const handleParams = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSavingParams(true)
-    try {
-      // TODO(Fase 05): los parámetros irán en la configuración de la empresa.
-      toast.success('Parámetros guardados', 'Moneda, impuesto y paginación actualizados.')
-    } finally {
-      setSavingParams(false)
-    }
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
+    toast.success(
+      'Preferencias guardadas',
+      'Moneda, impuesto y paginación se aplican en este navegador.',
+    )
   }
 
   return (
@@ -89,7 +116,13 @@ export default function SettingsPage() {
         </div>
         <form onSubmit={handleProfile} className="grid gap-4 sm:grid-cols-2">
           <Input label="Nombre completo" value={name} onChange={(event) => setName(event.target.value)} required />
-          <Input label="Correo electrónico" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <Input
+            label="Correo electrónico"
+            type="email"
+            value={user?.email ?? ''}
+            disabled
+            hint="El correo de acceso no se puede modificar"
+          />
           <div className="sm:col-span-2">
             <p className="text-body-sm text-gray-600">
               Rol actual: <Badge variant="primary">{user?.role ?? 'Admin'}</Badge>{' '}
@@ -109,7 +142,11 @@ export default function SettingsPage() {
       <section className="card space-y-4">
         <h2 className="text-h4 text-gray-800">Parámetros de operación</h2>
         <form onSubmit={handleParams} className="grid gap-4 sm:grid-cols-3">
-          <Select label="Moneda" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+          <Select
+            label="Moneda"
+            value={prefs.currency}
+            onChange={(event) => setPrefs((prev) => ({ ...prev, currency: event.target.value }))}
+          >
             <option value="PEN">Soles (S/)</option>
             <option value="USD">Dólares (US$)</option>
           </Select>
@@ -119,17 +156,21 @@ export default function SettingsPage() {
             min="0"
             max="100"
             step="0.01"
-            value={taxRate}
-            onChange={(event) => setTaxRate(event.target.value)}
+            value={prefs.taxRate}
+            onChange={(event) => setPrefs((prev) => ({ ...prev, taxRate: event.target.value }))}
             hint="IGV por defecto en las ventas"
           />
-          <Select label="Filas por página" value={pageSize} onChange={(event) => setPageSize(event.target.value)}>
+          <Select
+            label="Filas por página"
+            value={prefs.pageSize}
+            onChange={(event) => setPrefs((prev) => ({ ...prev, pageSize: event.target.value }))}
+          >
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
           </Select>
           <div className="sm:col-span-3">
-            <Button type="submit" variant="secondary" loading={savingParams}>
+            <Button type="submit" variant="secondary">
               <Save aria-hidden="true" className="h-4 w-4" />
               Guardar parámetros
             </Button>
@@ -235,19 +276,23 @@ export default function SettingsPage() {
         </div>
         <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
           <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-            <dt className="text-gray-600">Fase actual</dt>
-            <dd className="font-semibold text-gray-900">Fase 06 · Frontend</dd>
-          </div>
-          <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
             <dt className="text-gray-600">API (backend)</dt>
             <dd>
-              <Badge variant="warning">Pendiente · Fase 05</Badge>
+              {apiStatus === 'checking' && <Badge variant="neutral">Comprobando…</Badge>}
+              {apiStatus === 'up' && <Badge variant="success">Operativa</Badge>}
+              {apiStatus === 'down' && <Badge variant="error">Sin conexión</Badge>}
             </dd>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
             <dt className="text-gray-600">Base de datos</dt>
             <dd>
-              <Badge variant="warning">Pendiente · Fase 04</Badge>
+              <Badge variant="primary">Supabase · PostgreSQL</Badge>
+            </dd>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+            <dt className="text-gray-600">Almacén local</dt>
+            <dd>
+              <Badge variant="success">Hidratado desde la API</Badge>
             </dd>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">

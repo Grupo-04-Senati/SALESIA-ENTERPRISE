@@ -85,3 +85,12 @@ def require_role(*roles: str):
 def company_id_of(user: User) -> int:
     """Aislamiento multiempresa (CA5-08): toda query filtra por company_id."""
     return user.company_id
+
+
+def client_ip(request: Request) -> str:
+    """IP real del cliente: Railway/Vercel delegan en un proxy, así que la
+    dirección autoritativa llega en la cabecera X-Forwarded-For."""
+    forwarded = request.headers.get('x-forwarded-for')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.client.host if request.client else ''

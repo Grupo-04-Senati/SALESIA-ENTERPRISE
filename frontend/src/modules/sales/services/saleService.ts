@@ -4,7 +4,7 @@ import type { Seller } from '@/types/sale'
 import { apiFetch } from '@/services/api'
 import { ENDPOINTS } from '@/services/endpoints'
 import { getState, logProcessTrace } from '@/data/store'
-import type { ProcessTrace, SaleProcessResult } from '@/data/store'
+import type { ProcessTrace } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
 import { DEFAULT_TAX_RATE, computeTotals } from '@/data/seed'
 
@@ -48,6 +48,12 @@ export const getSaleProducts = (): SaleProduct[] =>
 export interface SaleFilters {
   status?: SaleStatus | ''
   search?: string
+}
+
+/** Resultado de registrar una venta: la venta creada y su traza de pasos. */
+export interface SaleProcessResult {
+  sale: Sale
+  trace: ProcessTrace
 }
 
 interface Page<T> {

@@ -2,7 +2,7 @@ import type { InventoryMovement, MovementType } from '@/types/sale'
 import { apiFetch } from '@/services/api'
 import { ENDPOINTS } from '@/services/endpoints'
 import { getState, logProcessTrace } from '@/data/store'
-import type { MovementInput, ProcessTrace } from '@/data/store'
+import type { ProcessTrace } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
 
 /**
@@ -21,7 +21,15 @@ export const MOVEMENT_LABELS: Record<MovementType, string> = {
   ADJUSTMENT: 'Ajuste',
 }
 
-export type { MovementInput, ProcessTrace }
+export type { ProcessTrace }
+
+/** Datos de un movimiento manual de inventario (POST /inventory/movements). */
+export interface MovementInput {
+  product_id: number
+  type: MovementType
+  quantity: number
+  reason: string
+}
 
 export interface StockRow {
   product_id: number
