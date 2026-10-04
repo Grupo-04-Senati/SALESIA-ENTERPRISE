@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import { NAV_ITEMS } from '@/utils/constants'
 
 const PIN_KEY = 'salesia-sidebar-pinned'
 
@@ -25,6 +26,8 @@ export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [pinned, setPinned] = useState<boolean>(readPinned)
   const [hoverOpen, setHoverOpen] = useState(false)
+  const location = useLocation()
+  const currentModule = NAV_ITEMS.find((item) => item.path === location.pathname)
 
   useEffect(() => {
     try {
@@ -99,6 +102,22 @@ export default function MainLayout() {
         <Topbar onMenu={handleMenu} />
         <main className="flex-1 px-5 py-6 lg:px-7">
           <div className="mx-auto w-full max-w-[1600px]">
+            {/* Banner superior con la imagen del módulo activo */}
+            {currentModule && (
+              <div className="mod-hero">
+                <img
+                  src={currentModule.img}
+                  alt=""
+                  aria-hidden="true"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none'
+                  }}
+                />
+                <span className="mod-hero-ico">
+                  <currentModule.icon aria-hidden="true" className="h-5 w-5" />
+                </span>
+              </div>
+            )}
             <Outlet />
           </div>
         </main>
