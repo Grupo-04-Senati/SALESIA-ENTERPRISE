@@ -13,6 +13,10 @@ import {
   Tag,
   UserPlus,
   Zap,
+  Truck,
+  ClipboardList,
+  RotateCcw,
+  Coins,
 } from 'lucide-react'
 
 /**
@@ -41,6 +45,10 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Productos', path: '/productos', icon: Package, group: 'operacion' },
   { label: 'Categorías', path: '/categorias', icon: Tag, group: 'operacion' },
   { label: 'Vendedores', path: '/vendedores', icon: UserPlus, group: 'operacion' },
+  { label: 'Compras', path: '/compras', icon: Truck, group: 'operacion' },
+  { label: 'Cotizaciones', path: '/cotizaciones', icon: ClipboardList, group: 'operacion' },
+  { label: 'Devoluciones', path: '/devoluciones', icon: RotateCcw, group: 'operacion' },
+  { label: 'Precios', path: '/precios', icon: Coins, group: 'operacion' },
   // --- Analítica ---
   { label: 'Analytics', path: '/analytics', icon: TrendingUp, group: 'analitica' },
   { label: 'Probabilidad', path: '/probabilidad', icon: Percent, group: 'analitica' },

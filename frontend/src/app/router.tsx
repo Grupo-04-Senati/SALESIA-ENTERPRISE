@@ -24,6 +24,10 @@ const InsightsPage = lazy(() => import('@/modules/insights/pages/InsightsPage'))
 const ReportsPage = lazy(() => import('@/modules/reports/pages/ReportsPage'))
 const SettingsPage = lazy(() => import('@/modules/settings/pages/SettingsPage'))
 const AutomationPage = lazy(() => import('@/modules/automation/pages/AutomationPage'))
+const PurchasingPage = lazy(() => import('@/modules/purchasing/pages/PurchasingPage'))
+const QuotesPage = lazy(() => import('@/modules/quotes/pages/QuotesPage'))
+const ReturnsPage = lazy(() => import('@/modules/returns/pages/ReturnsPage'))
+const PricingPage = lazy(() => import('@/modules/pricing/pages/PricingPage'))
 
 function PageLoader() {
   return (
@@ -88,6 +92,10 @@ const MODULE_ROUTES: Record<string, ReactNode> = {
   '/reportes': <Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>,
   '/configuracion': <Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>,
   '/automatizaciones': <Suspense fallback={<PageLoader />}><AutomationPage /></Suspense>,
+  '/compras': <Suspense fallback={<PageLoader />}><PurchasingPage /></Suspense>,
+  '/cotizaciones': <Suspense fallback={<PageLoader />}><QuotesPage /></Suspense>,
+  '/devoluciones': <Suspense fallback={<PageLoader />}><ReturnsPage /></Suspense>,
+  '/precios': <Suspense fallback={<PageLoader />}><PricingPage /></Suspense>,
 }
 
 export const router = createBrowserRouter([

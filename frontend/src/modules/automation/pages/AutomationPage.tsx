@@ -3,7 +3,8 @@ import { AlertTriangle, RotateCcw, Zap } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Switch from '@/components/ui/Switch'
-import Tabs from '@/components/ui/Tabs'
+import Tabs, { TabPanel } from '@/components/ui/Tabs'
+import SavedRulesPanel from '../components/SavedRulesPanel'
 import { Input } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
@@ -42,6 +43,7 @@ const MODULE_BADGE: Record<RuleModule, 'primary' | 'info' | 'success' | 'warning
 }
 
 const TAB_ITEMS = [
+  { id: 'guardadas', label: 'Guardadas' },
   { id: 'todas', label: 'Todas' },
   ...RULE_MODULES.map((module) => ({ id: module, label: module })),
 ]
@@ -148,6 +150,12 @@ export default function AutomationPage() {
 
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="automatizaciones" />
 
+      {/* Reglas guardadas en el backend */}
+      <TabPanel tabId="guardadas" active={tab === 'guardadas'}>
+        <SavedRulesPanel />
+      </TabPanel>
+
+      <TabPanel tabId={tab} active={tab !== 'guardadas'}>
       {/* Reglas por módulo */}
       {modulosVisibles.map((module) => {
         const delModulo = rules.filter((rule) => rule.module === module)
@@ -227,6 +235,7 @@ export default function AutomationPage() {
         módulo. El backend no las ejecuta: cuando el API gestione las reglas, quedarán registradas en
         la auditoría del sistema (RF-22).
       </p>
+      </TabPanel>
     </div>
   )
 }

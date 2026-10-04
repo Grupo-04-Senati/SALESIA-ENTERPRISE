@@ -35,6 +35,7 @@ import { useStatistics } from '@/hooks/useStatistics'
 import MeanPanel from '../components/MeanPanel'
 import MedianPanel from '../components/MedianPanel'
 import ComparePanel from '../components/ComparePanel'
+import SnapshotsPanel from '../components/SnapshotsPanel'
 
 /**
  * Dashboard analítico (Fase 10 · RF-09…RF-14): KPIs de ventas,
@@ -48,6 +49,7 @@ const TAB_ITEMS = [
   { id: 'indicadores', label: 'Indicadores' },
   { id: 'estadistica', label: 'Estadística descriptiva' },
   { id: 'modulos', label: 'Conexión con los módulos' },
+  { id: 'instantaneas', label: 'Instantáneas' },
 ]
 
 const TOOLTIP_STYLE = {
@@ -357,6 +359,11 @@ export default function AnalyticsPage() {
             })}
           </div>
         </section>
+      </TabPanel>
+
+      {/* Instantáneas de KPI */}
+      <TabPanel tabId="instantaneas" active={tab === 'instantaneas'}>
+        <SnapshotsPanel />
       </TabPanel>
     </div>
   )

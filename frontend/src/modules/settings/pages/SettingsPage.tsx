@@ -7,6 +7,9 @@ import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Modal from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/form'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
+import NotificationsPanel from '../components/NotificationsPanel'
+import ExportsPanel from '../components/ExportsPanel'
+import ReportsPanel from '../components/ReportsPanel'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
@@ -34,6 +37,9 @@ const TAB_ITEMS = [
   { id: 'parametros', label: 'Parámetros' },
   { id: 'usuarios', label: 'Usuarios y roles' },
   { id: 'sistema', label: 'Sistema' },
+  { id: 'notificaciones', label: 'Notificaciones' },
+  { id: 'exportaciones', label: 'Exportaciones' },
+  { id: 'reportes', label: 'Reportes' },
 ]
 
 const EMPTY_USER_FORM: CreateUserInput = {
@@ -424,6 +430,21 @@ export default function SettingsPage() {
         </dl>
       </section>
       </div>
+      </TabPanel>
+
+      {/* Notificaciones */}
+      <TabPanel tabId="notificaciones" active={tab === 'notificaciones'}>
+        <NotificationsPanel />
+      </TabPanel>
+
+      {/* Exportaciones */}
+      <TabPanel tabId="exportaciones" active={tab === 'exportaciones'}>
+        <ExportsPanel />
+      </TabPanel>
+
+      {/* Reportes programados */}
+      <TabPanel tabId="reportes" active={tab === 'reportes'}>
+        <ReportsPanel />
       </TabPanel>
 
       {/* Alta de usuarios (POST /users · RF-02) */}

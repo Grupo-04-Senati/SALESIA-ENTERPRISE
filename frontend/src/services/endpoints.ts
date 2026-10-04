@@ -44,6 +44,33 @@ export const ENDPOINTS = {
   inventoryProductMovements: (id: number) => `/api/v1/inventory/${id}/movements`,
   inventoryAlerts: '/api/v1/inventory/alerts',
 
+  // §2.4 Compras, cotizaciones, devoluciones y precios
+  suppliers: '/api/v1/suppliers',
+  purchaseOrders: '/api/v1/purchase-orders',
+  shipments: '/api/v1/shipments',
+  quotes: '/api/v1/quotes',
+  returns: '/api/v1/returns',
+  priceLists: '/api/v1/price-lists',
+  promotions: '/api/v1/promotions',
+
+  // §2.5 CRM: segmentos e interacciones
+  segments: '/api/v1/customer-segments',
+  interactions: '/api/v1/customer-interactions',
+
+  // §2.6 Almacén: unidades, sucursales, almacenes, stock y conteos
+  units: '/api/v1/units',
+  branches: '/api/v1/branches',
+  warehouses: '/api/v1/warehouses',
+  warehouseStock: '/api/v1/warehouse-stock',
+  stockCounts: '/api/v1/stock-counts',
+
+  // §2.7 Sistema: notificaciones, exportaciones, reportes, reglas y KPIs
+  notifications: '/api/v1/notifications',
+  dataExports: '/api/v1/data-exports',
+  scheduledReports: '/api/v1/scheduled-reports',
+  automationRules: '/api/v1/automation-rules',
+  kpiSnapshots: '/api/v1/kpi-snapshots',
+
   // §2.8 Estadística (Semana 07)
   statistics: {
     mean: '/api/v1/statistics/mean',

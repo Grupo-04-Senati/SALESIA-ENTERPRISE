@@ -5,6 +5,7 @@ import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
+import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import { Input, Select } from '@/components/ui/form'
 import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -21,15 +22,24 @@ import {
 import type { Customer, CustomerInput } from '@/types/customer'
 import CustomerForm from '../components/CustomerForm'
 import CustomerHistoryModal from '../components/CustomerHistoryModal'
+import SegmentsPanel from '../components/SegmentsPanel'
+import InteractionsPanel from '../components/InteractionsPanel'
 import { useDataVersion } from '@/data/DataProvider'
 
 /**
  * Página de Clientes (Fase 07 · RF-03): listado con búsqueda y filtros,
  * alta/edición con validación, historial y baja lógica.
+ * Secciones separadas en pestañas: Directorio · Segmentos · Interacciones.
  * TODO(Fase 05): conectar con /api/v1/customers.
  */
 
 const PAGE_SIZE = 10
+
+const TAB_ITEMS = [
+  { id: 'directorio', label: 'Directorio' },
+  { id: 'segmentos', label: 'Segmentos' },
+  { id: 'interacciones', label: 'Interacciones' },
+]
 
 const STATUS_LABELS: Record<Customer['status'], { variant: 'success' | 'neutral'; label: string }> = {
   active: { variant: 'success', label: 'Activo' },
@@ -51,6 +61,9 @@ export default function CustomersPage() {
   const [segment, setSegment] = useState('')
   const [status, setStatus] = useState<'active' | 'inactive' | ''>('')
   const [page, setPage] = useState(1)
+
+  // Pestañas de la página
+  const [tab, setTab] = useState('directorio')
 
   // Diálogos
   const [formOpen, setFormOpen] = useState(false)
@@ -159,6 +172,10 @@ export default function CustomersPage() {
         </Button>
       </div>
 
+      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="clientes" />
+
+      {/* Directorio */}
+      <TabPanel tabId="directorio" active={tab === 'directorio'}>
       {/* Búsqueda y filtros */}
       <div className="card flex flex-col gap-3 md:flex-row md:items-end">
         <Input
@@ -304,6 +321,17 @@ export default function CustomersPage() {
           />
         </div>
       )}
+      </TabPanel>
+
+      {/* Segmentos */}
+      <TabPanel tabId="segmentos" active={tab === 'segmentos'}>
+        <SegmentsPanel />
+      </TabPanel>
+
+      {/* Interacciones */}
+      <TabPanel tabId="interacciones" active={tab === 'interacciones'}>
+        <InteractionsPanel />
+      </TabPanel>
 
       {/* Alta / edición */}
       <CustomerForm

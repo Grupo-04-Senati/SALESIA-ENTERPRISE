@@ -15,14 +15,18 @@ import type { InventoryMovement } from '@/types/sale'
 import { MOVEMENT_LABELS, createMovement, listMovements, listStock } from '../services/inventoryService'
 import type { MovementInput, StockRow } from '../services/inventoryService'
 import MovementForm from '../components/MovementForm'
+import StockCountsPanel from '../components/StockCountsPanel'
+import WarehousesPanel from '../components/WarehousesPanel'
+import UnitsPanel from '../components/UnitsPanel'
+import BranchesPanel from '../components/BranchesPanel'
 import ProcessTraceList from '@/components/ProcessTraceList'
 import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 
 /**
- * Página de Inventario (Fase 08 · RF-08): dos secciones en pestañas —
- * Existencias (stock, alertas) y Movimientos (kardex) — con registro
- * de entradas/salidas.
+ * Página de Inventario (Fase 08 · RF-08): secciones en pestañas —
+ * Existencias (stock, alertas), Movimientos (kardex), Conteos,
+ * Almacenes, Unidades y Sucursales.
  * TODO(Fase 05): conectar con /api/v1/inventory.
  */
 
@@ -31,6 +35,10 @@ const PAGE_SIZE = 10
 const TAB_ITEMS = [
   { id: 'existencias', label: 'Existencias' },
   { id: 'movimientos', label: 'Movimientos' },
+  { id: 'conteos', label: 'Conteos' },
+  { id: 'almacenes', label: 'Almacenes' },
+  { id: 'unidades', label: 'Unidades' },
+  { id: 'sucursales', label: 'Sucursales' },
 ]
 
 export default function InventoryPage() {
@@ -271,6 +279,26 @@ export default function InventoryPage() {
               {/* Trazabilidad de movimientos */}
               <ProcessTraceList limit={3} title="Procesos ejecutados en Inventario" />
             </div>
+          </TabPanel>
+
+          {/* Conteos */}
+          <TabPanel tabId="conteos" active={tab === 'conteos'}>
+            <StockCountsPanel />
+          </TabPanel>
+
+          {/* Almacenes */}
+          <TabPanel tabId="almacenes" active={tab === 'almacenes'}>
+            <WarehousesPanel />
+          </TabPanel>
+
+          {/* Unidades */}
+          <TabPanel tabId="unidades" active={tab === 'unidades'}>
+            <UnitsPanel />
+          </TabPanel>
+
+          {/* Sucursales */}
+          <TabPanel tabId="sucursales" active={tab === 'sucursales'}>
+            <BranchesPanel />
           </TabPanel>
         </>
       )}
