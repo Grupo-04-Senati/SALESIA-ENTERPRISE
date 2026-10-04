@@ -61,19 +61,12 @@ export default function MainLayout() {
           desplegable; así el mouseleave se dispara siempre al retirar el
           cursor, incluso si la barra se abre justo bajo él. */}
       <div
-        className={`fixed bottom-0 left-0 top-14 z-40 hidden w-6 overflow-hidden shadow-large transition-[width] duration-200 ease-out lg:block ${
-          desktopOpen ? 'w-[250px]' : 'w-6'
+        className={`fixed bottom-0 left-0 top-14 z-40 hidden w-6 overflow-hidden transition-[width,box-shadow] duration-200 ease-out lg:block ${
+          desktopOpen ? 'w-[250px] shadow-large' : 'w-6'
         }`}
         onMouseEnter={() => setHoverOpen(true)}
         onMouseLeave={closeDesktop}
       >
-        {/* Asa indicadora cuando está retraída */}
-        {!desktopOpen && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-1/2 h-16 w-6 -translate-y-1/2 rounded-r-full bg-primary/30"
-          />
-        )}
         <div
           className={`absolute inset-y-0 left-0 w-[250px] transition-transform duration-200 ease-out ${
             desktopOpen ? 'translate-x-0' : '-translate-x-full'
