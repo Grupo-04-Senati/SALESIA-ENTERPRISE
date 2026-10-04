@@ -3,12 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      // Aplica el tema guardado antes de pintar (sin destello blanco/oscuro).
+      // Tema por defecto: claro. Solo aplica oscuro si el usuario lo guardó.
       try {
         var t = localStorage.getItem('salesia-theme')
-        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark')
+        if (t !== 'light' && t !== 'dark') {
+          t = 'light'
+          localStorage.setItem('salesia-theme', t)
         }
+        if (t === 'dark') document.documentElement.classList.add('dark')
       } catch (e) {}
     </script>
     <link rel="icon" type="image/jpeg" href="/logo.jpg" />
