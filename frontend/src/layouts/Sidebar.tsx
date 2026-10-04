@@ -49,7 +49,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     : t('sidebar.guest')
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[250px] flex-col bg-[#1E3A8A] text-white print:hidden">
+    <aside className="sticky top-0 flex h-full w-[250px] flex-col bg-[#1E3A8A] text-white print:hidden">
       {/* Navegación */}
       <nav className="flex flex-1 flex-col justify-between overflow-y-auto px-2.5 py-2.5">
         <div>
@@ -64,7 +64,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                   type="button"
                   onClick={() => toggleGroup(group)}
                   aria-expanded={isOpen}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] font-medium transition-colors ${
+                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[12px] font-medium transition-colors ${
                     isOpen ? 'text-white' : 'text-white/60 hover:text-white'
                   }`}
                 >
@@ -90,7 +90,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                             to={item.path}
                             onClick={onNavigate}
                             className={({ isActive }) =>
-                              `relative my-0.5 flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[14px] transition-colors ${
+                              `relative my-0.5 flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[15px] transition-colors ${
                                 isActive
                                   ? 'bg-[rgba(9,57,230,0.38)] font-medium text-white'
                                   : 'text-white/85 hover:bg-white/10 hover:text-white'
@@ -134,8 +134,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                 .join('') || 'US'}
             </span>
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-[13px] font-semibold">{user?.name ?? 'Usuario'}</p>
-              <p className="truncate text-[11px] text-white/55">{roleLabel}</p>
+              <p className="truncate text-[14px] font-semibold">{user?.name ?? 'Usuario'}</p>
+              <p className="truncate text-[12px] text-white/55">{roleLabel}</p>
             </div>
             <button
               type="button"

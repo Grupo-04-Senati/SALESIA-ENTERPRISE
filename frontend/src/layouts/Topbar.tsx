@@ -40,12 +40,12 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 print:hidden lg:px-5">
-      {/* Hamburguesa (móvil) */}
+      {/* Hamburguesa (abre/ancla la barra lateral) */}
       <button
         type="button"
         aria-label="Abrir menú"
         onClick={onMenu}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white"
       >
         <Menu aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
