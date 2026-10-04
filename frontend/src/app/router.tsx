@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { createBrowserRouter, Navigate, useNavigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import MainLayout from '@/layouts/MainLayout'
@@ -7,6 +7,7 @@ import AuthLayout from '@/layouts/AuthLayout'
 import PlaceholderPage from './PlaceholderPage'
 import NotFoundPage from './NotFoundPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
+import LauncherPage from '@/modules/launcher/pages/LauncherPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
 import { NAV_ITEMS, canAccessModule } from '@/utils/constants'
 import { getToken } from '@/services/api'
@@ -91,7 +92,7 @@ function ModuleGuard({ path, children }: { path: string; children: ReactNode }) 
             Tu rol ({user?.role ?? 'sin rol'}) no tiene asignado este módulo.
           </p>
         </div>
-        <button type="button" className="btn-primary" onClick={() => navigate('/')}>
+        <button type="button" className="btn-primary" onClick={() => navigate('/dashboard')}>
           Volver al Dashboard
         </button>
       </div>
@@ -138,19 +139,34 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <RequireAuth>
-        <MainLayout />
+        <Outlet />
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
-      ...NAV_ITEMS.filter((item) => item.path !== '/').map((item) => ({
-        path: item.path.slice(1),
-        element: (
-          <ModuleGuard path={item.path}>
-            {MODULE_ROUTES[item.path] ?? <PlaceholderPage />}
-          </ModuleGuard>
-        ),
-      })),
+      // Vista 1 (Diseño E): launcher con cards por rol
+      { index: true, element: <LauncherPage /> },
+      // Vista 2: módulos con topbar + sidebar contextual
+      {
+        element: <MainLayout />,
+        children: [
+          {
+            path: 'dashboard',
+            element: (
+              <ModuleGuard path="/dashboard">
+                <DashboardPage />
+              </ModuleGuard>
+            ),
+          },
+          ...NAV_ITEMS.filter((item) => item.path !== '/dashboard').map((item) => ({
+            path: item.path.slice(1),
+            element: (
+              <ModuleGuard path={item.path}>
+                {MODULE_ROUTES[item.path] ?? <PlaceholderPage />}
+              </ModuleGuard>
+            ),
+          })),
+        ],
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

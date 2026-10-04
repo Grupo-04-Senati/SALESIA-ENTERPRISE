@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigation } from 'react-router-dom'
+import { Link, useLocation, useNavigation } from 'react-router-dom'
 import { Bell, Menu, Moon, Search, Sun } from 'lucide-react'
 import { PATH_TITLES } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
@@ -8,14 +8,19 @@ import { useAuth } from '@/hooks/useAuth'
 
 /**
  * Topbar (Diseño E): 56px, fondo claro, borde inferior fino.
- * Izquierda: marca. Centro-derecha: búsqueda, tema, campana y usuario.
+ * Izquierda: marca (clicable al launcher). Centro-derecha: búsqueda,
+ * tema, campana y usuario. `home` oculta el breadcrumb de módulo.
  */
 interface TopbarProps {
   /** Abre el sidebar en móvil (hamburguesa). */
   onMenu?: () => void
+  /** true = vista launcher (sin breadcrumb de módulo). */
+  home?: boolean
+  /** Buscador controlado (launcher). Sin él, input decorativo. */
+  search?: { value: string; onChange: (value: string) => void }
 }
 
-export default function Topbar({ onMenu }: TopbarProps) {
+export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
   const { pathname } = useLocation()
   const navigation = useNavigation()
   const { user } = useAuth()
@@ -41,7 +46,7 @@ export default function Topbar({ onMenu }: TopbarProps) {
       </button>
 
       {/* Marca */}
-      <div className="flex items-center gap-2.5">
+      <Link to="/" className="flex items-center gap-2.5" aria-label="Ir al inicio">
         <img
           src="/logo.jpg"
           alt="Logo de SalesIA Enterprise"
@@ -50,16 +55,20 @@ export default function Topbar({ onMenu }: TopbarProps) {
         <span className="hidden font-head text-[15px] font-semibold text-gray-900 sm:block">
           SalesIA Enterprise
         </span>
-      </div>
+      </Link>
 
       {/* Breadcrumb píldora */}
-      <div className="ml-2 hidden items-center gap-2 text-body-sm text-gray-500 md:flex">
-        <span>SalesIA</span>
-        <span aria-hidden="true">/</span>
-        <span className="rounded-full bg-[#E8EEFF] px-3 py-1 text-[13px] font-semibold text-primary">
-          {title}
-        </span>
-      </div>
+      {!home && (
+        <div className="ml-2 hidden items-center gap-2 text-body-sm text-gray-500 md:flex">
+          <Link to="/" className="transition-colors hover:text-primary">
+            SalesIA
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span className="rounded-full bg-[#E8EEFF] px-3 py-1 text-[13px] font-semibold text-primary">
+            {title}
+          </span>
+        </div>
+      )}
 
       <div className="flex-1" />
 
@@ -71,8 +80,10 @@ export default function Topbar({ onMenu }: TopbarProps) {
         />
         <input
           type="search"
-          placeholder="Buscar en el sistema…"
-          aria-label="Buscar en el sistema"
+          placeholder={home ? 'Buscar módulo…' : 'Buscar en el sistema…'}
+          aria-label="Buscar"
+          value={search?.value ?? ''}
+          onChange={(event) => search?.onChange(event.target.value)}
           className="input h-9 w-56 py-1.5 pl-9 text-body-sm"
         />
       </div>

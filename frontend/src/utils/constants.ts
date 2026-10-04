@@ -28,6 +28,8 @@ import {
 export interface NavItem {
   /** Etiqueta visible en el sidebar */
   label: string
+  /** Descripción corta (cards del launcher) */
+  desc: string
   /** Ruta del módulo */
   path: string
   /** Icono Lucide (20px en el sidebar) */
@@ -38,25 +40,25 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   // --- Operación ---
-  { label: 'Dashboard', path: '/', icon: LayoutDashboard, group: 'operacion' },
-  { label: 'Ventas', path: '/ventas', icon: ShoppingCart, group: 'operacion' },
-  { label: 'Inventario', path: '/inventario', icon: Warehouse, group: 'operacion' },
-  { label: 'Clientes', path: '/clientes', icon: Users, group: 'operacion' },
-  { label: 'Productos', path: '/productos', icon: Package, group: 'operacion' },
-  { label: 'Categorías', path: '/categorias', icon: Tag, group: 'operacion' },
-  { label: 'Vendedores', path: '/vendedores', icon: UserPlus, group: 'operacion' },
-  { label: 'Compras', path: '/compras', icon: Truck, group: 'operacion' },
-  { label: 'Cotizaciones', path: '/cotizaciones', icon: ClipboardList, group: 'operacion' },
-  { label: 'Devoluciones', path: '/devoluciones', icon: RotateCcw, group: 'operacion' },
-  { label: 'Precios', path: '/precios', icon: Coins, group: 'operacion' },
+  { label: 'Dashboard', desc: 'Resumen general del negocio', path: '/dashboard', icon: LayoutDashboard, group: 'operacion' },
+  { label: 'Ventas', desc: 'Órdenes, tickets y facturación', path: '/ventas', icon: ShoppingCart, group: 'operacion' },
+  { label: 'Inventario', desc: 'Stock, kardex y conteos', path: '/inventario', icon: Warehouse, group: 'operacion' },
+  { label: 'Clientes', desc: 'Cartera, segmentos e interacciones', path: '/clientes', icon: Users, group: 'operacion' },
+  { label: 'Productos', desc: 'Catálogo y existencias', path: '/productos', icon: Package, group: 'operacion' },
+  { label: 'Categorías', desc: 'Clasificación del catálogo', path: '/categorias', icon: Tag, group: 'operacion' },
+  { label: 'Vendedores', desc: 'Equipo y metas de venta', path: '/vendedores', icon: UserPlus, group: 'operacion' },
+  { label: 'Compras', desc: 'Órdenes de compra y proveedores', path: '/compras', icon: Truck, group: 'operacion' },
+  { label: 'Cotizaciones', desc: 'Propuestas y conversión a venta', path: '/cotizaciones', icon: ClipboardList, group: 'operacion' },
+  { label: 'Devoluciones', desc: 'Reembolsos y reposición', path: '/devoluciones', icon: RotateCcw, group: 'operacion' },
+  { label: 'Precios', desc: 'Listas, descuentos y promociones', path: '/precios', icon: Coins, group: 'operacion' },
   // --- Analítica ---
-  { label: 'Analytics', path: '/analytics', icon: TrendingUp, group: 'analitica' },
-  { label: 'Probabilidad', path: '/probabilidad', icon: Percent, group: 'analitica' },
-  { label: 'Insights', path: '/insights', icon: Lightbulb, group: 'analitica' },
-  { label: 'Reportes', path: '/reportes', icon: FileText, group: 'analitica' },
+  { label: 'Analytics', desc: 'KPIs, series y comparativas', path: '/analytics', icon: TrendingUp, group: 'analitica' },
+  { label: 'Probabilidad', desc: 'Pronóstico de cierre de ventas', path: '/probabilidad', icon: Percent, group: 'analitica' },
+  { label: 'Insights', desc: 'Hallazgos automáticos de datos', path: '/insights', icon: Lightbulb, group: 'analitica' },
+  { label: 'Reportes', desc: 'Informes programados y exportación', path: '/reportes', icon: FileText, group: 'analitica' },
   // --- Sistema ---
-  { label: 'Configuración', path: '/configuracion', icon: Settings, group: 'sistema' },
-  { label: 'Automatizaciones', path: '/automatizaciones', icon: Zap, group: 'sistema' },
+  { label: 'Configuración', desc: 'Parámetros, usuarios y roles', path: '/configuracion', icon: Settings, group: 'sistema' },
+  { label: 'Automatizaciones', desc: 'Reglas, alertas y reportes automáticos', path: '/automatizaciones', icon: Zap, group: 'sistema' },
 ]
 
 export const GROUP_LABELS: Record<NavItem['group'], string> = {
@@ -75,9 +77,9 @@ export const ALL_MODULES = '*'
 export const ROLE_MODULES: Record<string, string[] | typeof ALL_MODULES> = {
   Admin: ALL_MODULES,
   Gerente: ALL_MODULES,
-  Vendedor: ['/', '/ventas', '/clientes', '/cotizaciones', '/devoluciones', '/productos', '/precios'],
-  Analista: ['/', '/analytics', '/probabilidad', '/insights', '/reportes', '/clientes', '/productos'],
-  Almacén: ['/', '/inventario', '/compras', '/productos'],
+  Vendedor: ['/dashboard', '/ventas', '/clientes', '/cotizaciones', '/devoluciones', '/productos', '/precios'],
+  Analista: ['/dashboard', '/analytics', '/probabilidad', '/insights', '/reportes', '/clientes', '/productos'],
+  Almacén: ['/dashboard', '/inventario', '/compras', '/productos'],
 }
 
 /**
@@ -100,7 +102,7 @@ export function visibleModules(role: string | undefined): NavItem[] {
 
 /** Título de la topbar por ruta (txt §7.1) */
 export const PATH_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
+  '/dashboard': 'Dashboard',
   '/clientes': 'Clientes',
   '/productos': 'Productos',
   '/categorias': 'Categorías',

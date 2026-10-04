@@ -147,6 +147,213 @@
 }
 
 /* ============================================================
+   Launcher (Diseño E): hero, secciones y cards de módulo
+   ============================================================ */
+
+.sec-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+
+.sec-head h2 {
+  position: relative;
+  padding-left: 14px;
+  font-size: 18px;
+  line-height: 22px;
+}
+
+.sec-head h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 5px;
+  border-radius: 3px;
+  background: #0939e6;
+}
+
+.sec-head .rule {
+  flex: 1;
+  height: 1px;
+  background: #eff0f2;
+}
+
+html.dark .sec-head .rule {
+  background: #2a2e38;
+}
+
+.mcard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  background: #fff;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: rgba(52, 58, 64, 0.06) 0px -2px 5px 0px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease,
+    background 0.15s ease;
+  animation: fade-in 0.3s ease both;
+}
+
+.mcard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #0939e6;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s ease;
+}
+
+.mcard::after {
+  content: '';
+  position: absolute;
+  right: -46px;
+  top: -46px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: #e8eeff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.mcard:hover,
+.mcard:focus-visible {
+  transform: translateY(-4px);
+  background: #f7f9ff;
+  border-color: #d6e0fa;
+  box-shadow: 0 16px 34px rgba(9, 57, 230, 0.16);
+}
+
+.mcard:hover::before,
+.mcard:focus-visible::before {
+  transform: scaleX(1);
+}
+
+.mcard:hover::after,
+.mcard:focus-visible::after {
+  opacity: 0.55;
+}
+
+.mcard .mcard-ico {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: #e8eeff;
+  color: #0939e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  position: relative;
+  z-index: 1;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.18s ease;
+}
+
+.mcard:hover .mcard-ico,
+.mcard:focus-visible .mcard-ico {
+  background: #0939e6;
+  color: #fff;
+  transform: scale(1.06);
+}
+
+.mcard .mcard-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f3f5f9;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  position: relative;
+  z-index: 1;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.18s ease;
+}
+
+.mcard:hover .mcard-arrow,
+.mcard:focus-visible .mcard-arrow {
+  background: #0939e6;
+  color: #fff;
+  transform: translateX(3px);
+}
+
+/* Modo oscuro */
+html.dark .mcard {
+  background: #1a1d25;
+}
+
+html.dark .mcard:hover,
+html.dark .mcard:focus-visible {
+  background: #1b2135;
+  border-color: #2e3a66;
+}
+
+html.dark .mcard::after {
+  background: #16224a;
+}
+
+html.dark .mcard .mcard-ico {
+  background: #16224a;
+  color: #7ea2ff;
+}
+
+html.dark .mcard .mcard-arrow {
+  background: #23262e;
+  color: #9aa1af;
+}
+
+/* Rolebar flotante */
+.rolebar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 14px;
+  display: flex;
+  gap: 4px;
+  background: #262626;
+  padding: 5px;
+  border-radius: 800px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+  z-index: 40;
+}
+
+.rolebar button {
+  border: 0;
+  background: transparent;
+  color: #cdcdcd;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 15px;
+  border-radius: 800px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rolebar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.rolebar button.on {
+  background: #0939e6;
+  color: #fff;
+}
+
+/* ============================================================
    Modo oscuro (tokens Diseño E). Se activa con la clase .dark
    en <html>. Reglas sin capa a proposito: ganan a utilidades.
    ============================================================ */
