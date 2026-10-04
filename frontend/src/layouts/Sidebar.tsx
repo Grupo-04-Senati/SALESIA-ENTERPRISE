@@ -25,6 +25,7 @@ const GROUPS = ['operacion', 'analitica', 'sistema'] as const
 export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth()
   const items = visibleModules(user?.role)
+  const firstGroup = GROUPS.find((group) => items.some((item) => item.group === group))
 
   const handleLogout = () => {
     // TODO(Fase 05): la sesión real usa el token de /api/v1/auth/logout.
@@ -52,12 +53,12 @@ export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
       </div>
 
       {/* Navegación agrupada */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
         {GROUPS.map((group) => {
           const groupItems = items.filter((item) => item.group === group)
           if (groupItems.length === 0) return null
           return (
-            <div key={group} className="mb-4">
+            <div key={group} className={group === firstGroup ? 'mb-4 pt-4' : 'mb-4'}>
               <p className="sticky top-0 z-10 mb-1 bg-primary px-3 pb-1.5 pt-1 text-caption font-semibold uppercase tracking-wider text-white/50">
                 {GROUP_LABELS[group]}
               </p>
