@@ -49,7 +49,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     : t('sidebar.guest')
 
   return (
-    <aside className="flex h-screen w-[250px] flex-col bg-[#1E3A8A] text-white print:hidden">
+    <aside className="sticky top-0 flex h-screen w-[250px] flex-col bg-[#1E3A8A] text-white print:hidden">
       {/* Navegación */}
       <nav className="flex flex-1 flex-col justify-between overflow-y-auto px-2.5 py-2.5">
         <div>

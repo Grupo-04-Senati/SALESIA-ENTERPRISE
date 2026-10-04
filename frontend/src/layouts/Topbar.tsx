@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigation } from 'react-router-dom'
-import { Languages, Menu, Moon, Search, Sun } from 'lucide-react'
+import { Link, useLocation, useNavigate, useNavigation } from 'react-router-dom'
+import { ArrowLeft, Languages, Menu, Moon, Search, Sun } from 'lucide-react'
 import { PATH_TITLES, PATH_TITLES_EN } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
@@ -24,6 +24,7 @@ interface TopbarProps {
 
 export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const navigation = useNavigation()
   const { user } = useAuth()
   const { lang, toggleLang, t } = useLang()
@@ -38,7 +39,7 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
       .join('') || 'US'
 
   return (
-    <header className="relative flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 print:hidden lg:px-5">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 print:hidden lg:px-5">
       {/* Hamburguesa (móvil) */}
       <button
         type="button"
@@ -61,12 +62,21 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
         </span>
       </Link>
 
+      {/* Retroceso: volver al launcher de módulos */}
+      {!home && (
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="ml-1 flex h-8 items-center gap-1.5 rounded-full bg-gray-100 pl-2.5 pr-3 text-[13px] font-medium text-gray-600 transition-colors hover:bg-primary hover:text-white"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          {t('topbar.back')}
+        </button>
+      )}
+
       {/* Breadcrumb píldora */}
       {!home && (
         <div className="ml-2 hidden items-center gap-2 text-body-sm text-gray-500 md:flex">
-          <Link to="/" className="transition-colors hover:text-primary">
-            SalesIA
-          </Link>
           <span aria-hidden="true">/</span>
           <span className="rounded-full bg-[#E8EEFF] px-3 py-1 text-[13px] font-semibold text-primary">
             {title}

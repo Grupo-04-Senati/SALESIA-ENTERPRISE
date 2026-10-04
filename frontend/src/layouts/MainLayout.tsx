@@ -13,8 +13,8 @@ export default function MainLayout() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar desktop */}
-      <div className="hidden shrink-0 lg:block">
+      {/* Sidebar desktop (sticky: se mantiene visible al hacer scroll) */}
+      <div className="hidden shrink-0 self-stretch lg:block">
         <Sidebar />
       </div>
 
