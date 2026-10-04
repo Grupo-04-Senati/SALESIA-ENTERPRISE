@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigation } from 'react-router-dom'
-import { Bell, Menu, Moon, Search, Sun } from 'lucide-react'
-import { PATH_TITLES } from '@/utils/constants'
+import { Languages, Menu, Moon, Search, Sun } from 'lucide-react'
+import { PATH_TITLES, PATH_TITLES_EN } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
+import NotificationsMenu from '@/components/ui/NotificationsMenu'
 import { useAuth } from '@/hooks/useAuth'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Topbar (Diseño E): 56px, fondo claro, borde inferior fino.
  * Izquierda: marca (clicable al launcher). Centro-derecha: búsqueda,
- * tema, campana y usuario. `home` oculta el breadcrumb de módulo.
+ * idioma, tema, notificaciones y usuario. `home` oculta el breadcrumb.
  */
 interface TopbarProps {
   /** Abre el sidebar en móvil (hamburguesa). */
@@ -24,8 +26,10 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
   const { pathname } = useLocation()
   const navigation = useNavigation()
   const { user } = useAuth()
+  const { lang, toggleLang, t } = useLang()
   const [theme, setTheme] = useState<Theme>(() => getTheme())
-  const title = PATH_TITLES[pathname] ?? 'SalesIA Enterprise'
+  const titles = lang === 'en' ? PATH_TITLES_EN : PATH_TITLES
+  const title = titles[pathname] ?? 'SalesIA Enterprise'
   const initials =
     (user?.name ?? 'Usuario')
       .split(' ')
@@ -80,19 +84,31 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
         />
         <input
           type="search"
-          placeholder={home ? 'Buscar módulo…' : 'Buscar en el sistema…'}
-          aria-label="Buscar"
+          placeholder={home ? t('topbar.searchModules') : t('topbar.searchSystem')}
+          aria-label={t('topbar.searchLabel')}
           value={search?.value ?? ''}
           onChange={(event) => search?.onChange(event.target.value)}
           className="input h-9 w-56 py-1.5 pl-9 text-body-sm"
         />
       </div>
 
+      {/* Idioma */}
+      <button
+        type="button"
+        aria-label={t('topbar.lang')}
+        title={t('topbar.lang')}
+        onClick={toggleLang}
+        className="flex h-9 items-center justify-center gap-1 rounded-full bg-gray-100 px-2.5 text-gray-500 transition-colors hover:bg-primary hover:text-white"
+      >
+        <Languages aria-hidden="true" className="h-[18px] w-[18px]" />
+        <span className="text-[11px] font-semibold uppercase">{lang}</span>
+      </button>
+
       {/* Acciones */}
       <button
         type="button"
-        aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-        title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        aria-label={theme === 'dark' ? 'Cambiar a modo claro' : t('topbar.themeDark')}
+        title={theme === 'dark' ? 'Modo claro' : t('topbar.themeDark')}
         onClick={() => setTheme(toggleTheme())}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white"
       >
@@ -103,16 +119,8 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
         )}
       </button>
 
-      <button
-        type="button"
-        aria-label="Notificaciones"
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white"
-      >
-        <Bell aria-hidden="true" className="h-[18px] w-[18px]" />
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
-          4
-        </span>
-      </button>
+      {/* Notificaciones (avisos reales) */}
+      <NotificationsMenu />
 
       {/* Usuario */}
       <div className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3">

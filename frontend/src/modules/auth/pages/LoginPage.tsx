@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import { Info, Lock, LogIn, Mail, TriangleAlert } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Página de Login (Diseño E):
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
+  const { t } = useLang()
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -25,7 +27,7 @@ export default function LoginPage() {
       await login(email, password)
       navigate('/', { replace: true })
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'No se pudo iniciar sesión.')
+      setError(caught instanceof Error ? caught.message : t('login.error'))
     } finally {
       setLoading(false)
     }
@@ -34,10 +36,8 @@ export default function LoginPage() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-subtle">
       <div className="mb-6">
-        <h2 className="text-h3 text-gray-900">Bienvenido de nuevo</h2>
-        <p className="mt-1 text-body-sm text-gray-500">
-          Ingresa tus credenciales para continuar.
-        </p>
+        <h2 className="text-h3 text-gray-900">{t('login.welcome')}</h2>
+        <p className="mt-1 text-body-sm text-gray-500">{t('login.sub')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -46,7 +46,7 @@ export default function LoginPage() {
             htmlFor="email"
             className="mb-1.5 block text-body-sm font-medium text-gray-700"
           >
-            Correo electrónico
+            {t('login.email')}
           </label>
           <div className="relative">
             <Mail
@@ -72,7 +72,7 @@ export default function LoginPage() {
             htmlFor="password"
             className="mb-1.5 block text-body-sm font-medium text-gray-700"
           >
-            Contraseña
+            {t('login.password')}
           </label>
           <div className="relative">
             <Lock
@@ -105,21 +105,19 @@ export default function LoginPage() {
 
         <button type="submit" className="btn-primary w-full" disabled={loading}>
           <LogIn aria-hidden="true" className="h-4 w-4" />
-          {loading ? 'Ingresando…' : 'Iniciar sesión'}
+          {loading ? t('login.submitting') : t('login.submit')}
         </button>
 
         <div className="flex items-start gap-2 rounded-xl bg-gray-100 px-3.5 py-3 text-caption text-gray-500">
-          <Info aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-primary" />
+          <Info aria-hidden="true" className="mt-px h-4 w-4 text-primary" />
           <span>
-            Acceso de administrador: <b className="font-semibold text-gray-700">admin@salesia.com</b>
+            {t('login.hint')} <b className="font-semibold text-gray-700">admin@salesia.com</b>
             <br />
-            Contraseña: <b className="font-semibold text-gray-700">admin123</b>
+            {t('login.passwordLabel')} <b className="font-semibold text-gray-700">admin123</b>
           </span>
         </div>
 
-        <p className="text-center text-caption text-gray-400">
-          ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
-        </p>
+        <p className="text-center text-caption text-gray-400">{t('login.forgot')}</p>
       </form>
     </div>
   )

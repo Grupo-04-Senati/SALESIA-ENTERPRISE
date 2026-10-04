@@ -28,8 +28,12 @@ import {
 export interface NavItem {
   /** Etiqueta visible en el sidebar */
   label: string
+  /** Etiqueta en inglés (shell i18n) */
+  labelEn: string
   /** Descripción corta (cards del launcher) */
   desc: string
+  /** Descripción en inglés */
+  descEn: string
   /** Ruta del módulo */
   path: string
   /** Icono Lucide (20px en el sidebar) */
@@ -40,31 +44,38 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   // --- Operación ---
-  { label: 'Dashboard', desc: 'Resumen general del negocio', path: '/dashboard', icon: LayoutDashboard, group: 'operacion' },
-  { label: 'Ventas', desc: 'Órdenes, tickets y facturación', path: '/ventas', icon: ShoppingCart, group: 'operacion' },
-  { label: 'Inventario', desc: 'Stock, kardex y conteos', path: '/inventario', icon: Warehouse, group: 'operacion' },
-  { label: 'Clientes', desc: 'Cartera, segmentos e interacciones', path: '/clientes', icon: Users, group: 'operacion' },
-  { label: 'Productos', desc: 'Catálogo y existencias', path: '/productos', icon: Package, group: 'operacion' },
-  { label: 'Categorías', desc: 'Clasificación del catálogo', path: '/categorias', icon: Tag, group: 'operacion' },
-  { label: 'Vendedores', desc: 'Equipo y metas de venta', path: '/vendedores', icon: UserPlus, group: 'operacion' },
-  { label: 'Compras', desc: 'Órdenes de compra y proveedores', path: '/compras', icon: Truck, group: 'operacion' },
-  { label: 'Cotizaciones', desc: 'Propuestas y conversión a venta', path: '/cotizaciones', icon: ClipboardList, group: 'operacion' },
-  { label: 'Devoluciones', desc: 'Reembolsos y reposición', path: '/devoluciones', icon: RotateCcw, group: 'operacion' },
-  { label: 'Precios', desc: 'Listas, descuentos y promociones', path: '/precios', icon: Coins, group: 'operacion' },
+  { label: 'Dashboard', labelEn: 'Dashboard', desc: 'Resumen general del negocio', descEn: 'Overall business overview', path: '/dashboard', icon: LayoutDashboard, group: 'operacion' },
+  { label: 'Ventas', labelEn: 'Sales', desc: 'Órdenes, tickets y facturación', descEn: 'Orders, tickets and invoicing', path: '/ventas', icon: ShoppingCart, group: 'operacion' },
+  { label: 'Inventario', labelEn: 'Inventory', desc: 'Stock, kardex y conteos', descEn: 'Stock, ledgers and counts', path: '/inventario', icon: Warehouse, group: 'operacion' },
+  { label: 'Clientes', labelEn: 'Customers', desc: 'Cartera, segmentos e interacciones', descEn: 'Portfolio, segments and interactions', path: '/clientes', icon: Users, group: 'operacion' },
+  { label: 'Productos', labelEn: 'Products', desc: 'Catálogo y existencias', descEn: 'Catalog and stock', path: '/productos', icon: Package, group: 'operacion' },
+  { label: 'Categorías', labelEn: 'Categories', desc: 'Clasificación del catálogo', descEn: 'Catalog classification', path: '/categorias', icon: Tag, group: 'operacion' },
+  { label: 'Vendedores', labelEn: 'Sellers', desc: 'Equipo y metas de venta', descEn: 'Team and sales targets', path: '/vendedores', icon: UserPlus, group: 'operacion' },
+  { label: 'Compras', labelEn: 'Purchasing', desc: 'Órdenes de compra y proveedores', descEn: 'Purchase orders and suppliers', path: '/compras', icon: Truck, group: 'operacion' },
+  { label: 'Cotizaciones', labelEn: 'Quotes', desc: 'Propuestas y conversión a venta', descEn: 'Proposals and conversion to sale', path: '/cotizaciones', icon: ClipboardList, group: 'operacion' },
+  { label: 'Devoluciones', labelEn: 'Returns', desc: 'Reembolsos y reposición', descEn: 'Refunds and restocking', path: '/devoluciones', icon: RotateCcw, group: 'operacion' },
+  { label: 'Precios', labelEn: 'Pricing', desc: 'Listas, descuentos y promociones', descEn: 'Lists, discounts and promotions', path: '/precios', icon: Coins, group: 'operacion' },
   // --- Analítica ---
-  { label: 'Analytics', desc: 'KPIs, series y comparativas', path: '/analytics', icon: TrendingUp, group: 'analitica' },
-  { label: 'Probabilidad', desc: 'Pronóstico de cierre de ventas', path: '/probabilidad', icon: Percent, group: 'analitica' },
-  { label: 'Insights', desc: 'Hallazgos automáticos de datos', path: '/insights', icon: Lightbulb, group: 'analitica' },
-  { label: 'Reportes', desc: 'Informes programados y exportación', path: '/reportes', icon: FileText, group: 'analitica' },
+  { label: 'Analytics', labelEn: 'Analytics', desc: 'KPIs, series y comparativas', descEn: 'KPIs, series and comparisons', path: '/analytics', icon: TrendingUp, group: 'analitica' },
+  { label: 'Probabilidad', labelEn: 'Probability', desc: 'Pronóstico de cierre de ventas', descEn: 'Sales closing forecast', path: '/probabilidad', icon: Percent, group: 'analitica' },
+  { label: 'Insights', labelEn: 'Insights', desc: 'Hallazgos automáticos de datos', descEn: 'Automatic data findings', path: '/insights', icon: Lightbulb, group: 'analitica' },
+  { label: 'Reportes', labelEn: 'Reports', desc: 'Informes programados y exportación', descEn: 'Scheduled reports and exports', path: '/reportes', icon: FileText, group: 'analitica' },
   // --- Sistema ---
-  { label: 'Configuración', desc: 'Parámetros, usuarios y roles', path: '/configuracion', icon: Settings, group: 'sistema' },
-  { label: 'Automatizaciones', desc: 'Reglas, alertas y reportes automáticos', path: '/automatizaciones', icon: Zap, group: 'sistema' },
+  { label: 'Configuración', labelEn: 'Settings', desc: 'Parámetros, usuarios y roles', descEn: 'Parameters, users and roles', path: '/configuracion', icon: Settings, group: 'sistema' },
+  { label: 'Automatizaciones', labelEn: 'Automations', desc: 'Reglas, alertas y reportes automáticos', descEn: 'Rules, alerts and scheduled reports', path: '/automatizaciones', icon: Zap, group: 'sistema' },
 ]
 
 export const GROUP_LABELS: Record<NavItem['group'], string> = {
   operacion: 'Operación',
   analitica: 'Analítica',
   sistema: 'Sistema',
+}
+
+/** Etiquetas de grupo en inglés (shell i18n). */
+export const GROUP_LABELS_EN: Record<NavItem['group'], string> = {
+  operacion: 'Operations',
+  analitica: 'Analytics',
+  sistema: 'System',
 }
 
 /** Todos los módulos (sin filtrar). */
@@ -119,4 +130,25 @@ export const PATH_TITLES: Record<string, string> = {
   '/cotizaciones': 'Cotizaciones',
   '/devoluciones': 'Devoluciones',
   '/precios': 'Precios',
+}
+
+/** Título de la topbar por ruta en inglés (shell i18n). */
+export const PATH_TITLES_EN: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/clientes': 'Customers',
+  '/productos': 'Products',
+  '/categorias': 'Categories',
+  '/vendedores': 'Sellers',
+  '/ventas': 'Sales',
+  '/inventario': 'Inventory',
+  '/analytics': 'Analytics',
+  '/probabilidad': 'Probability',
+  '/insights': 'Insights',
+  '/reportes': 'Reports',
+  '/configuracion': 'Settings',
+  '/automatizaciones': 'Automations',
+  '/compras': 'Purchasing',
+  '/cotizaciones': 'Quotes',
+  '/devoluciones': 'Returns',
+  '/precios': 'Pricing',
 }

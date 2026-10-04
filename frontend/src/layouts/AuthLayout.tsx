@@ -1,20 +1,32 @@
-import { BarChart3, ShieldCheck, Zap } from 'lucide-react'
+import { BarChart3, Languages, ShieldCheck, Zap } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Layout de autenticación — Diseño E (webadmin):
  * panel izquierdo azul con la marca y el valor del producto,
  * formulario a la derecha sobre fondo claro (oscuro en dark mode).
  */
-const HIGHLIGHTS = [
-  { icon: BarChart3, text: 'Analítica de ventas en tiempo real' },
-  { icon: ShieldCheck, text: 'Gestión por roles y accesos seguros' },
-  { icon: Zap, text: 'Automatizaciones y reportes automáticos' },
-] as const
-
 export default function AuthLayout() {
+  const { t, lang, toggleLang } = useLang()
+  const HIGHLIGHTS = [
+    { icon: BarChart3, text: t('auth.hl1') },
+    { icon: ShieldCheck, text: t('auth.hl2') },
+    { icon: Zap, text: t('auth.hl3') },
+  ] as const
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="relative flex min-h-screen bg-gray-50">
+      {/* Selector de idioma (login no tiene topbar) */}
+      <button
+        type="button"
+        aria-label={t('topbar.lang')}
+        title={t('topbar.lang')}
+        onClick={toggleLang}
+        className="absolute right-4 top-4 z-10 flex h-9 items-center justify-center gap-1 rounded-full bg-white px-3 text-gray-500 shadow-subtle transition-colors hover:bg-primary hover:text-white"
+      >
+        <Languages aria-hidden="true" className="h-[17px] w-[17px]" />
+        <span className="text-[11px] font-semibold uppercase">{lang}</span>
+      </button>
       {/* Panel de marca */}
       <aside className="relative hidden w-[44%] max-w-[560px] flex-col justify-between overflow-hidden bg-primary p-10 text-white md:flex">
         <div
@@ -34,17 +46,15 @@ export default function AuthLayout() {
           />
           <div>
             <p className="font-head text-base font-semibold">SalesIA Enterprise</p>
-            <p className="text-caption text-white/70">Sistema de Gestión y Analítica</p>
+            <p className="text-caption text-white/70">{t('auth.brandSub')}</p>
           </div>
         </div>
 
         <div className="relative">
           <h1 className="max-w-sm font-head text-[30px] font-semibold leading-9 text-white">
-            Gestiona tu operación con datos claros y decisiones rápidas.
+            {t('auth.headline')}
           </h1>
-          <p className="mt-3 max-w-sm text-body-sm text-white/75">
-            Ventas, inventario, clientes y analítica estadística en un solo lugar.
-          </p>
+          <p className="mt-3 max-w-sm text-body-sm text-white/75">{t('auth.lead')}</p>
           <ul className="mt-8 space-y-3">
             {HIGHLIGHTS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3 text-body-sm text-white/90">

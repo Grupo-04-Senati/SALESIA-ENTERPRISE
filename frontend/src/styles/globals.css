@@ -317,42 +317,6 @@ html.dark .mcard .mcard-arrow {
   color: #9aa1af;
 }
 
-/* Rolebar flotante */
-.rolebar {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 14px;
-  display: flex;
-  gap: 4px;
-  background: #262626;
-  padding: 5px;
-  border-radius: 800px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
-  z-index: 40;
-}
-
-.rolebar button {
-  border: 0;
-  background: transparent;
-  color: #cdcdcd;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 15px;
-  border-radius: 800px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.rolebar button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.rolebar button.on {
-  background: #0939e6;
-  color: #fff;
-}
-
 /* ============================================================
    Modo oscuro (tokens Diseño E). Se activa con la clase .dark
    en <html>. Reglas sin capa a proposito: ganan a utilidades.
