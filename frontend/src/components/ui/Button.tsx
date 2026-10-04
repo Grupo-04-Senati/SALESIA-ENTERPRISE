@@ -19,7 +19,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'chi
 }
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400'
+  'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400'
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-white hover:bg-primary-hover',

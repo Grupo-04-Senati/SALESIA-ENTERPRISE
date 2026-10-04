@@ -85,7 +85,7 @@ export default function NotificationsMenu() {
         <div
           role="dialog"
           aria-label={t('notif.title')}
-          className="absolute right-0 top-11 z-50 w-[350px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_18px_40px_rgba(16,24,40,0.16)] dark:border-gray-700 dark:bg-gray-800"
+          className="animate-drop-in absolute right-0 top-11 z-50 w-[350px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_18px_40px_rgba(16,24,40,0.16)] dark:border-gray-700 dark:bg-gray-800"
         >
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <p className="text-[14px] font-semibold text-gray-900 dark:text-gray-100">

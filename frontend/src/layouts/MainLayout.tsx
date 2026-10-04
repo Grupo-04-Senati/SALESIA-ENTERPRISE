@@ -104,7 +104,7 @@ export default function MainLayout() {
           <div className="mx-auto w-full max-w-[1600px]">
             {/* Banner superior con la imagen del módulo activo */}
             {currentModule && (
-              <div className="mod-hero">
+              <div key={location.pathname} className="mod-hero">
                 <img
                   src={currentModule.img}
                   alt=""
@@ -118,7 +118,9 @@ export default function MainLayout() {
                 </span>
               </div>
             )}
-            <Outlet />
+            <div key={location.pathname} className="page-enter">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>

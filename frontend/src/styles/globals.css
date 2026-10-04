@@ -94,6 +94,39 @@
     @apply btn bg-error text-white hover:bg-[#DC2626];
   }
 
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline,
+  .btn-danger {
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.15s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .btn:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled),
+  .btn-outline:hover:not(:disabled),
+  .btn-danger:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .btn:active:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled),
+  .btn-outline:active:not(:disabled),
+  .btn-danger:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 10px 24px rgba(9, 57, 230, 0.38);
+  }
+
   /* Inputs (Diseño E: fondo suave radio 12px, sin borde, focus ring azul) */
   .input {
     @apply w-full rounded-xl border border-transparent bg-gray-100 px-3.5 py-2.5 text-body text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
@@ -148,6 +181,106 @@
   animation: progress 1s ease-in-out infinite;
 }
 
+/* --- Biblioteca de animaciones (interfaz) --- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-zoom {
+  from {
+    opacity: 0;
+    transform: scale(1.07);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.22s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+
+.animate-drop-in {
+  animation: drop-in 0.18s ease-out both;
+}
+
+.animate-float-in-right {
+  animation: float-in-right 0.35s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+
+/* Transición de página: entra el contenido al cambiar de ruta */
+.page-enter {
+  animation: fade-up 0.4s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+
 /* ============================================================
    Launcher (Diseño E): hero, secciones y cards de módulo
    ============================================================ */
@@ -157,6 +290,7 @@
   align-items: center;
   gap: 10px;
   margin: 34px 0 12px;
+  animation: slide-in-left 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
 
 .sec-head h2 {
@@ -202,7 +336,7 @@ html.dark .sec-head .rule {
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease,
     background 0.15s ease;
-  animation: fade-in 0.3s ease both;
+  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
 
 .mcard::before {
@@ -294,6 +428,22 @@ html.dark .sec-head .rule {
   transform: translateX(3px);
 }
 
+.mcard:active {
+  transform: translateY(-2px) scale(0.99);
+  transition-duration: 0.08s;
+}
+
+.mcard .mcard-img {
+  transition: transform 0.55s ease, filter 0.4s ease;
+  transform-origin: center;
+}
+
+.mcard:hover .mcard-img,
+.mcard:focus-visible .mcard-img {
+  transform: scale(1.07);
+  filter: saturate(1.08) brightness(1.04);
+}
+
 /* Card en formato cuadro: imagen arriba e icono + nombre abajo */
 .mcard.mcard-tile {
   flex-direction: column;
@@ -372,7 +522,7 @@ html.dark .mcard.mcard-tile .mcard-img {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   background: #eef1f6;
-  animation: fade-in 0.3s ease both;
+  animation: fade-up 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
 
 .mod-hero img {
@@ -381,6 +531,8 @@ html.dark .mcard.mcard-tile .mcard-img {
   height: 136px;
   object-fit: cover;
   object-position: center 35%;
+  transform-origin: center 35%;
+  animation: hero-zoom 0.75s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
 
 .mod-hero::after {
@@ -402,6 +554,7 @@ html.dark .mcard.mcard-tile .mcard-img {
   z-index: 1;
   display: flex;
   width: 44px;
+  animation: pop-in 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   height: 44px;
   align-items: center;
   justify-content: center;
@@ -611,4 +764,17 @@ html.dark ::-webkit-scrollbar-thumb {
 
 html.dark ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
+}
+
+/* Accesibilidad: respetar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

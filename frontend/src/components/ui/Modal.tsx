@@ -58,7 +58,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={cn('animate-fade-in my-6 w-full rounded-lg bg-white p-6 shadow-modal', SIZES[size])}
+        className={cn('animate-scale-in my-6 w-full rounded-lg bg-white p-6 shadow-modal', SIZES[size])}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-h3 text-gray-900">

@@ -82,7 +82,7 @@ export default function LauncherPage() {
 
       <div className="mx-auto w-full max-w-[1700px] px-5 pb-24 pt-4">
         {/* Hero */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-subtle">
+        <section className="animate-fade-up rounded-xl border border-gray-200 bg-white p-6 shadow-subtle">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-[23px] leading-7 text-gray-900">
@@ -96,7 +96,8 @@ export default function LauncherPage() {
               {heroKpis.map((kpi, index) => (
                 <div
                   key={kpi.label}
-                  className={`flex flex-col ${index > 0 ? 'border-l border-gray-200 pl-6 lg:pl-8' : ''}`}
+                  className={`animate-fade-up flex flex-col ${index > 0 ? 'border-l border-gray-200 pl-6 lg:pl-8' : ''}`}
+                  style={{ animationDelay: `${140 + index * 90}ms` }}
                 >
                   <span className="text-caption text-gray-500">{kpi.label}</span>
                   <span className="mt-0.5 font-head text-xl font-semibold tabular-nums text-gray-900">
@@ -130,7 +131,7 @@ export default function LauncherPage() {
                 </div>
 
                 <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-                  {items.map((item) => {
+                  {items.map((item, itemIndex) => {
                     const Icon = item.icon
                     const label = lang === 'en' ? item.labelEn : item.label
                     const desc = lang === 'en' ? item.descEn : item.desc
@@ -139,6 +140,7 @@ export default function LauncherPage() {
                         key={item.path}
                         type="button"
                         className="mcard mcard-tile"
+                        style={{ animationDelay: `${Math.min(itemIndex * 55, 660)}ms` }}
                         onClick={() => navigate(item.path)}
                       >
                         <img

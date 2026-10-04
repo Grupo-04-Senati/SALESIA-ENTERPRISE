@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={toast.id}
               role="status"
               className={cn(
-                'animate-fade-in pointer-events-auto rounded-md border p-4 shadow-medium',
+                'animate-float-in-right pointer-events-auto rounded-md border p-4 shadow-medium',
                 style,
               )}
             >
