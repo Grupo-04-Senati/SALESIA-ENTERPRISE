@@ -89,6 +89,10 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [apiStatus, setApiStatus] = useState<'checking' | 'up' | 'down'>('checking')
   const [tab, setTab] = useState('perfil')
+  const tabs =
+    user?.role === 'Admin'
+      ? TAB_ITEMS
+      : TAB_ITEMS.filter((item) => item.id !== 'usuarios')
 
   // Alta de usuarios (POST /users, solo Admin).
   const [userModalOpen, setUserModalOpen] = useState(false)
@@ -195,7 +199,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="configuracion" />
+      <Tabs items={tabs} value={tab} onChange={setTab} id="configuracion" />
 
       {/* Perfil */}
       <TabPanel tabId="perfil" active={tab === 'perfil'}>

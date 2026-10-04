@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useLocation, useNavigation } from 'react-router-dom'
-import { Bell, Search } from 'lucide-react'
+import { Bell, Moon, Search, Sun } from 'lucide-react'
 import { PATH_TITLES } from '@/utils/constants'
+import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -13,6 +15,7 @@ export default function Topbar() {
   const { pathname } = useLocation()
   const navigation = useNavigation()
   const { user } = useAuth()
+  const [theme, setTheme] = useState<Theme>(() => getTheme())
   const title = PATH_TITLES[pathname] ?? 'SalesIA Enterprise'
   const initials =
     (user?.name ?? 'Usuario')
@@ -44,6 +47,20 @@ export default function Topbar() {
             className="input h-9 w-56 py-1.5 pl-9 text-body-sm"
           />
         </div>
+
+        <button
+          type="button"
+          aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          onClick={() => setTheme(toggleTheme())}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100"
+        >
+          {theme === 'dark' ? (
+            <Sun aria-hidden="true" className="h-5 w-5" />
+          ) : (
+            <Moon aria-hidden="true" className="h-5 w-5" />
+          )}
+        </button>
 
         <button
           type="button"

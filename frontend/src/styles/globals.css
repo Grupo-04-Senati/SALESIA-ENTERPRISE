@@ -127,3 +127,167 @@
 .animate-progress {
   animation: progress 1s ease-in-out infinite;
 }
+
+
+/* ============================================================
+   Modo oscuro - se activa con la clase .dark en <html>.
+   Reglas sin capa a proposito: ganan a las utilidades de Tailwind.
+   ============================================================ */
+
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html.dark h1,
+html.dark h2 {
+  color: #ffffff;
+}
+
+html.dark h3 {
+  color: #f3f4f6;
+}
+
+html.dark h4 {
+  color: #d1d5db;
+}
+
+/* --- Superficies --- */
+html.dark .bg-white {
+  background-color: #1f2937;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #374151;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200 {
+  border-color: #374151;
+}
+
+html.dark .border-gray-300 {
+  border-color: #4b5563;
+}
+
+html.dark .divide-gray-100 > * + *,
+html.dark .divide-gray-200 > * + * {
+  border-color: #374151;
+}
+
+/* --- Textos --- */
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #f3f4f6;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #d1d5db;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: #9ca3af;
+}
+
+html.dark .text-gray-300 {
+  color: #6b7280;
+}
+
+/* --- Componentes del sistema --- */
+html.dark .input {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+html.dark .input::placeholder {
+  color: #6b7280;
+}
+
+html.dark .input:disabled {
+  background-color: #374151;
+}
+
+html.dark .input-error {
+  border-color: #ef4444;
+}
+
+html.dark .card {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+html.dark .btn-outline {
+  color: #60a5fa;
+  border-color: #3b82f6;
+}
+
+html.dark .btn-outline:hover {
+  background-color: #1f2937;
+}
+
+html.dark .btn:disabled {
+  background-color: #374151;
+  color: #6b7280;
+}
+
+/* --- Hovers de utilidades sobre superficies claras --- */
+html.dark .hover\:bg-gray-50:hover {
+  background-color: #1f2937;
+}
+
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #374151;
+}
+
+/* --- Badges / estados con fondo claro --- */
+html.dark .bg-success-bg {
+  background-color: #064e3b;
+}
+
+html.dark .bg-error-bg {
+  background-color: #7f1d1d;
+}
+
+html.dark .bg-warning-bg {
+  background-color: #78350f;
+}
+
+html.dark .bg-info-bg {
+  background-color: #164e63;
+}
+
+html.dark .text-success-fg {
+  color: #6ee7b7;
+}
+
+html.dark .text-error-fg {
+  color: #fca5a5;
+}
+
+html.dark .text-warning-fg {
+  color: #fcd34d;
+}
+
+html.dark .text-info-fg {
+  color: #67e8f9;
+}
+
+/* --- Scrollbar acorde al tema --- */
+html.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

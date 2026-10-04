@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import { NAV_ITEMS, GROUP_LABELS } from '@/utils/constants'
+import { GROUP_LABELS, visibleModules } from '@/utils/constants'
 import { useAuth } from '@/hooks/useAuth'
 
 interface SidebarProps {
@@ -23,7 +23,8 @@ const GROUPS = ['operacion', 'analitica', 'sistema'] as const
  * activo en cyan #06B6D4.
  */
 export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const items = visibleModules(user?.role)
 
   const handleLogout = () => {
     // TODO(Fase 05): la sesión real usa el token de /api/v1/auth/logout.
@@ -52,36 +53,40 @@ export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
 
       {/* Navegación agrupada */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {GROUPS.map((group) => (
-          <div key={group} className="mb-4">
-            <p className="mb-1 px-3 text-caption font-semibold uppercase tracking-wider text-white/50">
-              {GROUP_LABELS[group]}
-            </p>
-            <ul className="space-y-1">
-              {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
-                const Icon = item.icon
-                return (
-                  <li key={item.path}>
-                    <NavLink
-                      to={item.path}
-                      end={item.path === '/'}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-accent text-white'
-                            : 'text-white/90 hover:bg-white/10'
-                        }`
-                      }
-                    >
-                      <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </NavLink>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
+        {GROUPS.map((group) => {
+          const groupItems = items.filter((item) => item.group === group)
+          if (groupItems.length === 0) return null
+          return (
+            <div key={group} className="mb-4">
+              <p className="mb-1 px-3 text-caption font-semibold uppercase tracking-wider text-white/50">
+                {GROUP_LABELS[group]}
+              </p>
+              <ul className="space-y-1">
+                {groupItems.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <li key={item.path}>
+                      <NavLink
+                        to={item.path}
+                        end={item.path === '/'}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-accent text-white'
+                              : 'text-white/90 hover:bg-white/10'
+                          }`
+                        }
+                      >
+                        <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })}
       </nav>
 
       {/* Cerrar sesión */}

@@ -1,16 +1,18 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { ShieldAlert } from 'lucide-react'
 import MainLayout from '@/layouts/MainLayout'
 import AuthLayout from '@/layouts/AuthLayout'
 import PlaceholderPage from './PlaceholderPage'
 import NotFoundPage from './NotFoundPage'
 import LoginPage from '@/modules/auth/pages/LoginPage'
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage'
-import { NAV_ITEMS } from '@/utils/constants'
+import { NAV_ITEMS, canAccessModule } from '@/utils/constants'
 import { getToken } from '@/services/api'
 import { hydrateStore } from '@/services/hydrate'
 import { fetchMe } from '@/modules/auth/services/authService'
+import { useAuth } from '@/hooks/useAuth'
 
 const CustomersPage = lazy(() => import('@/modules/customers/pages/CustomersPage'))
 const ProductsPage = lazy(() => import('@/modules/products/pages/ProductsPage'))
@@ -74,6 +76,30 @@ function GuestOnly({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/** Guarda de módulo: el rol debe tener asignada la ruta (ROLE_MODULES). */
+function ModuleGuard({ path, children }: { path: string; children: ReactNode }) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  if (!canAccessModule(user?.role, path)) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
+        <ShieldAlert aria-hidden="true" className="h-12 w-12 text-warning" />
+        <div>
+          <h2 className="text-h3 text-gray-900">Módulo no disponible</h2>
+          <p className="mt-1 text-body-sm text-gray-500">
+            Tu rol ({user?.role ?? 'sin rol'}) no tiene asignado este módulo.
+          </p>
+        </div>
+        <button type="button" className="btn-primary" onClick={() => navigate('/')}>
+          Volver al Dashboard
+        </button>
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
 /**
  * Rutas de la aplicación.
  * Cada módulo implementado (Fase 06 → Fase 12) sustituye a
@@ -119,7 +145,11 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       ...NAV_ITEMS.filter((item) => item.path !== '/').map((item) => ({
         path: item.path.slice(1),
-        element: MODULE_ROUTES[item.path] ?? <PlaceholderPage />,
+        element: (
+          <ModuleGuard path={item.path}>
+            {MODULE_ROUTES[item.path] ?? <PlaceholderPage />}
+          </ModuleGuard>
+        ),
       })),
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -65,6 +65,39 @@ export const GROUP_LABELS: Record<NavItem['group'], string> = {
   sistema: 'Sistema',
 }
 
+/** Todos los módulos (sin filtrar). */
+export const ALL_MODULES = '*'
+
+/**
+ * Módulos asignados a cada rol (sidebar + guard de rutas).
+ * Admin y Gerente ven todo; los demás solo sus módulos.
+ */
+export const ROLE_MODULES: Record<string, string[] | typeof ALL_MODULES> = {
+  Admin: ALL_MODULES,
+  Gerente: ALL_MODULES,
+  Vendedor: ['/', '/ventas', '/clientes', '/cotizaciones', '/devoluciones', '/productos', '/precios'],
+  Analista: ['/', '/analytics', '/probabilidad', '/insights', '/reportes', '/clientes', '/productos'],
+  Almacén: ['/', '/inventario', '/compras', '/productos'],
+}
+
+/**
+ * ¿El rol puede ver este módulo?
+ * Rol desconocido o sin rol → todo (evita bloquear cuentas nuevas).
+ */
+export function canAccessModule(role: string | undefined, path: string): boolean {
+  const modules = role ? ROLE_MODULES[role] : undefined
+  if (modules === undefined || modules === ALL_MODULES) return true
+  return modules.includes(path)
+}
+
+/** Módulos visibles para el rol (null = todos). */
+export function visibleModules(role: string | undefined): NavItem[] {
+  if (!role || ROLE_MODULES[role] === undefined || ROLE_MODULES[role] === ALL_MODULES) {
+    return NAV_ITEMS
+  }
+  return NAV_ITEMS.filter((item) => canAccessModule(role, item.path))
+}
+
 /** Título de la topbar por ruta (txt §7.1) */
 export const PATH_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -79,4 +112,9 @@ export const PATH_TITLES: Record<string, string> = {
   '/insights': 'Insights',
   '/reportes': 'Reportes',
   '/configuracion': 'Configuración',
+  '/automatizaciones': 'Automatizaciones',
+  '/compras': 'Compras',
+  '/cotizaciones': 'Cotizaciones',
+  '/devoluciones': 'Devoluciones',
+  '/precios': 'Precios',
 }
