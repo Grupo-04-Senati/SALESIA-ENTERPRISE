@@ -73,7 +73,7 @@ export default function AuthLayout() {
       </aside>
 
       {/* Formulario */}
-      <main className="flex flex-1 items-center justify-center p-6">
+      <main className="flex flex-1 items-center justify-center bg-[url('/cards/images.jpg')] bg-cover bg-center bg-no-repeat p-6">
         <div className="w-full max-w-[420px]">
           <div className="mb-7 flex flex-col items-center text-center md:hidden">
             <img
@@ -81,7 +81,7 @@ export default function AuthLayout() {
               alt={t('auth.logo-alt')}
               className="mb-3 h-14 w-14 rounded-full object-cover"
             />
-            <h1 className="text-h3 text-gray-900">SalesIA Enterprise</h1>
+            <h1 className="text-h3 text-white">SalesIA Enterprise</h1>
           </div>
           <Outlet />
         </div>

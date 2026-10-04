@@ -81,6 +81,20 @@ export default function LauncherPage() {
       <Topbar home search={{ value: query, onChange: setQuery }} />
 
       <div className="mx-auto w-full max-w-[1700px] px-5 pb-24 pt-4">
+        {/* Portada */}
+        <section className="animate-fade-up mb-4 overflow-hidden rounded-xl border border-gray-200 shadow-subtle">
+          <img
+            src="/cards/images.jpg"
+            alt=""
+            aria-hidden="true"
+            className="block h-40 w-full object-cover object-center sm:h-48 lg:h-56"
+            onError={(event) => {
+              const section = event.currentTarget.parentElement
+              if (section) section.style.display = 'none'
+            }}
+          />
+        </section>
+
         {/* Hero */}
         <section className="animate-fade-up rounded-xl border border-gray-200 bg-white p-6 shadow-subtle">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
