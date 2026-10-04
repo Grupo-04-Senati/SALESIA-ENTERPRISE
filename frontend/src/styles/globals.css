@@ -294,6 +294,40 @@ html.dark .sec-head .rule {
   transform: translateX(3px);
 }
 
+/* Card en formato cuadro: imagen arriba e icono + nombre abajo */
+.mcard.mcard-tile {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-color: #e5e7eb;
+  border-radius: 14px;
+}
+
+.mcard.mcard-tile .mcard-img {
+  display: block;
+  width: 100%;
+  height: 118px;
+  object-fit: cover;
+  background: #eef1f6;
+  border-bottom: 1px solid #eceff5;
+}
+
+.mcard.mcard-tile .mcard-foot {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  position: relative;
+  z-index: 1;
+}
+
+.mcard.mcard-tile .mcard-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
 /* Modo oscuro */
 html.dark .mcard {
   background: #1a1d25;
@@ -317,6 +351,15 @@ html.dark .mcard .mcard-ico {
 html.dark .mcard .mcard-arrow {
   background: #23262e;
   color: #9aa1af;
+}
+
+html.dark .mcard.mcard-tile {
+  border-color: #2a2e38;
+}
+
+html.dark .mcard.mcard-tile .mcard-img {
+  background: #20242e;
+  border-bottom-color: #262a34;
 }
 
 /* ============================================================

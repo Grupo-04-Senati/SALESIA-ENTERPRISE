@@ -138,36 +138,34 @@ export default function LauncherPage() {
                       <button
                         key={item.path}
                         type="button"
-                        className="mcard"
+                        className="mcard mcard-tile"
                         onClick={() => navigate(item.path)}
                       >
-                        <span className="relative flex-none">
-                          <span className="mcard-ico overflow-hidden p-0">
-                            <img
-                              src={item.img}
-                              alt=""
-                              aria-hidden="true"
-                              loading="lazy"
-                              className="h-full w-full object-cover"
-                              onError={(event) => {
-                                event.currentTarget.style.display = 'none'
-                              }}
-                            />
+                        <img
+                          className="mcard-img"
+                          src={item.img}
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.style.visibility = 'hidden'
+                          }}
+                        />
+                        <span className="mcard-foot">
+                          <span className="mcard-ico">
+                            <Icon aria-hidden="true" className="h-5 w-5" />
                           </span>
-                          <span className="absolute bottom-0 right-0 flex h-[21px] w-[21px] items-center justify-center rounded-tl-[9px] rounded-br-[12px] bg-primary text-white shadow-[0_2px_6px_rgba(9,57,230,0.35)]">
-                            <Icon aria-hidden="true" className="h-3 w-3" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[15px] font-semibold leading-5 text-gray-900">
+                              {label}
+                            </span>
+                            <span className="mt-0.5 block text-[13px] font-medium leading-4 text-gray-500">
+                              {desc}
+                            </span>
                           </span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-semibold leading-5 text-gray-900">
-                            {label}
+                          <span className="mcard-arrow">
+                            <ChevronRight aria-hidden="true" className="h-4 w-4" />
                           </span>
-                          <span className="mt-0.5 block text-[13px] font-medium leading-4 text-gray-500">
-                            {desc}
-                          </span>
-                        </span>
-                        <span className="mcard-arrow">
-                          <ChevronRight aria-hidden="true" className="h-4 w-4" />
                         </span>
                       </button>
                     )
