@@ -34,9 +34,10 @@ const ReturnsPage = lazy(() => import('@/modules/returns/pages/ReturnsPage'))
 const PricingPage = lazy(() => import('@/modules/pricing/pages/PricingPage'))
 
 function PageLoader() {
+  const { t } = useLang()
   return (
     <div className="flex min-h-screen items-center justify-center text-body text-gray-500">
-      Cargando…
+      {t('common.cargando-puntos')}
     </div>
   )
 }
@@ -47,6 +48,7 @@ function PageLoader() {
  */
 function RequireAuth({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
+  const { t } = useLang()
 
   useEffect(() => {
     if (!getToken()) {
@@ -65,7 +67,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center text-body text-gray-500">
-        Cargando datos de la API…
+        {t('common.cargando-datos-api')}
       </div>
     )
   }
