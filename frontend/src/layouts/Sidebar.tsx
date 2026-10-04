@@ -58,7 +58,7 @@ export default function Sidebar({ open, onOpen, onClose }: SidebarProps) {
           if (groupItems.length === 0) return null
           return (
             <div key={group} className="mb-4">
-              <p className="mb-1 px-3 text-caption font-semibold uppercase tracking-wider text-white/50">
+              <p className="sticky top-0 z-10 mb-1 bg-primary px-3 pb-1.5 pt-1 text-caption font-semibold uppercase tracking-wider text-white/50">
                 {GROUP_LABELS[group]}
               </p>
               <ul className="space-y-1">
