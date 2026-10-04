@@ -213,6 +213,31 @@ export const dictSettings: ModuleDict = {
     'settings.frecuencia-diaria': 'Diaria',
     'settings.frecuencia-semanal': 'Semanal',
     'settings.frecuencia-mensual': 'Mensual',
+    'settings.foto-de-perfil': 'Foto de perfil',
+    'settings.cambiar-foto': 'Cambiar foto',
+    'settings.quitar-foto': 'Quitar foto',
+    'settings.la-foto-debe-ser-jpg-o-png':
+      'La foto debe ser un archivo JPG o PNG de al menos 256×256 px.',
+    'settings.el-nombre-y-la-foto-se-guardaron':
+      'El nombre y la foto de tu cuenta se guardaron en el backend.',
+    'settings.cambiar-contrasena': 'Cambiar contraseña',
+    'settings.contrasena-actual': 'Contraseña actual',
+    'settings.contrasena-nueva': 'Contraseña nueva',
+    'settings.repetir-contrasena': 'Repetir contraseña',
+    'settings.las-contrasenas-no-coinciden': 'Las contraseñas no coinciden.',
+    'settings.la-nueva-debe-ser-distinta':
+      'La contraseña nueva debe ser distinta a la actual.',
+    'settings.contrasena-actualizada': 'Contraseña actualizada',
+    'settings.tu-contrasena-cambio-correctamente': 'Tu contraseña se cambió correctamente.',
+    'settings.no-se-pudo-cambiar-la-contrasena': 'No se pudo cambiar la contraseña',
+    'settings.editar-usuario': 'Editar usuario',
+    'settings.usuario-actualizado': 'Usuario actualizado',
+    'settings.los-cambios-se-guardaron': 'Los cambios se guardaron correctamente.',
+    'settings.deja-la-contrasena-vacia-para-no-cambiarla':
+      'Déjala vacía para no cambiar la contraseña.',
+    'settings.administra-nombre-rol-estado':
+      'Como Admin puedes modificar el nombre, el rol, el estado y la contraseña de cada usuario.',
+    'settings.no-modifiques-tu-propio-rol': 'No puedes modificar tu propio rol (RN-33).',
   },
   en: {
     'settings.cancelar': 'Cancel',
@@ -422,5 +447,30 @@ export const dictSettings: ModuleDict = {
     'settings.frecuencia-diaria': 'Daily',
     'settings.frecuencia-semanal': 'Weekly',
     'settings.frecuencia-mensual': 'Monthly',
+    'settings.foto-de-perfil': 'Profile photo',
+    'settings.cambiar-foto': 'Change photo',
+    'settings.quitar-foto': 'Remove photo',
+    'settings.la-foto-debe-ser-jpg-o-png':
+      'The photo must be a JPG or PNG file of at least 256×256 px.',
+    'settings.el-nombre-y-la-foto-se-guardaron':
+      'Your account name and photo were saved on the backend.',
+    'settings.cambiar-contrasena': 'Change password',
+    'settings.contrasena-actual': 'Current password',
+    'settings.contrasena-nueva': 'New password',
+    'settings.repetir-contrasena': 'Repeat password',
+    'settings.las-contrasenas-no-coinciden': 'Passwords do not match.',
+    'settings.la-nueva-debe-ser-distinta':
+      'The new password must be different from the current one.',
+    'settings.contrasena-actualizada': 'Password updated',
+    'settings.tu-contrasena-cambio-correctamente': 'Your password was changed successfully.',
+    'settings.no-se-pudo-cambiar-la-contrasena': 'Could not change the password',
+    'settings.editar-usuario': 'Edit user',
+    'settings.usuario-actualizado': 'User updated',
+    'settings.los-cambios-se-guardaron': 'Changes saved successfully.',
+    'settings.deja-la-contrasena-vacia-para-no-cambiarla':
+      'Leave it empty to keep the current password.',
+    'settings.administra-nombre-rol-estado':
+      'As Admin you can change each user’s name, role, status and password.',
+    'settings.no-modifiques-tu-propio-rol': 'You cannot change your own role (RN-33).',
   },
 }

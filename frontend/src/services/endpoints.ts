@@ -12,6 +12,8 @@ export const ENDPOINTS = {
     refresh: '/api/v1/auth/refresh',
     logout: '/api/v1/auth/logout',
     me: '/api/v1/auth/me',
+    profile: '/api/v1/auth/profile',
+    password: '/api/v1/auth/password',
     forgotPassword: '/api/v1/auth/forgot-password',
     resetPassword: '/api/v1/auth/reset-password',
   },

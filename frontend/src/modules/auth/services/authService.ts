@@ -39,14 +39,31 @@ export async function fetchMe(): Promise<User> {
   return me
 }
 
-/** PUT /users/{id} — actualiza el nombre del propio perfil (RF-02). */
-export async function updateProfileName(userId: number, fullName: string): Promise<User> {
-  const updated = await apiFetch<User>(`${ENDPOINTS.users}/${userId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ full_name: fullName }),
+/** PATCH /auth/profile — actualiza nombre y/o foto del propio perfil (cualquier rol). */
+export interface ProfileInput {
+  full_name?: string
+  /** Data-URI de la foto; '' la elimina. */
+  avatar?: string | null
+}
+
+export async function updateProfile(input: ProfileInput): Promise<User> {
+  const updated = await apiFetch<User>(ENDPOINTS.auth.profile, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
   })
   setCurrentUser(updated)
   return updated
+}
+
+/** PATCH /auth/password — cambia la propia contraseña (valida la actual). */
+export async function changePassword(
+  current_password: string,
+  new_password: string,
+): Promise<void> {
+  await apiFetch(ENDPOINTS.auth.password, {
+    method: 'PATCH',
+    body: JSON.stringify({ current_password, new_password }),
+  })
 }
 
 /** POST /auth/logout (best effort) y cierre de la sesión local. */
@@ -106,5 +123,30 @@ export async function createManagedUser(input: CreateUserInput): Promise<Managed
   return apiFetch<ManagedUser>(ENDPOINTS.users, {
     method: 'POST',
     body: JSON.stringify({ ...input, status: 'active' }),
+  })
+}
+
+/** Datos para que el Admin edite un usuario (PUT /users/{id}). */
+export interface UpdateManagedUserInput {
+  full_name?: string
+  role?: Role
+  /** contraseña nueva; si se omite o va vacía no se modifica. */
+  password?: string
+  status?: 'active' | 'inactive'
+}
+
+/** PUT /users/{id} — el Admin modifica nombre, rol, estado y/o contraseña. */
+export async function updateManagedUser(
+  userId: number,
+  input: UpdateManagedUserInput,
+): Promise<ManagedUser> {
+  const payload: Record<string, string> = {}
+  if (input.full_name) payload.full_name = input.full_name
+  if (input.role) payload.role = input.role
+  if (input.password) payload.password = input.password
+  if (input.status) payload.status = input.status
+  return apiFetch<ManagedUser>(`${ENDPOINTS.users}/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   })
 }

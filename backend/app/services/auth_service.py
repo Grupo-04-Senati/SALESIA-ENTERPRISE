@@ -15,6 +15,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.models.security import LoginAttempt
@@ -82,6 +83,7 @@ def login(db: Session, email: str, password: str, ip: Optional[str] = None) -> d
             'name': user.full_name,
             'email': user.email,
             'role': role_display(role),
+            'avatar': user.avatar,
         },
     }
 
@@ -114,6 +116,7 @@ def refresh(db: Session, refresh_token: str, ip: Optional[str] = None) -> dict:
             'name': user.full_name,
             'email': user.email,
             'role': role_display(role),
+            'avatar': user.avatar,
         },
     }
 
@@ -125,4 +128,42 @@ def me(user: User) -> dict:
         'email': user.email,
         'role': role_display(user.role.name),
         'company_id': user.company_id,
+        'avatar': user.avatar,
     }
+
+
+def update_profile(db: Session, user: User, payload) -> dict:
+    """Actualiza nombre y/o foto del propio perfil (cualquier rol)."""
+    changed: dict = {}
+    if payload.full_name is not None:
+        user.full_name = payload.full_name.strip()
+        changed['full_name'] = user.full_name
+    if payload.avatar is not None:
+        user.avatar = payload.avatar or None
+        changed['avatar'] = 'updated' if user.avatar else 'removed'
+    if not changed:
+        raise ValidationAppError('No hay cambios para guardar.')
+
+    write_audit(
+        db, user=user, action='user.profile_update', entity='users', entity_id=user.id,
+        detail=changed,
+    )
+    db.commit()
+    db.refresh(user)
+    return me(user)
+
+
+def change_password(db: Session, user: User, payload, ip: Optional[str] = None) -> dict:
+    """Cambia la propia contraseña validando la actual (cualquier rol)."""
+    if not verify_password(payload.current_password, user.password_hash):
+        raise Unauthenticated('La contraseña actual es incorrecta.')
+    if payload.current_password == payload.new_password:
+        raise ValidationAppError('La contraseña nueva debe ser distinta a la actual.')
+
+    user.password_hash = hash_password(payload.new_password)
+    write_audit(
+        db, user=user, action='auth.password_change', entity='users', entity_id=user.id,
+        ip_address=ip,
+    )
+    db.commit()
+    return {'detail': 'Contraseña actualizada correctamente.'}

@@ -10,6 +10,8 @@ export interface User {
   name: string
   email: string
   role: Role
+  /** Foto de perfil (data-URI) o null si no tiene. */
+  avatar?: string | null
 }
 
 export interface LoginRequest {

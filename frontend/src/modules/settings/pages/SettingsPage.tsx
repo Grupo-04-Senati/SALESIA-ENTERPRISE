@@ -1,6 +1,18 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { Palette, RotateCcw, Save, Server, UserCog, UserPlus, Users, Database } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import {
+  Camera,
+  Database,
+  KeyRound,
+  Palette,
+  Pencil,
+  RotateCcw,
+  Save,
+  Server,
+  UserCog,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
@@ -16,11 +28,19 @@ import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
 import {
   ROLES,
+  changePassword,
   createManagedUser,
   listManagedUsers,
-  updateProfileName,
+  setCurrentUser,
+  updateManagedUser,
+  updateProfile,
 } from '@/modules/auth/services/authService'
-import type { CreateUserInput, ManagedUser } from '@/modules/auth/services/authService'
+import type {
+  CreateUserInput,
+  ManagedUser,
+  ProfileInput,
+  UpdateManagedUserInput,
+} from '@/modules/auth/services/authService'
 import type { Role } from '@/types/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { getState } from '@/data/store'
@@ -69,6 +89,42 @@ interface Prefs {
 
 const DEFAULT_PREFS: Prefs = { currency: 'PEN', taxRate: '18', pageSize: '10' }
 
+/** Reduce la foto a un cuadro de 256 px y devuelve un data-URI JPEG. */
+function readAndResizeAvatar(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!/^image\/(png|jpe?g|webp|avif|gif)$/.test(file.type)) {
+      reject(new Error('type'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read'))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => reject(new Error('decode'))
+      image.onload = () => {
+        const max = 256
+        const scale = Math.min(1, max / Math.max(image.width, image.height))
+        const width = Math.max(1, Math.round(image.width * scale))
+        const height = Math.max(1, Math.round(image.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        if (!context) {
+          reject(new Error('canvas'))
+          return
+        }
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, width, height)
+        context.drawImage(image, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.85))
+      }
+      image.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY)
@@ -102,6 +158,33 @@ export default function SettingsPage() {
   const [userFormError, setUserFormError] = useState<string | null>(null)
   const [creatingUser, setCreatingUser] = useState(false)
 
+  // Perfil: foto pendiente (null = sin cambios, '' = quitar) y contraseña propia.
+  const [avatarDraft, setAvatarDraft] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })
+  const [pwdError, setPwdError] = useState<string | null>(null)
+  const [savingPwd, setSavingPwd] = useState(false)
+
+  // Edición de usuarios (PUT /users/{id}, solo Admin).
+  const [editTarget, setEditTarget] = useState<ManagedUser | null>(null)
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    role: 'Vendedor' as Role,
+    status: 'active' as 'active' | 'inactive',
+    password: '',
+  })
+  const [editError, setEditError] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  // Vista previa de la foto (borrador sin guardar o foto guardada) e iniciales.
+  const shownAvatar = avatarDraft !== null ? avatarDraft : (user?.avatar ?? null)
+  const initials =
+    (user?.name ?? 'Usuario')
+      .split(' ')
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'US'
+
   const loadUsers = () => {
     // GET /api/v1/users (solo Admin).
     listManagedUsers()
@@ -120,8 +203,10 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    loadUsers()
-  }, [])
+    // GET /api/v1/users solo lo admite el Admin.
+    if (user?.role === 'Admin') loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role])
 
   useEffect(() => {
     // Estado real del backend (GET /health).
@@ -133,12 +218,25 @@ export default function SettingsPage() {
   const handleProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user) return
+    const fullName = name.trim()
+    if (fullName.length < 2) {
+      toast.error(
+        t('settings.no-se-pudo-actualizar'),
+        t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'),
+      )
+      return
+    }
     setSavingProfile(true)
     try {
-      await updateProfileName(user.id, name.trim())
+      const input: ProfileInput = { full_name: fullName }
+      if (avatarDraft !== null) input.avatar = avatarDraft
+      await updateProfile(input)
+      setAvatarDraft(null)
       toast.success(
         t('settings.perfil-actualizado'),
-        t('settings.el-nombre-de-tu-cuenta-se-guardo-en-el-backend'),
+        avatarDraft !== null
+          ? t('settings.el-nombre-y-la-foto-se-guardaron')
+          : t('settings.el-nombre-de-tu-cuenta-se-guardo-en-el-backend'),
       )
     } catch (reason) {
       toast.error(
@@ -147,6 +245,107 @@ export default function SettingsPage() {
       )
     } finally {
       setSavingProfile(false)
+    }
+  }
+
+  const handleAvatarFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      setAvatarDraft(await readAndResizeAvatar(file))
+    } catch {
+      toast.error(
+        t('settings.no-se-pudo-actualizar'),
+        t('settings.la-foto-debe-ser-jpg-o-png'),
+      )
+    }
+  }
+
+  const handlePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setPwdError(null)
+    if (pwd.next.length < 6) {
+      setPwdError(t('settings.la-contrasena-debe-tener-al-menos-6-caracteres'))
+      return
+    }
+    if (pwd.next !== pwd.confirm) {
+      setPwdError(t('settings.las-contrasenas-no-coinciden'))
+      return
+    }
+    if (pwd.next === pwd.current) {
+      setPwdError(t('settings.la-nueva-debe-ser-distinta'))
+      return
+    }
+    setSavingPwd(true)
+    try {
+      await changePassword(pwd.current, pwd.next)
+      setPwd({ current: '', next: '', confirm: '' })
+      toast.success(
+        t('settings.contrasena-actualizada'),
+        t('settings.tu-contrasena-cambio-correctamente'),
+      )
+    } catch (reason) {
+      toast.error(
+        t('settings.no-se-pudo-cambiar-la-contrasena'),
+        reason instanceof Error ? reason.message : t('settings.error-inesperado'),
+      )
+    } finally {
+      setSavingPwd(false)
+    }
+  }
+
+  const openEdit = (managed: ManagedUser) => {
+    setEditTarget(managed)
+    setEditForm({
+      full_name: managed.name,
+      role: (managed.role as Role) ?? 'Vendedor',
+      status: managed.status,
+      password: '',
+    })
+    setEditError(null)
+  }
+
+  const handleEditUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!editTarget || !user) return
+    const fullName = editForm.full_name.trim()
+    if (fullName.length < 2) {
+      setEditError(t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))
+      return
+    }
+    if (editForm.password && editForm.password.length < 6) {
+      setEditError(t('settings.la-contrasena-debe-tener-al-menos-6-caracteres'))
+      return
+    }
+    const isSelf = editTarget.id === user.id
+    if (isSelf && editForm.role !== user.role) {
+      setEditError(t('settings.no-modifiques-tu-propio-rol'))
+      return
+    }
+    setEditError(null)
+    setSavingEdit(true)
+    try {
+      const input: UpdateManagedUserInput = {
+        full_name: fullName,
+        role: editForm.role,
+        status: editForm.status,
+      }
+      if (editForm.password) input.password = editForm.password
+      await updateManagedUser(editTarget.id, input)
+      if (isSelf) setCurrentUser({ ...user, name: fullName })
+      toast.success(
+        t('settings.usuario-actualizado'),
+        `${fullName} · ${t('settings.los-cambios-se-guardaron')}`,
+      )
+      setEditTarget(null)
+      loadUsers()
+    } catch (reason) {
+      setEditError(
+        reason instanceof Error ? reason.message : t('settings.no-se-pudo-actualizar'),
+      )
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -218,12 +417,57 @@ export default function SettingsPage() {
 
       {/* Perfil */}
       <TabPanel tabId="perfil" active={tab === 'perfil'}>
+      <div className="space-y-6">
       <section className="card space-y-4">
         <div className="flex items-center gap-2">
           <UserCog aria-hidden="true" className="h-5 w-5 text-primary" />
           <h2 className="text-h4 text-gray-800">{t('settings.mi-perfil')}</h2>
         </div>
         <form onSubmit={handleProfile} className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-4 sm:col-span-2">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-h4 font-semibold text-white">
+              {shownAvatar ? (
+                <img
+                  src={shownAvatar}
+                  alt={t('settings.foto-de-perfil')}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span aria-hidden="true">{initials}</span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-body-sm font-semibold text-gray-800">
+                {t('settings.foto-de-perfil')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarFile}
+                />
+                <Button type="button" variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
+                  <Camera aria-hidden="true" className="h-4 w-4" />
+                  {t('settings.cambiar-foto')}
+                </Button>
+                {shownAvatar && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvatarDraft('')}
+                  >
+                    {t('settings.quitar-foto')}
+                  </Button>
+                )}
+              </div>
+              <p className="text-caption text-gray-500">
+                {t('settings.la-foto-debe-ser-jpg-o-png')}
+              </p>
+            </div>
+          </div>
           <Input
             label={t('settings.nombre-completo')}
             value={name}
@@ -251,6 +495,55 @@ export default function SettingsPage() {
           </div>
         </form>
       </section>
+
+      {/* Contraseña propia (cualquier rol) */}
+      <section className="card space-y-4">
+        <div className="flex items-center gap-2">
+          <KeyRound aria-hidden="true" className="h-5 w-5 text-primary" />
+          <h2 className="text-h4 text-gray-800">{t('settings.cambiar-contrasena')}</h2>
+        </div>
+        <form onSubmit={handlePassword} className="grid gap-4 sm:grid-cols-3">
+          <Input
+            label={t('settings.contrasena-actual')}
+            type="password"
+            required
+            autoComplete="current-password"
+            value={pwd.current}
+            onChange={(event) => setPwd({ ...pwd, current: event.target.value })}
+          />
+          <Input
+            label={t('settings.contrasena-nueva')}
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={pwd.next}
+            onChange={(event) => setPwd({ ...pwd, next: event.target.value })}
+            hint={t('settings.minimo-6-caracteres')}
+          />
+          <Input
+            label={t('settings.repetir-contrasena')}
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            value={pwd.confirm}
+            onChange={(event) => setPwd({ ...pwd, confirm: event.target.value })}
+          />
+          {pwdError && (
+            <p role="alert" className="rounded-md bg-error/10 px-3 py-2 text-caption text-error sm:col-span-3">
+              {pwdError}
+            </p>
+          )}
+          <div className="sm:col-span-3">
+            <Button type="submit" variant="secondary" loading={savingPwd}>
+              <KeyRound aria-hidden="true" className="h-4 w-4" />
+              {t('settings.cambiar-contrasena')}
+            </Button>
+          </div>
+        </form>
+      </section>
+      </div>
       </TabPanel>
 
       {/* Parámetros */}
@@ -336,6 +629,7 @@ export default function SettingsPage() {
               t('settings.correo'),
               t('settings.rol'),
               t('settings.estado'),
+              t('settings.acciones'),
             ]}
           >
             {users.map((managed) => (
@@ -350,13 +644,19 @@ export default function SettingsPage() {
                     {managed.status === 'active' ? t('settings.activo') : t('settings.inactivo')}
                   </Badge>
                 </TableCell>
+                <TableCell>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(managed)}>
+                    <Pencil aria-hidden="true" className="h-4 w-4" />
+                    {t('settings.editar')}
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </DataTable>
         )}
         <p className="text-caption text-gray-500">
-          {t('settings.roles-disponibles')} {ROLES.join(' · ')} —{' '}
-          {t('settings.la-contrasena-inicial-la-defines-al-crear-el-usuario')}
+          {t('settings.administra-nombre-rol-estado')} — {t('settings.roles-disponibles')}{' '}
+          {ROLES.join(' · ')}
         </p>
       </section>
       </TabPanel>
@@ -543,6 +843,85 @@ export default function SettingsPage() {
           {userFormError && (
             <p role="alert" className="rounded-md bg-error/10 px-3 py-2 text-caption text-error">
               {userFormError}
+            </p>
+          )}
+        </form>
+      </Modal>
+
+      {/* Edición de usuarios (PUT /users/{id} · nombre, rol, estado y contraseña) */}
+      <Modal
+        open={editTarget !== null}
+        onClose={() => setEditTarget(null)}
+        title={t('settings.editar-usuario')}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              {t('settings.cancelar')}
+            </Button>
+            <Button type="submit" form="edit-user-form" loading={savingEdit}>
+              <Save aria-hidden="true" className="h-4 w-4" />
+              {t('settings.guardar-cambios')}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-user-form" onSubmit={handleEditUser} className="space-y-4">
+          <Input
+            label={t('settings.nombre-completo')}
+            required
+            minLength={2}
+            maxLength={150}
+            value={editForm.full_name}
+            onChange={(event) => setEditForm({ ...editForm, full_name: event.target.value })}
+          />
+          <Input
+            label={t('settings.correo-electronico')}
+            type="email"
+            value={editTarget?.email ?? ''}
+            disabled
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label={t('settings.rol')}
+              value={editForm.role}
+              onChange={(event) =>
+                setEditForm({ ...editForm, role: event.target.value as Role })
+              }
+              disabled={editTarget?.id === user?.id}
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label={t('settings.estado')}
+              value={editForm.status}
+              onChange={(event) =>
+                setEditForm({
+                  ...editForm,
+                  status: event.target.value as 'active' | 'inactive',
+                })
+              }
+              disabled={editTarget?.id === user?.id}
+            >
+              <option value="active">{t('settings.activo')}</option>
+              <option value="inactive">{t('settings.inactivo')}</option>
+            </Select>
+          </div>
+          <Input
+            label={t('settings.contrasena-nueva')}
+            type="password"
+            autoComplete="new-password"
+            minLength={6}
+            value={editForm.password}
+            onChange={(event) => setEditForm({ ...editForm, password: event.target.value })}
+            hint={t('settings.deja-la-contrasena-vacia-para-no-cambiarla')}
+          />
+          {editError && (
+            <p role="alert" className="rounded-md bg-error/10 px-3 py-2 text-caption text-error">
+              {editError}
             </p>
           )}
         </form>

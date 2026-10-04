@@ -134,12 +134,21 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
 
       {/* Usuario */}
       <div className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3">
-        <div
-          aria-hidden="true"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
-        >
-          {initials}
-        </div>
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt=""
+            aria-hidden="true"
+            className="h-7 w-7 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
+          >
+            {initials}
+          </div>
+        )}
         <div className="hidden leading-tight lg:block">
           <p className="text-[13px] font-semibold text-gray-800">{user?.name ?? 'Usuario'}</p>
           <p className="text-[11px] text-gray-400">{user?.role ?? 'Invitado'}</p>

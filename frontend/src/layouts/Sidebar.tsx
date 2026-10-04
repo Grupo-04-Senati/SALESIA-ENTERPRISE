@@ -123,16 +123,25 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         {/* Usuario + salir */}
         <div className="-mx-2.5 mt-2 border-t border-white/10 bg-black/20 px-3 py-2.5">
           <div className="flex items-center gap-2.5">
-            <span
-              aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-semibold text-[#1E3A8A]"
-            >
-              {(user?.name ?? 'Usuario')
-                .split(' ')
-                .slice(0, 2)
-                .map((part) => part[0]?.toUpperCase() ?? '')
-                .join('') || 'US'}
-            </span>
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt=""
+                aria-hidden="true"
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/20"
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-semibold text-[#1E3A8A]"
+              >
+                {(user?.name ?? 'Usuario')
+                  .split(' ')
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase() ?? '')
+                  .join('') || 'US'}
+              </span>
+            )}
             <div className="min-w-0 flex-1 leading-tight">
               <p className="truncate text-[14px] font-semibold">{user?.name ?? 'Usuario'}</p>
               <p className="truncate text-[12px] text-white/55">{roleLabel}</p>

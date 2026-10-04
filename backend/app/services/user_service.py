@@ -26,6 +26,7 @@ def _serialize(user: User) -> dict:
         'role': role_display(user.role.name),
         'status': 'active' if user.is_active else 'inactive',
         'last_login': user.last_login,
+        'avatar': user.avatar,
     }
 
 

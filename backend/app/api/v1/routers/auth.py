@@ -18,6 +18,8 @@ from app.models.user import User
 from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
+    PasswordChange,
+    ProfileUpdate,
     RefreshRequest,
     ResetPasswordRequest,
 )
@@ -114,3 +116,24 @@ def reset_password(payload: ResetPasswordRequest, request: Request, db: Session 
 @router.get('/me', status_code=status.HTTP_200_OK)
 def me(user: User = Depends(get_current_user)):
     return auth_service.me(user)
+
+
+@router.patch('/profile', status_code=status.HTTP_200_OK)
+def patch_profile(
+    payload: ProfileUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Actualiza nombre y/o foto del propio perfil (cualquier rol)."""
+    return auth_service.update_profile(db, user, payload)
+
+
+@router.patch('/password', status_code=status.HTTP_200_OK)
+def patch_password(
+    payload: PasswordChange,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Cambia la propia contraseña validando la actual (cualquier rol)."""
+    return auth_service.change_password(db, user, payload, ip=client_ip(request))
