@@ -13,12 +13,15 @@ import { getBySeller, getDistribution, getKpis, getMonthly, getTicketDataset, co
  * el archivo en el backend (docs/05_api.md §2.10).
  */
 
+/** Traductor i18n (clave → texto) inyectado desde `useLang()`. */
+export type Translator = (key: string, params?: Record<string, string | number>) => string
+
 export const REPORT_TYPES = [
-  { value: 'ventas', label: 'Reporte de ventas', description: 'Detalle de ventas, estados y totales.' },
-  { value: 'estadistico', label: 'Reporte estadístico', description: 'Indicadores, distribución y media/mediana.' },
-  { value: 'productos', label: 'Reporte de productos', description: 'Catálogo, precios y nivel de stock.' },
-  { value: 'clientes', label: 'Reporte de clientes', description: 'Segmentación y comportamiento de compra.' },
-  { value: 'vendedores', label: 'Reporte de vendedores', description: 'Ingresos y ventas por vendedor.' },
+  { value: 'ventas', label: 'reports.tipo-ventas', description: 'reports.tipo-ventas-desc' },
+  { value: 'estadistico', label: 'reports.tipo-estadistico', description: 'reports.tipo-estadistico-desc' },
+  { value: 'productos', label: 'reports.tipo-productos', description: 'reports.tipo-productos-desc' },
+  { value: 'clientes', label: 'reports.tipo-clientes', description: 'reports.tipo-clientes-desc' },
+  { value: 'vendedores', label: 'reports.tipo-vendedores', description: 'reports.tipo-vendedores-desc' },
 ] as const
 
 export type ReportType = (typeof REPORT_TYPES)[number]['value']
@@ -46,7 +49,7 @@ export interface Report {
 const money = (value: number): string => formatCurrency(value)
 const round2 = (value: number): number => Math.round(value * 100) / 100
 
-export async function generateReport(type: ReportType): Promise<Report> {
+export async function generateReport(type: ReportType, t: Translator): Promise<Report> {
   const generated_at = new Date().toISOString()
 
   if (type === 'ventas') {
@@ -67,28 +70,28 @@ export async function generateReport(type: ReportType): Promise<Report> {
     const válidas = sales.filter((sale) => sale.status !== 'cancelled')
     return {
       type,
-      title: 'Reporte de ventas',
-      description: 'Detalle de ventas registradas en el periodo.',
+      title: t('reports.tipo-ventas'),
+      description: t('reports.descripcion-ventas'),
       generated_at,
       columns: [
-        { key: 'venta', label: 'Venta' },
-        { key: 'fecha', label: 'Fecha' },
-        { key: 'cliente', label: 'Cliente' },
-        { key: 'vendedor', label: 'Vendedor' },
-        { key: 'estado', label: 'Estado' },
-        { key: 'total', label: 'Total', align: 'right' },
-        { key: 'saldo', label: 'Saldo', align: 'right' },
+        { key: 'venta', label: t('reports.col-venta') },
+        { key: 'fecha', label: t('reports.col-fecha') },
+        { key: 'cliente', label: t('reports.col-cliente') },
+        { key: 'vendedor', label: t('reports.col-vendedor') },
+        { key: 'estado', label: t('reports.col-estado') },
+        { key: 'total', label: t('reports.col-total'), align: 'right' },
+        { key: 'saldo', label: t('reports.col-saldo'), align: 'right' },
       ],
       rows,
       summary: [
-        { label: 'Ventas registradas', value: formatNumber(sales.length) },
-        { label: 'Ventas válidas', value: formatNumber(válidas.length) },
+        { label: t('reports.ventas-registradas'), value: formatNumber(sales.length) },
+        { label: t('reports.ventas-validas'), value: formatNumber(válidas.length) },
         {
-          label: 'Ingresos totales',
+          label: t('reports.ingresos-totales'),
           value: money(válidas.reduce((total, sale) => total + sale.total, 0)),
         },
         {
-          label: 'Saldo por cobrar',
+          label: t('reports.saldo-por-cobrar'),
           value: money(sales.reduce((total, sale) => total + sale.balance, 0)),
         },
       ],
@@ -101,36 +104,36 @@ export async function generateReport(type: ReportType): Promise<Report> {
     const compare = compareMeanMedian(dataset)
     const sinVentas = dataset.length === 0
     const rows: ReportRow[] = [
-      { indicador: 'Ingresos del periodo', valor: kpis.ingresos, unidad: 'S/' },
-      { indicador: 'Transacciones', valor: kpis.transacciones, unidad: 'uds' },
-      { indicador: 'Ticket promedio', valor: kpis.ticketPromedio, unidad: 'S/' },
-      { indicador: 'Media de tickets', valor: sinVentas ? '—' : round2(compare.mean), unidad: 'S/' },
-      { indicador: 'Mediana de tickets', valor: sinVentas ? '—' : round2(compare.median), unidad: 'S/' },
-      { indicador: 'Diferencia media − mediana', valor: sinVentas ? '—' : compare.difference, unidad: 'S/' },
-      { indicador: 'Variación mensual', valor: kpis.variacionMensual, unidad: '%' },
-      { indicador: 'Mínimo del ticket', valor: sinVentas ? '—' : Math.min(...dataset), unidad: 'S/' },
-      { indicador: 'Máximo del ticket', valor: sinVentas ? '—' : Math.max(...dataset), unidad: 'S/' },
+      { indicador: t('reports.ind-ingresos-periodo'), valor: kpis.ingresos, unidad: 'S/' },
+      { indicador: t('reports.ind-transacciones'), valor: kpis.transacciones, unidad: 'uds' },
+      { indicador: t('reports.ind-ticket-promedio'), valor: kpis.ticketPromedio, unidad: 'S/' },
+      { indicador: t('reports.ind-media-tickets'), valor: sinVentas ? '—' : round2(compare.mean), unidad: 'S/' },
+      { indicador: t('reports.ind-mediana-tickets'), valor: sinVentas ? '—' : round2(compare.median), unidad: 'S/' },
+      { indicador: t('reports.ind-diferencia-media-mediana'), valor: sinVentas ? '—' : compare.difference, unidad: 'S/' },
+      { indicador: t('reports.ind-variacion-mensual'), valor: kpis.variacionMensual, unidad: '%' },
+      { indicador: t('reports.ind-minimo-ticket'), valor: sinVentas ? '—' : Math.min(...dataset), unidad: 'S/' },
+      { indicador: t('reports.ind-maximo-ticket'), valor: sinVentas ? '—' : Math.max(...dataset), unidad: 'S/' },
     ]
     return {
       type,
-      title: 'Reporte estadístico',
-      description: 'Indicadores descriptivos de los tickets de venta (Semana 07).',
+      title: t('reports.tipo-estadistico'),
+      description: t('reports.descripcion-estadistico'),
       generated_at,
       columns: [
-        { key: 'indicador', label: 'Indicador' },
-        { key: 'valor', label: 'Valor', align: 'right' },
-        { key: 'unidad', label: 'Unidad' },
+        { key: 'indicador', label: t('reports.col-indicador') },
+        { key: 'valor', label: t('reports.col-valor'), align: 'right' },
+        { key: 'unidad', label: t('reports.col-unidad') },
       ],
       rows,
       summary: [
-        { label: 'Observaciones analizadas', value: formatNumber(dataset.length) },
+        { label: t('reports.observaciones-analizadas'), value: formatNumber(dataset.length) },
         {
-          label: 'Interpretación',
+          label: t('reports.interpretacion'),
           value: sinVentas
-            ? 'Sin ventas registradas en el periodo: no hay tickets que analizar.'
-            : compare.interpretation,
+            ? t('reports.sin-ventas-interpretacion')
+            : t(compare.interpretation),
         },
-        { label: 'Meses incluidos', value: '12' },
+        { label: t('reports.meses-incluidos'), value: '12' },
       ],
     }
   }
@@ -150,24 +153,24 @@ export async function generateReport(type: ReportType): Promise<Report> {
     }))
     return {
       type,
-      title: 'Reporte de productos',
-      description: 'Catálogo con precios, margen y nivel de stock.',
+      title: t('reports.tipo-productos'),
+      description: t('reports.descripcion-productos'),
       generated_at,
       columns: [
-        { key: 'sku', label: 'SKU' },
-        { key: 'producto', label: 'Producto' },
-        { key: 'categoria', label: 'Categoría' },
-        { key: 'precio', label: 'Precio', align: 'right' },
-        { key: 'margen', label: 'Margen (%)', align: 'right' },
-        { key: 'stock', label: 'Stock', align: 'right' },
-        { key: 'estado', label: 'Estado' },
+        { key: 'sku', label: t('reports.col-sku') },
+        { key: 'producto', label: t('reports.col-producto') },
+        { key: 'categoria', label: t('reports.col-categoria') },
+        { key: 'precio', label: t('reports.col-precio'), align: 'right' },
+        { key: 'margen', label: t('reports.col-margen-pct'), align: 'right' },
+        { key: 'stock', label: t('reports.col-stock'), align: 'right' },
+        { key: 'estado', label: t('reports.col-estado') },
       ],
       rows,
       summary: [
-        { label: 'Productos activos', value: formatNumber(products.filter((p) => p.status === 'active').length) },
-        { label: 'Productos en alerta', value: formatNumber(products.filter((p) => p.current_stock <= p.min_stock).length) },
+        { label: t('reports.productos-activos'), value: formatNumber(products.filter((p) => p.status === 'active').length) },
+        { label: t('reports.productos-en-alerta'), value: formatNumber(products.filter((p) => p.current_stock <= p.min_stock).length) },
         {
-          label: 'Valor de inventario (costo)',
+          label: t('reports.valor-inventario-costo'),
           value: money(products.reduce((total, product) => total + product.cost_price * product.current_stock, 0)),
         },
       ],
@@ -188,24 +191,24 @@ export async function generateReport(type: ReportType): Promise<Report> {
     }))
     return {
       type,
-      title: 'Reporte de clientes',
-      description: 'Segmentación y comportamiento de compra por cliente.',
+      title: t('reports.tipo-clientes'),
+      description: t('reports.descripcion-clientes'),
       generated_at,
       columns: [
-        { key: 'cliente', label: 'Cliente' },
-        { key: 'documento', label: 'Documento' },
-        { key: 'segmento', label: 'Segmento' },
-        { key: 'compras', label: 'Compras', align: 'right' },
-        { key: 'total_comprado', label: 'Total comprado', align: 'right' },
-        { key: 'ticket_promedio', label: 'Ticket prom.', align: 'right' },
-        { key: 'estado', label: 'Estado' },
+        { key: 'cliente', label: t('reports.col-cliente') },
+        { key: 'documento', label: t('reports.col-documento') },
+        { key: 'segmento', label: t('reports.col-segmento') },
+        { key: 'compras', label: t('reports.col-compras'), align: 'right' },
+        { key: 'total_comprado', label: t('reports.col-total-comprado'), align: 'right' },
+        { key: 'ticket_promedio', label: t('reports.col-ticket-prom'), align: 'right' },
+        { key: 'estado', label: t('reports.col-estado') },
       ],
       rows,
       summary: [
-        { label: 'Clientes', value: formatNumber(customers.length) },
-        { label: 'Clientes activos', value: formatNumber(customers.filter((c) => c.status === 'active').length) },
+        { label: t('reports.clientes'), value: formatNumber(customers.length) },
+        { label: t('reports.clientes-activos'), value: formatNumber(customers.filter((c) => c.status === 'active').length) },
         {
-          label: 'Facturación acumulada',
+          label: t('reports.facturacion-acumulada'),
           value: money(customers.reduce((total, customer) => total + customer.total_purchased, 0)),
         },
       ],
@@ -224,27 +227,27 @@ export async function generateReport(type: ReportType): Promise<Report> {
       ingresos: total,
       ticket_promedio: propias.length > 0 ? round2(total / propias.length) : 0,
       participación: bySeller.length > 0 ? Math.round((total / Math.max(bySeller.reduce((s, row) => s + row.ingresos, 0), 1)) * 1000) / 10 : 0,
-      estado: propias.some((sale) => sale.status !== 'paid') ? 'Con saldos' : 'Al día',
+      estado: propias.some((sale) => sale.status !== 'paid') ? t('reports.con-saldos') : t('reports.al-dia'),
     }
   })
   return {
     type: 'vendedores',
-    title: 'Reporte de vendedores',
-    description: 'Ingresos, tickets y participación por vendedor.',
+    title: t('reports.tipo-vendedores'),
+    description: t('reports.descripcion-vendedores'),
     generated_at,
     columns: [
-      { key: 'vendedor', label: 'Vendedor' },
-      { key: 'ventas', label: 'Ventas', align: 'right' },
-      { key: 'ingresos', label: 'Ingresos', align: 'right' },
-      { key: 'ticket_promedio', label: 'Ticket prom.', align: 'right' },
-      { key: 'participación', label: 'Participación (%)', align: 'right' },
-      { key: 'estado', label: 'Estado' },
+      { key: 'vendedor', label: t('reports.col-vendedor') },
+      { key: 'ventas', label: t('reports.col-ventas'), align: 'right' },
+      { key: 'ingresos', label: t('reports.col-ingresos'), align: 'right' },
+      { key: 'ticket_promedio', label: t('reports.col-ticket-prom'), align: 'right' },
+      { key: 'participación', label: t('reports.col-participacion-pct'), align: 'right' },
+      { key: 'estado', label: t('reports.col-estado') },
     ],
     rows,
     summary: [
-      { label: 'Vendedores', value: formatNumber(bySeller.length) },
-      { label: 'Ingresos atribuidos', value: money(bySeller.reduce((total, seller) => total + seller.ingresos, 0)) },
-      { label: 'Vendedores con saldos', value: formatNumber(rows.filter((row) => row.estado === 'Con saldos').length) },
+      { label: t('reports.vendedores'), value: formatNumber(bySeller.length) },
+      { label: t('reports.ingresos-atribuidos'), value: money(bySeller.reduce((total, seller) => total + seller.ingresos, 0)) },
+      { label: t('reports.vendedores-con-saldos'), value: formatNumber(rows.filter((row) => row.estado === t('reports.con-saldos')).length) },
     ],
   }
 }

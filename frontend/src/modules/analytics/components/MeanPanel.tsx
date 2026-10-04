@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
-import { formatCurrency, formatNumber } from '@/utils/formatters'
+import { formatCurrency } from '@/utils/formatters'
 import { mean } from '../services/statisticsService'
 import MediaChart from '@/components/charts/MediaChart'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Panel de la media aritmética (Fase 09 · RF-11).
@@ -14,16 +15,20 @@ interface MeanPanelProps {
 }
 
 export default function MeanPanel({ values }: MeanPanelProps) {
+  const { t } = useLang()
+
   if (values.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-h4 text-gray-800">Media aritmética</h3>
+        <h3 className="text-h4 text-gray-800">{t('analytics.media-aritmetica')}</h3>
         <EmptyState
-          title="Sin ventas en el periodo"
-          description="La media se calcula con los tickets reales. Registra ventas para verla."
+          title={t('analytics.sin-ventas-en-el-periodo')}
+          description={t(
+            'analytics.la-media-se-calcula-con-los-tickets-reales-registra-ventas-para-verla',
+          )}
           action={
             <Link to="/ventas" className="btn-primary">
-              Registrar venta
+              {t('analytics.registrar-venta')}
             </Link>
           }
         />
@@ -35,17 +40,19 @@ export default function MeanPanel({ values }: MeanPanelProps) {
 
   return (
     <div className="card">
-      <h3 className="text-h4 text-gray-800">Media aritmética</h3>
+      <h3 className="text-h4 text-gray-800">{t('analytics.media-aritmetica')}</h3>
       <p className="mt-1 text-kpi font-bold text-primary">{formatCurrency(value)}</p>
       <p className="text-caption text-gray-500">
-        Suma de {formatNumber(values.length)} tickets dividido entre {formatNumber(values.length)}.
+        {t('analytics.suma-de-n-tickets', { n: values.length })}{' '}
+        {t('analytics.dividido-entre-n', { n: values.length })}
       </p>
 
       <div className="mt-4">
         <MediaChart values={values} />
       </div>
       <p className="mt-2 text-caption text-gray-500">
-        Eje de datos: <span className="text-gray-500">#6B7280</span> · media marcada en azul corporativo.
+        {t('analytics.eje-de-datos')} <span className="text-gray-500">#6B7280</span> ·{' '}
+        {t('analytics.media-marcada-en-azul-corporativo')}
       </p>
     </div>
   )

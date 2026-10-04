@@ -1,18 +1,37 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { dictCommon } from './dict/common'
+import { dictDashboard } from './dict/dashboard'
+import { dictCustomers } from './dict/customers'
+import { dictProducts } from './dict/products'
+import { dictCategories } from './dict/categories'
+import { dictInventory } from './dict/inventory'
+import { dictSales } from './dict/sales'
+import { dictReturns } from './dict/returns'
+import { dictPurchasing } from './dict/purchasing'
+import { dictQuotes } from './dict/quotes'
+import { dictPricing } from './dict/pricing'
+import { dictReports } from './dict/reports'
+import { dictInsights } from './dict/insights'
+import { dictProbability } from './dict/probability'
+import { dictAutomation } from './dict/automation'
+import { dictSettings } from './dict/settings'
+import { dictEmployees } from './dict/employees'
+import { dictAnalytics } from './dict/analytics'
 
 /**
- * i18n ligero para el shell (topbar, sidebar, launcher y login).
- * Persiste la preferencia en localStorage y alterna con el botón
- * de idioma de la topbar. Los módulos internos quedan en español.
+ * i18n ligero de toda la app: shell (topbar, sidebar, launcher, login) y
+ * módulos internos (diccionarios en ./dict/*). Persiste la preferencia en
+ * localStorage y alterna con el botón de idioma de la topbar.
  */
 
 export type Lang = 'es' | 'en'
-type Dict = Record<string, string>
+export type Dict = Record<string, string>
+export type ModuleDict = { es: Dict; en: Dict }
 
 const STORAGE_KEY = 'salesia-lang'
 
-const ES: Dict = {
+const baseES: Dict = {
   'topbar.searchModules': 'Buscar módulo…',
   'topbar.searchSystem': 'Buscar en el sistema…',
   'topbar.searchLabel': 'Buscar',
@@ -54,7 +73,7 @@ const ES: Dict = {
   'auth.hl3': 'Automatizaciones y reportes automáticos',
 }
 
-const EN: Dict = {
+const baseEN: Dict = {
   'topbar.searchModules': 'Search module…',
   'topbar.searchSystem': 'Search the system…',
   'topbar.searchLabel': 'Search',
@@ -95,6 +114,30 @@ const EN: Dict = {
   'auth.hl3': 'Automations and scheduled reports',
 }
 
+const MODULE_DICTS: ModuleDict[] = [
+  dictCommon,
+  dictDashboard,
+  dictCustomers,
+  dictProducts,
+  dictCategories,
+  dictInventory,
+  dictSales,
+  dictReturns,
+  dictPurchasing,
+  dictQuotes,
+  dictPricing,
+  dictReports,
+  dictInsights,
+  dictProbability,
+  dictAutomation,
+  dictSettings,
+  dictEmployees,
+  dictAnalytics,
+]
+
+const ES: Dict = Object.assign({}, baseES, ...MODULE_DICTS.map((dict) => dict.es))
+const EN: Dict = Object.assign({}, baseEN, ...MODULE_DICTS.map((dict) => dict.en))
+
 const DICTS: Record<Lang, Dict> = { es: ES, en: EN }
 
 /** Etiquetas de roles según idioma. */
@@ -107,8 +150,8 @@ interface LangContextValue {
   lang: Lang
   setLang: (lang: Lang) => void
   toggleLang: () => void
-  /** Traduce una clave; `{n}` se reemplaza por params.n. */
-  t: (key: string, params?: { n?: number }) => string
+  /** Traduce una clave; los `{placeholder}` se reemplazan por params. */
+  t: (key: string, params?: Record<string, string | number>) => string
 }
 
 const LangContext = createContext<LangContextValue | null>(null)
@@ -136,9 +179,12 @@ export function LangProvider({ children }: { children: ReactNode }) {
   }, [lang])
 
   const t = useCallback(
-    (key: string, params?: { n?: number }) => {
+    (key: string, params?: Record<string, string | number>) => {
       const raw = DICTS[lang][key] ?? DICTS.es[key] ?? key
-      return params?.n === undefined ? raw : raw.replace('{n}', String(params.n))
+      if (!params) return raw
+      return raw.replace(/\{(\w+)\}/g, (whole, name: string) =>
+        params[name] !== undefined ? String(params[name]) : whole,
+      )
     },
     [lang],
   )

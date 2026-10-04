@@ -24,13 +24,20 @@ import { isLowStock, ruleEnabled, ruleNumber } from '@/data/store'
 
 const round2 = (value: number): number => Math.round(value * 100) / 100
 
+/** Traductor i18n (clave → texto) inyectado desde `useLang()`. */
+export type Translator = (key: string, params?: Record<string, string | number>) => string
+
 let seedId = 100
 
 /**
  * Genera los insights aplicando cada regla sobre los datos actuales.
  * @param filters filtros de analítica vigentes (periodo, vendedor, categoría)
+ * @param t traductor i18n; si se omite, se devuelven las claves sin traducir
  */
-export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTERS): Promise<Insight[]> {
+export async function generateInsights(
+  filters: AnalyticsFilters = DEFAULT_FILTERS,
+  t: Translator = (key) => key,
+): Promise<Insight[]> {
   const kpis = getKpis(filters)
   const monthly = getMonthly(filters)
   const bySeller = getBySeller(filters)
@@ -48,11 +55,25 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
   if (ruleEnabled('REG-01_TENDENCIA') && last && previous && previous.ingresos > 0) {
     const change = round2(((last.ingresos - previous.ingresos) / previous.ingresos) * 100)
     const margen = ruleNumber('REG-01_TENDENCIA', 'margen', 10)
+    const params = {
+      mes: last.mes,
+      variacion: Math.abs(change),
+      mesAnterior: previous.mes,
+      actual: formatShort(last.ingresos),
+      anterior: formatShort(previous.ingresos),
+      umbral: margen,
+    }
     insights.push({
-      title: change >= 0 ? 'Crecimiento de ingresos en el último mes' : 'Caída de ingresos en el último mes',
+      title:
+        change >= 0
+          ? t('insights.titulo-crecimiento-ingresos')
+          : t('insights.titulo-caida-ingresos'),
       severity: change >= margen ? 'SUCCESS' : change >= 0 ? 'INFO' : change >= -margen ? 'WARNING' : 'CRITICAL',
       rule: 'REG-01_TENDENCIA_INGRESOS',
-      message: `Los ingresos de ${last.mes} fueron ${change >= 0 ? 'mayores' : 'menores'} en ${Math.abs(change)}% frente a ${previous.mes} (${formatShort(last.ingresos)} vs. ${formatShort(previous.ingresos)}). Umbral de alerta: ±${margen}%.`,
+      message:
+        change >= 0
+          ? t('insights.mensaje-tendencia-positiva', params)
+          : t('insights.mensaje-tendencia-negativa', params),
       evidence: {
         mes_actual: last.mes,
         ingresos_actual: last.ingresos,
@@ -69,10 +90,14 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
   // REG-02 · Ticket promedio del periodo (solo con ventas reales)
   if (kpis.transacciones > 0) {
     insights.push({
-      title: 'Ticket promedio del periodo',
+      title: t('insights.titulo-ticket-promedio'),
       severity: 'INFO',
       rule: 'REG-02_TICKET_PROMEDIO',
-      message: `El ticket promedio es S/ ${kpis.ticketPromedio} sobre ${kpis.transacciones} transacciones, con ingresos de S/ ${kpis.ingresos}.`,
+      message: t('insights.mensaje-ticket-promedio', {
+        ticket: kpis.ticketPromedio,
+        transacciones: kpis.transacciones,
+        ingresos: kpis.ingresos,
+      }),
       evidence: {
         ticket_promedio: kpis.ticketPromedio,
         transacciones: kpis.transacciones,
@@ -91,10 +116,13 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
   if (ruleEnabled('REG-03_CONCENTRACION') && topSeller && totalSeller > 0) {
     const share = round2((topSeller.ingresos / totalSeller) * 100)
     insights.push({
-      title: `Concentración de ventas en ${topSeller.name}`,
+      title: t('insights.titulo-concentracion-vendedor', { vendedor: topSeller.name }),
       severity: share >= umbral ? 'WARNING' : 'INFO',
       rule: 'REG-03_CONCENTRACION_VENDEDOR',
-      message: `${topSeller.name} concentra el ${share}% de los ingresos del periodo${share >= umbral ? `, por encima del umbral configurado del ${umbral}%` : `, por debajo del umbral configurado del ${umbral}%`}.`,
+      message: t(
+        share >= umbral ? 'insights.mensaje-concentracion-alta' : 'insights.mensaje-concentracion-baja',
+        { vendedor: topSeller.name, participacion: share, umbral },
+      ),
       evidence: {
         vendedor: topSeller.name,
         ingresos: topSeller.ingresos,
@@ -112,10 +140,13 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
   if (topCategory && totalCategory > 0) {
     const share = round2((topCategory.ingresos / totalCategory) * 100)
     insights.push({
-      title: `Categoría líder: ${topCategory.name}`,
+      title: t('insights.titulo-categoria-lider', { categoria: topCategory.name }),
       severity: 'INFO',
       rule: 'REG-04_CONCENTRACION_CATEGORIA',
-      message: `${topCategory.name} aporta el ${share}% de los ingresos del periodo.`,
+      message: t('insights.mensaje-categoria-lider', {
+        categoria: topCategory.name,
+        participacion: share,
+      }),
       evidence: {
         categoría: topCategory.name,
         ingresos: topCategory.ingresos,
@@ -131,13 +162,18 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
     insights.push({
       title:
         Math.abs(compare.differencePct) < 5
-          ? 'Distribución simétrica de tickets'
+          ? t('insights.titulo-distribucion-simetrica')
           : compare.difference > 0
-            ? 'Cola derecha: pocas ventas elevan el promedio'
-            : 'Cola izquierda: muchas ventas pequeñas bajan el promedio',
+            ? t('insights.titulo-cola-derecha')
+            : t('insights.titulo-cola-izquierda'),
       severity: Math.abs(compare.differencePct) < 5 ? 'INFO' : 'WARNING',
       rule: 'REG-05_ASIMETRIA_DISTRIBUCION',
-      message: `${compare.interpretation} Media S/ ${round2(compare.mean)} vs. mediana S/ ${round2(compare.median)} (${compare.differencePct}%).`,
+      message: t('insights.mensaje-asimetria', {
+        interpretacion: t(compare.interpretation),
+        media: round2(compare.mean),
+        mediana: round2(compare.median),
+        pct: compare.differencePct,
+      }),
       evidence: {
         media: round2(compare.mean),
         mediana: round2(compare.median),
@@ -156,14 +192,17 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
     insights.push({
       title:
         pending.length === 0
-          ? 'Sin ventas pendientes de cobro'
-          : `${pending.length} venta(s) con saldo pendiente`,
+          ? t('insights.titulo-sin-pendientes')
+          : t('insights.titulo-ventas-saldo-pendiente', { n: pending.length }),
       severity: pending.length === 0 ? 'SUCCESS' : pendingAmount > 200 ? 'WARNING' : 'INFO',
       rule: 'REG-06_COBRANZA_PENDIENTE',
       message:
         pending.length === 0
-          ? 'Todas las ventas registradas están pagadas.'
-          : `El saldo por cobrar suma S/ ${round2(pendingAmount)} en ${pending.length} venta(s).`,
+          ? t('insights.mensaje-todas-pagadas')
+          : t('insights.mensaje-saldo-pendiente', {
+              saldo: round2(pendingAmount),
+              n: pending.length,
+            }),
       evidence: {
         ventas_pendientes: pending.length,
         saldo_por_cobrar: round2(pendingAmount),
@@ -178,13 +217,13 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
     const alerts = stock.filter((row) => isLowStock(row))
     const outOfStock = stock.filter((row) => row.current_stock === 0)
     insights.push({
-      title: outOfStock.length > 0 ? 'Productos sin stock' : 'Alertas de stock bajo',
+      title: outOfStock.length > 0 ? t('insights.productos-sin-stock') : t('insights.titulo-alertas-stock-bajo'),
       severity: outOfStock.length > 0 ? 'CRITICAL' : alerts.length > 0 ? 'WARNING' : 'SUCCESS',
       rule: 'REG-07_STOCK_BAJO',
       message:
         alerts.length === 0
-          ? 'Todos los productos están por encima del umbral de alerta configurado.'
-          : `${alerts.length} producto(s) en alerta según el umbral configurado, de los cuales ${outOfStock.length} están agotados.`,
+          ? t('insights.mensaje-stock-ok')
+          : t('insights.mensaje-stock-alerta', { n: alerts.length, agotados: outOfStock.length }),
       evidence: {
         productos_en_alerta: alerts.length,
         productos_sin_stock: outOfStock.length,
@@ -199,10 +238,14 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
   const topProduct = byProduct[0]
   if (topProduct) {
     insights.push({
-      title: `Producto estrella: ${topProduct.name}`,
+      title: t('insights.titulo-producto-estrella', { producto: topProduct.name }),
       severity: 'SUCCESS',
       rule: 'REG-08_PRODUCTO_ESTRELLA',
-      message: `${topProduct.name} lidera la facturación con S/ ${topProduct.ingresos} (${topProduct.unidades} unidades).`,
+      message: t('insights.mensaje-producto-estrella', {
+        producto: topProduct.name,
+        ingresos: topProduct.ingresos,
+        unidades: topProduct.unidades,
+      }),
       evidence: {
         producto: topProduct.name,
         ingresos: topProduct.ingresos,
@@ -215,11 +258,10 @@ export async function generateInsights(filters: AnalyticsFilters = DEFAULT_FILTE
 
   if (insights.length === 0) {
     insights.push({
-      title: 'Sin datos suficientes para analizar',
+      title: t('insights.titulo-sin-datos'),
       severity: 'INFO',
       rule: 'REG-02_TICKET_PROMEDIO',
-      message:
-        'Todavía no hay ventas ni productos registrados. En cuanto registres actividad, las reglas generarán observaciones con evidencia numérica.',
+      message: t('insights.mensaje-sin-datos'),
       evidence: {},
       analysis_id: null,
       dataset_id: null,
@@ -280,12 +322,12 @@ export const INSIGHT_RULES: Array<{
   severity: InsightSeverity
   automationCode: string
 }> = [
-  { code: 'REG-01_TENDENCIA_INGRESOS', description: 'Compara los ingresos del último mes con el anterior.', severity: 'INFO', automationCode: 'REG-01_TENDENCIA' },
-  { code: 'REG-02_TICKET_PROMEDIO', description: 'Calcula el ticket promedio del periodo filtrado.', severity: 'INFO', automationCode: '' },
-  { code: 'REG-03_CONCENTRACION_VENDEDOR', description: 'Detecta concentración de ingresos por vendedor.', severity: 'WARNING', automationCode: 'REG-03_CONCENTRACION' },
-  { code: 'REG-04_CONCENTRACION_CATEGORIA', description: 'Identifica la categoría con mayor participación.', severity: 'INFO', automationCode: '' },
-  { code: 'REG-05_ASIMETRIA_DISTRIBUCION', description: 'Compara media y mediana para detectar colas asimétricas.', severity: 'WARNING', automationCode: '' },
-  { code: 'REG-06_COBRANZA_PENDIENTE', description: 'Suma el saldo de ventas pendientes o parciales.', severity: 'WARNING', automationCode: '' },
-  { code: 'REG-07_STOCK_BAJO', description: 'Detecta productos en o por debajo del umbral de stock.', severity: 'CRITICAL', automationCode: 'REG-07_STOCK_INSIGHT' },
-  { code: 'REG-08_PRODUCTO_ESTRELLA', description: 'Rankea el producto con mayor facturación.', severity: 'SUCCESS', automationCode: '' },
+  { code: 'REG-01_TENDENCIA_INGRESOS', description: 'insights.regla-desc-01', severity: 'INFO', automationCode: 'REG-01_TENDENCIA' },
+  { code: 'REG-02_TICKET_PROMEDIO', description: 'insights.regla-desc-02', severity: 'INFO', automationCode: '' },
+  { code: 'REG-03_CONCENTRACION_VENDEDOR', description: 'insights.regla-desc-03', severity: 'WARNING', automationCode: 'REG-03_CONCENTRACION' },
+  { code: 'REG-04_CONCENTRACION_CATEGORIA', description: 'insights.regla-desc-04', severity: 'INFO', automationCode: '' },
+  { code: 'REG-05_ASIMETRIA_DISTRIBUCION', description: 'insights.regla-desc-05', severity: 'WARNING', automationCode: '' },
+  { code: 'REG-06_COBRANZA_PENDIENTE', description: 'insights.regla-desc-06', severity: 'WARNING', automationCode: '' },
+  { code: 'REG-07_STOCK_BAJO', description: 'insights.regla-desc-07', severity: 'CRITICAL', automationCode: 'REG-07_STOCK_INSIGHT' },
+  { code: 'REG-08_PRODUCTO_ESTRELLA', description: 'insights.regla-desc-08', severity: 'SUCCESS', automationCode: '' },
 ]

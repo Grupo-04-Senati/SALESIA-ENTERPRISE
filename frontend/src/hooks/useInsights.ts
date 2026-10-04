@@ -3,6 +3,7 @@ import type { Insight } from '@/types/insight'
 import { generateInsights } from '@/modules/insights/services/insightService'
 import type { AnalyticsFilters } from '@/modules/analytics/services/statisticsService'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Hook de datos de insights (Fase 06 — hooks de datos).
@@ -15,6 +16,7 @@ export function useInsights(filters: AnalyticsFilters) {
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const version = useDataVersion()
+  const { t } = useLang()
 
   const { months, seller, category } = filters
 
@@ -22,13 +24,15 @@ export function useInsights(filters: AnalyticsFilters) {
     let cancelled = false
     setLoading(true)
     setError(null)
-    generateInsights({ months, seller, category })
+    generateInsights({ months, seller, category }, t)
       .then((result) => {
         if (!cancelled) setInsights(result)
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron generar los insights')
+          setError(
+            reason instanceof Error ? reason.message : t('insights.no-se-pudieron-generar'),
+          )
         }
       })
       .finally(() => {
@@ -37,7 +41,7 @@ export function useInsights(filters: AnalyticsFilters) {
     return () => {
       cancelled = true
     }
-  }, [months, seller, category, attempt, version])
+  }, [months, seller, category, attempt, version, t])
 
   return {
     insights,

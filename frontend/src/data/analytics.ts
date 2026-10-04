@@ -277,7 +277,7 @@ export function compareMeanMedian(values: number[]): CompareResult {
       median: 0,
       difference: 0,
       differencePct: 0,
-      interpretation: 'Sin ventas suficientes en el periodo: todavía no hay tickets que comparar.',
+      interpretation: 'analytics.interp-sin-ventas',
     }
   }
   const meanValue = mean(values)
@@ -286,13 +286,11 @@ export function compareMeanMedian(values: number[]): CompareResult {
   const differencePct = medianValue > 0 ? round2((difference / medianValue) * 100) : 0
   let interpretation: string
   if (Math.abs(differencePct) < 5) {
-    interpretation = 'Media y mediana son muy parecidas: la distribución es casi simétrica.'
+    interpretation = 'analytics.interp-simetrica'
   } else if (difference > 0) {
-    interpretation =
-      'La media supera a la mediana: la distribución tiene cola derecha (algunas ventas muy altas elevan el promedio).'
+    interpretation = 'analytics.interp-cola-derecha'
   } else {
-    interpretation =
-      'La mediana supera a la media: la distribución tiene cola izquierda (las ventas pequeñas bajan el promedio).'
+    interpretation = 'analytics.interp-cola-izquierda'
   }
   return { mean: meanValue, median: medianValue, difference, differencePct, interpretation }
 }
@@ -471,36 +469,36 @@ export function getStatisticalDatasets(filters: Partial<AnalyticsFilters> = {}):
   return [
     {
       id: 'total',
-      label: 'Total de la venta',
-      description: 'Importe final de cada venta, con descuento e impuesto.',
+      label: 'probability.ds-total-label',
+      description: 'probability.ds-total-desc',
       unit: 'S/',
       values: sales.map((sale) => sale.total),
     },
     {
       id: 'cantidad',
-      label: 'Cantidad por línea',
-      description: 'Unidades vendidas en cada línea de venta.',
+      label: 'probability.ds-cantidad-label',
+      description: 'probability.ds-cantidad-desc',
       unit: 'und',
       values: lines.map((item) => item.quantity),
     },
     {
       id: 'precio',
-      label: 'Precio unitario',
-      description: 'Precio de venta de cada producto facturado.',
+      label: 'probability.ds-precio-label',
+      description: 'probability.ds-precio-desc',
       unit: 'S/',
       values: lines.map((item) => item.unit_price),
     },
     {
       id: 'subtotal',
-      label: 'Subtotal por línea',
-      description: 'Resultado de cantidad × precio menos el descuento de la línea.',
+      label: 'probability.ds-subtotal-label',
+      description: 'probability.ds-subtotal-desc',
       unit: 'S/',
       values: lines.map((item) => item.quantity * item.unit_price - item.discount),
     },
     {
       id: 'descuento',
-      label: 'Descuento aplicado',
-      description: 'Descuentos de línea (0 cuando no se aplicó).',
+      label: 'probability.ds-descuento-label',
+      description: 'probability.ds-descuento-desc',
       unit: 'S/',
       values: lines.map((item) => item.discount),
     },
@@ -511,6 +509,8 @@ export interface BayesScenario {
   id: string
   eventA: string
   eventB: string
+  /** Nombre del vendedor líder (parámetro de la clave eventA). */
+  seller?: string
   prior: number
   likelihood: number
   evidence: number
@@ -520,6 +520,7 @@ export interface BayesScenario {
     conAyB: number
     conB: number
   }
+  /** Clave i18n de la lectura (params: detalle). */
   lectura: string
 }
 
@@ -557,38 +558,36 @@ export function getBayesScenarios(): BayesScenario[] {
   const definitions: Definition[] = [
     {
       id: 'recurrente-ticket',
-      eventA: 'Cliente recurrente o frecuente',
-      eventB: 'Compra con ticket sobre el promedio',
+      eventA: 'probability.evt-cliente-recurrente-o-frecuente',
+      eventB: 'probability.evt-compra-con-ticket-sobre-el-promedio',
       isA: (sale) => recurrentes.has(sale.customer.id),
       isB: (sale) => sale.total > ticketPromedio,
-      lectura: (d) =>
-        `De cada ${d.conB} compras con ticket alto, ${d.conAyB} son de clientes recurrentes.`,
+      lectura: () => 'probability.lect-recurrente-ticket',
     },
     {
       id: 'vendedor-pagada',
-      eventA: `Vendedor con más ventas (${topSeller ?? '—'})`,
-      eventB: 'Venta totalmente pagada',
+      eventA: 'probability.evt-vendedor-con-mas-ventas',
+      eventB: 'probability.evt-venta-totalmente-pagada',
       isA: (sale) => sale.seller.name === topSeller,
       isB: (sale) => sale.status === 'paid',
-      lectura: (d) =>
-        `De las ${d.conB} ventas pagadas, ${d.conAyB} pertenecen al vendedor con más cartera.`,
+      lectura: () => 'probability.lect-vendedor-pagada',
     },
     {
       id: 'bebidas-descuento',
-      eventA: 'Venta con producto de Bebidas',
-      eventB: 'Venta que recibió descuento',
+      eventA: 'probability.evt-venta-con-producto-de-bebidas',
+      eventB: 'probability.evt-venta-que-recibio-descuento',
       isA: (sale) => sale.items.some((item) => bebidas.has(item.product_id)),
       isB: (sale) => sale.discount > 0,
-      lectura: (d) =>
-        `${d.conAyB} de las ${d.conAyB + Math.max(d.conA - d.conAyB, 0)} ventas de Bebidas usaron descuento.`,
+      lectura: () => 'probability.lect-bebidas-descuento',
     },
     {
       id: 'multilinea',
-      eventA: 'Venta de una sola línea',
-      eventB: 'Venta con más de 2 líneas',
+      eventA: 'probability.evt-venta-de-una-sola-linea',
+      eventB: 'probability.evt-venta-con-mas-de-2-lineas',
       isA: (sale) => sale.items.length === 1,
       isB: (sale) => sale.items.length > 2,
-      lectura: (d) => `Las ventas grandes (más de 2 líneas) suelen ser ${d.conAyB === 0 ? 'de una sola línea' : 'de varias líneas'}.`,
+      lectura: (d) =>
+        d.conAyB === 0 ? 'probability.lect-multilinea-una' : 'probability.lect-multilinea-varias',
     },
   ]
 
@@ -602,6 +601,7 @@ export function getBayesScenarios(): BayesScenario[] {
       id: definition.id,
       eventA: definition.eventA,
       eventB: definition.eventB,
+      seller: topSeller ?? '—',
       prior: ratio(conA, total),
       likelihood: ratio(conAyB, conA),
       evidence: ratio(conB, total),
@@ -639,7 +639,12 @@ export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Arr
   const quantitative = (name: string, values: number[]) => ({
     name,
     type: 'quantitative' as const,
-    subtype: values.length === 0 ? 'sin datos' : values.every((value) => Number.isInteger(value)) ? 'discreta' : 'continua',
+    subtype:
+      values.length === 0
+        ? 'probability.subtipo-sin-datos'
+        : values.every((value) => Number.isInteger(value))
+          ? 'probability.subtipo-discreta'
+          : 'probability.subtipo-continua',
     count: values.length,
     mean: values.length > 0 ? round2(mean(values)) : 0,
     median: values.length > 0 ? round2(median(values)) : 0,
@@ -649,26 +654,26 @@ export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Arr
   const qualitative = (name: string, values: string[]) => ({
     name,
     type: 'qualitative' as const,
-    subtype: 'nominal',
+    subtype: 'probability.subtipo-nominal',
     count: values.length,
     frequencies: frequencies(values),
   })
 
   return [
-    quantitative('total de la venta', sales.map((sale) => sale.total)),
-    quantitative('subtotal de la venta', sales.map((sale) => sale.subtotal)),
-    quantitative('impuesto de la venta', sales.map((sale) => sale.tax)),
-    quantitative('cantidad vendida (línea)', lines.map((item) => item.quantity)),
-    quantitative('precio unitario', lines.map((item) => item.unit_price)),
-    qualitative('categoría del producto', lines.map((item) => {
+    quantitative('probability.var-total-venta', sales.map((sale) => sale.total)),
+    quantitative('probability.var-subtotal-venta', sales.map((sale) => sale.subtotal)),
+    quantitative('probability.var-impuesto-venta', sales.map((sale) => sale.tax)),
+    quantitative('probability.var-cantidad-vendida-linea', lines.map((item) => item.quantity)),
+    quantitative('probability.var-precio-unitario', lines.map((item) => item.unit_price)),
+    qualitative('probability.var-categoria-producto', lines.map((item) => {
       const product = state.products.find((entry) => entry.id === item.product_id)
-      return product?.category.name ?? 'Sin categoría'
+      return product?.category.name ?? 'probability.sin-categoria'
     })),
-    qualitative('vendedor', sales.map((sale) => sale.seller.name)),
-    qualitative('estado de la venta', state.sales.map((sale) => sale.status)),
-    qualitative('segmento del cliente', sales.map((sale) => {
+    qualitative('probability.var-vendedor', sales.map((sale) => sale.seller.name)),
+    qualitative('probability.var-estado-venta', state.sales.map((sale) => sale.status)),
+    qualitative('probability.var-segmento-cliente', sales.map((sale) => {
       const customer = state.customers.find((entry) => entry.id === sale.customer.id)
-      return customer?.segment ?? 'Sin segmento'
+      return customer?.segment ?? 'probability.sin-segmento'
     })),
   ]
 }

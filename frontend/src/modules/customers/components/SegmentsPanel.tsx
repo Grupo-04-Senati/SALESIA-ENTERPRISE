@@ -17,12 +17,14 @@ import {
   updateSegment,
 } from '../services/segmentService'
 import type { CustomerSegment, SegmentInput } from '../services/segmentService'
+import { useLang } from '@/i18n/i18n'
 
 /** Pestaña «Segmentos» de Clientes: segmentación RF-03 (ENDPOINTS.segments). */
 
 const EMPTY_FORM = { name: '', description: '', min_purchases: '0', min_total: '0' }
 
 export default function SegmentsPanel() {
+  const { t } = useLang()
   const toast = useToast()
 
   const [segments, setSegments] = useState<CustomerSegment[]>([])
@@ -48,7 +50,11 @@ export default function SegmentsPanel() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los segmentos')
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : t('customers.no-se-pudieron-cargar-los-segmentos'),
+          )
         }
       })
       .finally(() => {
@@ -83,17 +89,17 @@ export default function SegmentsPanel() {
   const handleSubmit = async () => {
     const name = form.name.trim()
     if (name.length < 2) {
-      setFormError('El nombre debe tener al menos 2 caracteres.')
+      setFormError(t('customers.el-nombre-debe-tener-al-menos-2-caracteres'))
       return
     }
     const minPurchases = Number(form.min_purchases)
     const minTotal = Number(form.min_total)
     if (Number.isNaN(minPurchases) || minPurchases < 0) {
-      setFormError('Las mínimas compras deben ser un número mayor o igual a 0.')
+      setFormError(t('customers.las-minimas-compras-deben-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
     if (Number.isNaN(minTotal) || minTotal < 0) {
-      setFormError('El monto mínimo debe ser un número mayor o igual a 0.')
+      setFormError(t('customers.el-monto-minimo-debe-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
     const input: SegmentInput = {
@@ -106,15 +112,23 @@ export default function SegmentsPanel() {
     try {
       if (editing) {
         await updateSegment(editing.id, input)
-        toast.success('Segmento actualizado', `${name} se guardó correctamente.`)
+        toast.success(
+          t('customers.segmento-actualizado'),
+          `${name} ${t('customers.se-guardo-correctamente')}`,
+        )
       } else {
         await createSegment(input)
-        toast.success('Segmento creado', `${name} ya está disponible para clasificar clientes.`)
+        toast.success(
+          t('customers.segmento-creado'),
+          `${name} ${t('customers.ya-esta-disponible-para-clasificar-clientes')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar el segmento.')
+      setFormError(
+        reason instanceof Error ? reason.message : t('customers.no-se-pudo-guardar-el-segmento'),
+      )
     } finally {
       setSaving(false)
     }
@@ -125,11 +139,18 @@ export default function SegmentsPanel() {
     setDeleteError(null)
     try {
       await deleteSegment(deleting.id)
-      toast.success('Segmento eliminado', `${deleting.name} se quitó de la segmentación.`)
+      toast.success(
+        t('customers.segmento-eliminado'),
+        `${deleting.name} ${t('customers.se-quito-de-la-segmentacion')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar el segmento.')
+      setDeleteError(
+        reason instanceof Error
+          ? reason.message
+          : t('customers.no-se-pudo-eliminar-el-segmento'),
+      )
     }
   }
 
@@ -137,11 +158,11 @@ export default function SegmentsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Segmentos comerciales con umbrales de compra: clasifican a los clientes del directorio.
+          {t('customers.segmentos-comerciales-con-umbrales-de-compra-clasifican-a-los-clientes-del-directorio')}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo segmento
+          {t('customers.nuevo-segmento')}
         </Button>
       </div>
 
@@ -151,18 +172,18 @@ export default function SegmentsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('customers.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && segments.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Segmento', 'Descripción', 'Mín. compras', 'Mín. monto', 'Clientes', 'Estado', '']}>
+          <DataTable headers={[t('customers.segmento'), t('customers.descripcion'), t('customers.min-compras'), t('customers.min-monto'), t('customers.clientes'), t('customers.estado'), '']}>
             <TableStateRow colSpan={7}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando segmentos…
+                {t('customers.cargando-segmentos')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -171,12 +192,12 @@ export default function SegmentsPanel() {
         <div className="card">
           <EmptyState
             icon={Tags}
-            title="Sin segmentos"
-            description="Aún no hay segmentos. Crea el primero para empezar a clasificar a tus clientes."
+            title={t('customers.sin-segmentos')}
+            description={t('customers.aun-no-hay-segmentos-crea-el-primero-para-empezar-a-clasificar-a-tus-clientes')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo segmento
+                {t('customers.nuevo-segmento')}
               </Button>
             }
           />
@@ -184,7 +205,7 @@ export default function SegmentsPanel() {
       ) : (
         <div className="card">
           <DataTable
-            headers={['Segmento', 'Descripción', 'Mín. compras', 'Mín. monto', 'Clientes', 'Estado', 'Acciones']}
+            headers={[t('customers.segmento'), t('customers.descripcion'), t('customers.min-compras'), t('customers.min-monto'), t('customers.clientes'), t('customers.estado'), t('customers.acciones')]}
           >
             {segments.map((segment) => (
               <TableRow key={segment.id}>
@@ -195,7 +216,7 @@ export default function SegmentsPanel() {
                 <TableCell>{segment.customer_count}</TableCell>
                 <TableCell>
                   <Badge variant={segment.status === 'inactive' ? 'neutral' : 'success'}>
-                    {segment.status === 'inactive' ? 'Inactivo' : 'Activo'}
+                    {segment.status === 'inactive' ? t('customers.inactivo') : t('customers.activo')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -203,8 +224,8 @@ export default function SegmentsPanel() {
                     <button
                       type="button"
                       onClick={() => openEdit(segment)}
-                      aria-label={`Editar ${segment.name}`}
-                      title="Editar"
+                      aria-label={`${t('customers.editar')} ${segment.name}`}
+                      title={t('customers.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -215,8 +236,8 @@ export default function SegmentsPanel() {
                         setDeleteError(null)
                         setDeleting(segment)
                       }}
-                      aria-label={`Eliminar ${segment.name}`}
-                      title="Eliminar"
+                      aria-label={`${t('customers.eliminar')} ${segment.name}`}
+                      title={t('customers.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -232,53 +253,53 @@ export default function SegmentsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar segmento' : 'Nuevo segmento'}
+        title={editing ? t('customers.editar-segmento') : t('customers.nuevo-segmento')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('customers.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear segmento'}
+              {editing ? t('customers.guardar-cambios') : t('customers.crear-segmento')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Nombre"
+            label={t('customers.nombre')}
             required
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="Ej. Mayoristas"
+            placeholder={t('customers.ej-mayoristas')}
             error={formError ?? undefined}
             autoFocus
           />
           <Textarea
-            label="Descripción"
-            hint="Opcional. Describe qué clientes agrupa este segmento."
+            label={t('customers.descripcion')}
+            hint={t('customers.opcional-describe-que-clientes-agrupa-este-segmento')}
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Ej. Clientes con volumen de compra alto"
+            placeholder={t('customers.ej-clientes-con-volumen-de-compra-alto')}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Mín. compras"
+              label={t('customers.min-compras')}
               type="number"
               min={0}
               step={1}
               value={form.min_purchases}
               onChange={(event) => setForm({ ...form, min_purchases: event.target.value })}
-              hint="Compras mínimas para pertenecer"
+              hint={t('customers.compras-minimas-para-pertenecer')}
             />
             <Input
-              label="Mín. monto"
+              label={t('customers.min-monto')}
               type="number"
               min={0}
               step="0.01"
               value={form.min_total}
               onChange={(event) => setForm({ ...form, min_total: event.target.value })}
-              hint="Monto acumulado mínimo (S/)"
+              hint={t('customers.monto-acumulado-minimo-s')}
             />
           </div>
         </div>
@@ -287,21 +308,21 @@ export default function SegmentsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar segmento"
+        title={t('customers.eliminar-segmento')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('customers.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('customers.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar el segmento <strong>{deleting?.name}</strong>? Los clientes que lo usan
-          conservan su segmentación actual.
+          {t('customers.eliminar-el-segmento')} <strong>{deleting?.name}</strong>
+          {t('customers.los-clientes-que-lo-usan-conservan-su-segmentacion-actual')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

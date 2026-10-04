@@ -14,7 +14,6 @@ import { formatDateTime } from '@/utils/formatters'
 import { getState } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 import {
-  INTERACTION_LABELS,
   createInteraction,
   deleteInteraction,
   listInteractions,
@@ -25,10 +24,19 @@ import type {
   InteractionInput,
   InteractionKind,
 } from '../services/interactionService'
+import { useLang } from '@/i18n/i18n'
 
 /** Pestaña «Interacciones» de Clientes: CRM (ENDPOINTS.interactions). */
 
 const KINDS: InteractionKind[] = ['note', 'call', 'email', 'meeting', 'visit']
+
+const KIND_LABEL_KEYS: Record<InteractionKind, string> = {
+  note: 'customers.nota',
+  call: 'customers.llamada',
+  email: 'customers.correo',
+  meeting: 'customers.reunion',
+  visit: 'customers.visita',
+}
 
 const KIND_BADGES: Record<InteractionKind, BadgeVariant> = {
   note: 'neutral',
@@ -56,6 +64,7 @@ function toInputDateTime(value: string | null): string {
 }
 
 export default function InteractionsPanel() {
+  const { t } = useLang()
   const toast = useToast()
   const version = useDataVersion()
   const customers = useMemo(() => getState().customers, [version])
@@ -84,7 +93,9 @@ export default function InteractionsPanel() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las interacciones',
+            reason instanceof Error
+              ? reason.message
+              : t('customers.no-se-pudieron-cargar-las-interacciones'),
           )
         }
       })
@@ -122,11 +133,11 @@ export default function InteractionsPanel() {
     const customerId = Number(form.customer_id)
     const subject = form.subject.trim()
     if (!customerId) {
-      setFormError('Selecciona el cliente de la interacción.')
+      setFormError(t('customers.selecciona-el-cliente-de-la-interaccion'))
       return
     }
     if (subject.length < 3) {
-      setFormError('El asunto debe tener al menos 3 caracteres.')
+      setFormError(t('customers.el-asunto-debe-tener-al-menos-3-caracteres'))
       return
     }
     const input: InteractionInput = {
@@ -140,16 +151,24 @@ export default function InteractionsPanel() {
     try {
       if (editing) {
         await updateInteraction(editing.id, input)
-        toast.success('Interacción actualizada', `${subject} se guardó correctamente.`)
+        toast.success(
+          t('customers.interaccion-actualizada'),
+          `${subject} ${t('customers.se-guardo-correctamente')}`,
+        )
       } else {
         await createInteraction(input)
-        toast.success('Interacción registrada', `${subject} quedó en la ficha del cliente.`)
+        toast.success(
+          t('customers.interaccion-registrada'),
+          `${subject} ${t('customers.quedo-en-la-ficha-del-cliente')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
       setFormError(
-        reason instanceof Error ? reason.message : 'No se pudo guardar la interacción.',
+        reason instanceof Error
+          ? reason.message
+          : t('customers.no-se-pudo-guardar-la-interaccion'),
       )
     } finally {
       setSaving(false)
@@ -161,12 +180,17 @@ export default function InteractionsPanel() {
     setDeleteError(null)
     try {
       await deleteInteraction(deleting.id)
-      toast.success('Interacción eliminada', `${deleting.subject} se quitó del historial.`)
+      toast.success(
+        t('customers.interaccion-eliminada'),
+        `${deleting.subject} ${t('customers.se-quito-del-historial')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
       setDeleteError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la interacción.',
+        reason instanceof Error
+          ? reason.message
+          : t('customers.no-se-pudo-eliminar-la-interaccion'),
       )
     }
   }
@@ -175,11 +199,11 @@ export default function InteractionsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Llamadas, correos, reuniones y visitas registradas con tus clientes.
+          {t('customers.llamadas-correos-reuniones-y-visitas-registradas-con-tus-clientes')}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva interacción
+          {t('customers.nueva-interaccion')}
         </Button>
       </div>
 
@@ -189,18 +213,18 @@ export default function InteractionsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('customers.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && items.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Fecha', 'Cliente', 'Tipo', 'Asunto', 'Registró', '']}>
+          <DataTable headers={[t('customers.fecha'), t('customers.cliente'), t('customers.tipo'), t('customers.asunto'), t('customers.registro'), '']}>
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando interacciones…
+                {t('customers.cargando-interacciones')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -209,19 +233,21 @@ export default function InteractionsPanel() {
         <div className="card">
           <EmptyState
             icon={History}
-            title="Sin interacciones"
-            description="Todavía no registras contacto con tus clientes. Crea la primera interacción para llevar la traza del CRM."
+            title={t('customers.sin-interacciones')}
+            description={t(
+              'customers.todavia-no-registras-contacto-con-tus-clientes-crea-la-primera-interaccion-para-llevar-la-traza-del-crm',
+            )}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva interacción
+                {t('customers.nueva-interaccion')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Fecha', 'Cliente', 'Tipo', 'Asunto', 'Registró', 'Acciones']}>
+          <DataTable headers={[t('customers.fecha'), t('customers.cliente'), t('customers.tipo'), t('customers.asunto'), t('customers.registro'), t('customers.acciones')]}>
             {items.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="whitespace-nowrap">
@@ -229,7 +255,7 @@ export default function InteractionsPanel() {
                 </TableCell>
                 <TableCell className="font-medium text-gray-900">{row.customer_name}</TableCell>
                 <TableCell>
-                  <Badge variant={KIND_BADGES[row.kind]}>{INTERACTION_LABELS[row.kind]}</Badge>
+                  <Badge variant={KIND_BADGES[row.kind]}>{t(KIND_LABEL_KEYS[row.kind])}</Badge>
                 </TableCell>
                 <TableCell>
                   <div className="font-medium text-gray-900">{row.subject}</div>
@@ -243,8 +269,8 @@ export default function InteractionsPanel() {
                     <button
                       type="button"
                       onClick={() => openEdit(row)}
-                      aria-label={`Editar ${row.subject}`}
-                      title="Editar"
+                      aria-label={`${t('customers.editar')} ${row.subject}`}
+                      title={t('customers.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -255,8 +281,8 @@ export default function InteractionsPanel() {
                         setDeleteError(null)
                         setDeleting(row)
                       }}
-                      aria-label={`Eliminar ${row.subject}`}
-                      title="Eliminar"
+                      aria-label={`${t('customers.eliminar')} ${row.subject}`}
+                      title={t('customers.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -272,28 +298,28 @@ export default function InteractionsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar interacción' : 'Nueva interacción'}
+        title={editing ? t('customers.editar-interaccion') : t('customers.nueva-interaccion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('customers.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Registrar interacción'}
+              {editing ? t('customers.guardar-cambios') : t('customers.registrar-interaccion')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="Cliente"
+            label={t('customers.cliente')}
             required
             value={form.customer_id}
             onChange={(event) => setForm({ ...form, customer_id: event.target.value })}
             error={formError ?? undefined}
             autoFocus
           >
-            <option value="">Selecciona un cliente…</option>
+            <option value="">{t('customers.selecciona-un-cliente')}</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.name}
@@ -302,7 +328,7 @@ export default function InteractionsPanel() {
           </Select>
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
-              label="Tipo"
+              label={t('customers.tipo')}
               required
               value={form.kind}
               onChange={(event) =>
@@ -311,33 +337,33 @@ export default function InteractionsPanel() {
             >
               {KINDS.map((kind) => (
                 <option key={kind} value={kind}>
-                  {INTERACTION_LABELS[kind]}
+                  {t(KIND_LABEL_KEYS[kind])}
                 </option>
               ))}
             </Select>
             <Input
-              label="Fecha y hora"
+              label={t('customers.fecha-y-hora')}
               type="datetime-local"
               value={form.occurred_at}
               onChange={(event) => setForm({ ...form, occurred_at: event.target.value })}
-              hint="Vacío = fecha actual"
+              hint={t('customers.vacio-fecha-actual')}
             />
           </div>
           <Input
-            label="Asunto"
+            label={t('customers.asunto')}
             required
             minLength={3}
             maxLength={150}
             value={form.subject}
             onChange={(event) => setForm({ ...form, subject: event.target.value })}
-            placeholder="Ej. Llamada de seguimiento"
+            placeholder={t('customers.ej-llamada-de-seguimiento')}
           />
           <Textarea
-            label="Notas"
-            hint="Opcional. Detalle de lo tratado en el contacto."
+            label={t('customers.notas')}
+            hint={t('customers.opcional-detalle-de-lo-tratado-en-el-contacto')}
             value={form.notes}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="Ej. Interesado en el plan anual"
+            placeholder={t('customers.ej-interesado-en-el-plan-anual')}
           />
         </div>
       </Modal>
@@ -345,21 +371,21 @@ export default function InteractionsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar interacción"
+        title={t('customers.eliminar-interaccion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('customers.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('customers.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la interacción <strong>{deleting?.subject}</strong> registrada con{' '}
-          {deleting?.customer_name}?
+          {t('customers.eliminar-la-interaccion')} <strong>{deleting?.subject}</strong>{' '}
+          {t('customers.registrada-con')} {deleting?.customer_name}?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

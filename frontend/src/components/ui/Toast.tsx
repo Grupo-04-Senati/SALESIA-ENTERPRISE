@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ComponentType, ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Toasts del sistema de diseño (txt §5.5): fondo blanco, radio 8px,
@@ -42,6 +43,7 @@ const AUTO_DISMISS_MS = 4000
 const MAX_VISIBLE = 4
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useLang()
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
   const nextId = useRef(0)
@@ -111,7 +113,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => dismiss(toast.id)}
-                  aria-label="Cerrar aviso"
+                  aria-label={t('common.cerrar-aviso')}
                   className="-m-0.5 rounded p-0.5 text-gray-400 transition-colors hover:text-gray-700"
                 >
                   <X aria-hidden="true" className="h-4 w-4" />

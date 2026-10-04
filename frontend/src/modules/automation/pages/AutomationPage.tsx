@@ -8,6 +8,7 @@ import SavedRulesPanel from '../components/SavedRulesPanel'
 import { Input } from '@/components/ui/form'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 import { RULE_MODULES } from '@/data/rules'
 import type { AutomationRule, RuleModule } from '@/data/rules'
 import {
@@ -42,14 +43,24 @@ const MODULE_BADGE: Record<RuleModule, 'primary' | 'info' | 'success' | 'warning
   Probabilidad: 'neutral',
 }
 
+const MODULE_LABEL_KEYS: Record<RuleModule, string> = {
+  Ventas: 'automation.ventas',
+  Inventario: 'automation.inventario',
+  Clientes: 'automation.clientes',
+  Productos: 'automation.productos',
+  Analítica: 'automation.analitica',
+  Probabilidad: 'automation.probabilidad',
+}
+
 const TAB_ITEMS = [
-  { id: 'guardadas', label: 'Guardadas' },
-  { id: 'todas', label: 'Todas' },
-  ...RULE_MODULES.map((module) => ({ id: module, label: module })),
+  { id: 'guardadas', label: 'automation.guardadas' },
+  { id: 'todas', label: 'automation.todas' },
+  ...RULE_MODULES.map((module) => ({ id: module, label: MODULE_LABEL_KEYS[module] })),
 ]
 
 export default function AutomationPage() {
   const toast = useToast()
+  const { t } = useLang()
   const version = useDataVersion()
   const [tab, setTab] = useState('todas')
 
@@ -65,24 +76,26 @@ export default function AutomationPage() {
     const insights = state.rules.find((rule) => rule.code === 'REG-03_CONCENTRACION')?.enabled
     return [
       {
-        label: 'Alertas de stock activas',
-        value: `${alertas} producto(s)`,
-        detail: `umbral ${ruleNumber('ALERTA_STOCK', 'factor', 100)}% del stock mínimo`,
+        label: t('automation.alertas-de-stock-activas'),
+        value: t('automation.n-productos', { n: alertas }),
+        detail: t('automation.umbral-n-del-stock-minimo', {
+          n: ruleNumber('ALERTA_STOCK', 'factor', 100),
+        }),
       },
       {
-        label: 'IGV en nuevas ventas',
+        label: t('automation.igv-en-nuevas-ventas'),
         value: `${ruleNumber('RN-11_TOTALES', 'taxRate', 18)}%`,
-        detail: 'se usa en el total y en los reportes',
+        detail: t('automation.se-usa-en-el-total-y-en-los-reportes'),
       },
       {
-        label: 'Alerta de concentración',
-        value: insights ? `${ruleNumber('REG-03_CONCENTRACION', 'umbral', 40)}%` : 'desactivada',
-        detail: 'participación de un vendedor sobre el periodo',
+        label: t('automation.alerta-de-concentracion'),
+        value: insights ? `${ruleNumber('REG-03_CONCENTRACION', 'umbral', 40)}%` : t('automation.desactivada-2'),
+        detail: t('automation.participacion-de-un-vendedor-sobre-el-periodo'),
       },
       {
-        label: 'Mínimo para estadística',
-        value: `${ruleNumber('RN-40_MINIMO_DATOS', 'minimo', 2)} datos`,
-        detail: 'controla media, mediana y clasificación de variables',
+        label: t('automation.minimo-para-estadistica'),
+        value: t('automation.n-datos', { n: ruleNumber('RN-40_MINIMO_DATOS', 'minimo', 2) }),
+        detail: t('automation.controla-media-mediana-y-clasificacion-de-variables'),
       },
     ]
   }, [version])
@@ -91,10 +104,10 @@ export default function AutomationPage() {
     setRuleEnabled(rule.code, !rule.enabled)
     toast.show(
       rule.enabled ? 'warning' : 'success',
-      rule.enabled ? 'Regla desactivada' : 'Regla activada',
+      rule.enabled ? t('automation.regla-desactivada') : t('automation.regla-activada'),
       rule.enabled
-        ? `${rule.name}: el sistema dejará de aplicar este comportamiento.`
-        : `${rule.name}: se aplicará automáticamente en las próximas operaciones.`,
+        ? `${t(rule.name)}: ${t('automation.el-sistema-dejara-de-aplicar-este-comportamiento')}`
+        : `${t(rule.name)}: ${t('automation.se-aplicara-automaticamente-en-las-proximas-operaciones')}`,
     )
   }
 
@@ -102,21 +115,23 @@ export default function AutomationPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1>Automatizaciones</h1>
+          <h1>{t('automation.automatizaciones')}</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-gray-600">
-            Diseña el comportamiento automático del sistema: activa o desactiva reglas de negocio y
-            ajusta sus umbrales. Los cambios se aplican de inmediato en todos los módulos.
+            {t('automation.disena-el-comportamiento-automatico-del-sistema-activa-o-desactiva-reglas-de-negocio-y-ajusta-sus-umbrales-los-cambios-se-aplican-de-inmediato-en-todos-los-modulos')}
           </p>
         </div>
         <Button
           variant="outline"
           onClick={() => {
             resetRules()
-            toast.success('Configuración restablecida', 'Las reglas volvieron a sus valores por defecto.')
+            toast.success(
+              t('automation.configuracion-restablecida'),
+              t('automation.las-reglas-volvieron-a-sus-valores-por-defecto'),
+            )
           }}
         >
           <RotateCcw aria-hidden="true" className="h-4 w-4" />
-          Restablecer reglas
+          {t('automation.restablecer-reglas')}
         </Button>
       </div>
 
@@ -127,14 +142,14 @@ export default function AutomationPage() {
             <Zap aria-hidden="true" className="h-6 w-6 text-primary" />
           </span>
           <div>
-            <p className="text-body-sm text-gray-600">Reglas automáticas</p>
+            <p className="text-body-sm text-gray-600">{t('automation.reglas-automaticas')}</p>
             <p className="text-h3 font-bold text-primary">
-              {activas} <span className="text-body font-normal text-gray-500">de {rules.length} activas</span>
+              {activas} <span className="text-body font-normal text-gray-500">{t('automation.de-n-activas', { n: rules.length })}</span>
             </p>
           </div>
         </div>
         <div className="card">
-          <p className="text-body-sm font-semibold text-gray-900">Efecto actual de la configuración</p>
+          <p className="text-body-sm font-semibold text-gray-900">{t('automation.efecto-actual-de-la-configuracion')}</p>
           <ul className="mt-2 space-y-1 text-caption text-gray-600">
             {efecto.map((item) => (
               <li key={item.label} className="flex justify-between gap-3">
@@ -163,9 +178,9 @@ export default function AutomationPage() {
         return (
           <section key={module} className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge variant={MODULE_BADGE[module]}>{module}</Badge>
+              <Badge variant={MODULE_BADGE[module]}>{t(MODULE_LABEL_KEYS[module])}</Badge>
               <span className="text-caption text-gray-500">
-                {delModulo.filter((rule) => rule.enabled).length} de {delModulo.length} activas
+                {delModulo.filter((rule) => rule.enabled).length} {t('automation.de-n-activas', { n: delModulo.length })}
               </span>
             </div>
 
@@ -179,11 +194,11 @@ export default function AutomationPage() {
                 >
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-body font-semibold text-gray-900">{rule.name}</h2>
+                      <h2 className="text-body font-semibold text-gray-900">{t(rule.name)}</h2>
                       <span className="font-mono text-caption text-gray-400">{rule.code}</span>
-                      {!rule.enabled && <Badge variant="neutral">Desactivada</Badge>}
+                      {!rule.enabled && <Badge variant="neutral">{t('automation.desactivada')}</Badge>}
                     </div>
-                    <p className="mt-1 text-body-sm text-gray-600">{rule.description}</p>
+                    <p className="mt-1 text-body-sm text-gray-600">{t(rule.description)}</p>
 
                     {rule.params.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-4">
@@ -214,11 +229,11 @@ export default function AutomationPage() {
 
                   <div className="flex items-center gap-3 lg:pt-1">
                     <span className={`text-caption font-medium ${rule.enabled ? 'text-success' : 'text-gray-400'}`}>
-                      {rule.enabled ? 'Activa' : 'Inactiva'}
+                      {rule.enabled ? t('automation.activa') : t('automation.inactiva')}
                     </span>
                     <Switch
                       checked={rule.enabled}
-                      label={`${rule.enabled ? 'Desactivar' : 'Activar'} ${rule.name}`}
+                      label={`${t(rule.enabled ? 'automation.desactivar' : 'automation.activar')} ${t(rule.name)}`}
                       onChange={() => toggle(rule)}
                     />
                   </div>
@@ -231,9 +246,7 @@ export default function AutomationPage() {
 
       <p className="flex items-start gap-2 rounded-lg bg-info-bg px-4 py-3 text-caption text-info-fg">
         <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-        Estas preferencias se guardan en tu navegador (localStorage) y rigen la simulación de este
-        módulo. El backend no las ejecuta: cuando el API gestione las reglas, quedarán registradas en
-        la auditoría del sistema (RF-22).
+        {t('automation.estas-preferencias-se-guardan-en-tu-navegador-localstorage-y-rigen-la-simulacion-de-este-modulo-el-backend-no-las-ejecuta-cuando-el-api-gestione-las-reglas-quedaran-registradas-en-la-auditoria-del-sistema-rf-22')}
       </p>
       </TabPanel>
     </div>

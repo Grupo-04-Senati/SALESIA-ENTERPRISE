@@ -7,6 +7,7 @@ import { Input, Select } from '@/components/ui/form'
 import { minNumber, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
 import { getProductCategories } from '../services/productService'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Formulario de producto crear/editar en modal (RF-04).
@@ -42,6 +43,7 @@ const EMPTY: FormValues = {
 }
 
 export default function ProductForm({ open, onClose, product, onSubmit }: ProductFormProps) {
+  const { t } = useLang()
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [errors, setErrors] = useState<FormErrors<FormValues>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -78,13 +80,19 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
   }
 
   const rules: FormRules<FormValues> = {
-    sku: (value) => required('El SKU es obligatorio')(value),
-    name: (value) => required()(value),
-    category_id: required('Selecciona una categoría'),
-    cost_price: (value) => required('El costo es obligatorio')(value) ?? minNumber(0, 'El costo no puede ser negativo')(value),
-    sale_price: (value) => required('El precio de venta es obligatorio')(value) ?? minNumber(0, 'El precio no puede ser negativo')(value),
-    min_stock: (value) => required()(value) ?? minNumber(0, 'El stock mínimo no puede ser negativo')(value),
-    unit: required(),
+    sku: (value) => required(t('products.el-sku-es-obligatorio'))(value),
+    name: (value) => required(t('products.este-campo-es-obligatorio'))(value),
+    category_id: required(t('products.selecciona-una-categoria')),
+    cost_price: (value) =>
+      required(t('products.el-costo-es-obligatorio'))(value) ??
+      minNumber(0, t('products.el-costo-no-puede-ser-negativo'))(value),
+    sale_price: (value) =>
+      required(t('products.el-precio-de-venta-es-obligatorio'))(value) ??
+      minNumber(0, t('products.el-precio-no-puede-ser-negativo'))(value),
+    min_stock: (value) =>
+      required(t('products.este-campo-es-obligatorio'))(value) ??
+      minNumber(0, t('products.el-stock-minimo-no-puede-ser-negativo'))(value),
+    unit: required(t('products.este-campo-es-obligatorio')),
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -92,7 +100,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
     const found = validateForm(values, rules)
     // RN-05: venta ≥ costo (regla cruzada entre campos).
     if (!found.sale_price && !found.cost_price && Number(values.sale_price) < Number(values.cost_price)) {
-      found.sale_price = 'El precio de venta no puede ser menor al costo.'
+      found.sale_price = t('products.el-precio-de-venta-no-puede-ser-menor-al-costo')
     }
     setErrors(found)
     if (Object.keys(found).length > 0) return
@@ -117,22 +125,22 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
     <Modal
       open={open}
       onClose={onClose}
-      title={product ? 'Editar producto' : 'Nuevo producto'}
+      title={product ? t('products.editar-producto') : t('products.nuevo-producto')}
       size="lg"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancelar
+            {t('products.cancelar')}
           </Button>
           <Button type="submit" form="product-form" loading={submitting}>
-            {product ? 'Guardar cambios' : 'Crear producto'}
+            {product ? t('products.guardar-cambios') : t('products.crear-producto')}
           </Button>
         </>
       }
     >
       <form id="product-form" onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="SKU"
+          label={t('products.sku')}
           required
           placeholder="SKU-0021"
           value={values.sku}
@@ -142,9 +150,9 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
 
         <div className="sm:col-span-2">
           <Input
-            label="Nombre del producto"
+            label={t('products.nombre-del-producto')}
             required
-            placeholder="Gaseosa 500ml"
+            placeholder={t('products.gaseosa-500ml')}
             value={values.name}
             onChange={setValue('name')}
             error={errors.name}
@@ -152,15 +160,13 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         </div>
 
         <Select
-          label="Categoría"
+          label={t('products.categoria')}
           required
           value={values.category_id}
           onChange={setValue('category_id')}
           error={errors.category_id}
           hint={
-            categories.length === 0
-              ? 'No hay categorías: créalas primero en el menú Categorías.'
-              : undefined
+            categories.length === 0 ? t('products.no-hay-categorias-crealas-primero-en-el-menu-categorias') : undefined
           }
         >
           {categories.map((category) => (
@@ -171,7 +177,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         </Select>
 
         <Input
-          label="Unidad"
+          label={t('products.unidad')}
           required
           placeholder="UND"
           value={values.unit}
@@ -180,7 +186,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         />
 
         <Input
-          label="Precio de costo (S/)"
+          label={t('products.precio-de-costo')}
           required
           type="number"
           min="0"
@@ -192,7 +198,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         />
 
         <Input
-          label="Precio de venta (S/)"
+          label={t('products.precio-de-venta')}
           required
           type="number"
           min="0"
@@ -204,7 +210,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         />
 
         <Input
-          label="Stock mínimo"
+          label={t('products.stock-minimo')}
           required
           type="number"
           min="0"

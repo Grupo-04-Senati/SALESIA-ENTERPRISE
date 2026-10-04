@@ -9,6 +9,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
 import { getState } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
@@ -25,9 +26,12 @@ import type { Warehouse } from '../services/warehouseService'
 
 /** Pestaña «Conteos» de Inventario: conteos cíclicos (ENDPOINTS.stockCounts). */
 
-const STATUS_BADGES: Record<StockCount['status'], { variant: 'warning' | 'success'; label: string }> = {
-  draft: { variant: 'warning', label: 'Borrador' },
-  done: { variant: 'success', label: 'Confirmado' },
+const STATUS_BADGES: Record<
+  StockCount['status'],
+  { variant: 'warning' | 'success'; labelKey: string }
+> = {
+  draft: { variant: 'warning', labelKey: 'inventory.borrador' },
+  done: { variant: 'success', labelKey: 'inventory.confirmado' },
 }
 
 interface Line {
@@ -38,6 +42,7 @@ interface Line {
 const EMPTY_FORM = { warehouse_id: '', notes: '', lines: [{ product_id: '', counted_qty: '0' }] as Line[] }
 
 export default function StockCountsPanel() {
+  const { t } = useLang()
   const toast = useToast()
   const version = useDataVersion()
   const products = useMemo(() => getState().products, [version])
@@ -73,7 +78,9 @@ export default function StockCountsPanel() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los conteos')
+          setError(
+            reason instanceof Error ? reason.message : t('inventory.no-se-pudieron-cargar-los-conteos'),
+          )
         }
       })
       .finally(() => {
@@ -104,11 +111,11 @@ export default function StockCountsPanel() {
   const handleSubmit = async () => {
     const warehouseId = Number(form.warehouse_id)
     if (!warehouseId) {
-      setFormError('Selecciona el almacén a contar.')
+      setFormError(t('inventory.selecciona-el-almacen-a-contar'))
       return
     }
     if (form.lines.length === 0) {
-      setFormError('Agrega al menos un producto al conteo.')
+      setFormError(t('inventory.agrega-al-menos-un-producto-al-conteo'))
       return
     }
     const items = form.lines.map((line) => ({
@@ -116,11 +123,11 @@ export default function StockCountsPanel() {
       counted_qty: Number(line.counted_qty),
     }))
     if (items.some((item) => !item.product_id)) {
-      setFormError('Selecciona el producto de cada línea.')
+      setFormError(t('inventory.selecciona-el-producto-de-cada-linea'))
       return
     }
     if (items.some((item) => Number.isNaN(item.counted_qty) || item.counted_qty < 0)) {
-      setFormError('La cantidad contada debe ser un número mayor o igual a 0.')
+      setFormError(t('inventory.la-cantidad-contada-debe-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
     setSaving(true)
@@ -130,11 +137,13 @@ export default function StockCountsPanel() {
         notes: form.notes.trim() || null,
         items,
       })
-      toast.success('Conteo creado', `${created.count_number} quedó en borrador.`)
+      toast.success(t('inventory.conteo-creado'), `${created.count_number} ${t('inventory.quedo-en-borrador')}`)
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo crear el conteo.')
+      setFormError(
+        reason instanceof Error ? reason.message : t('inventory.no-se-pudo-crear-el-conteo'),
+      )
     } finally {
       setSaving(false)
     }
@@ -151,8 +160,8 @@ export default function StockCountsPanel() {
     } catch (reason: unknown) {
       if (detailRequest.current === requestId) {
         toast.error(
-          'No se pudo abrir el conteo',
-          reason instanceof Error ? reason.message : 'Error inesperado',
+          t('inventory.no-se-pudo-abrir-el-conteo'),
+          reason instanceof Error ? reason.message : t('inventory.error-inesperado'),
         )
         setDetailOpen(false)
       }
@@ -173,13 +182,16 @@ export default function StockCountsPanel() {
     setConfirming(true)
     try {
       await confirmStockCount(detail.id)
-      toast.success('Conteo confirmado', 'Los ajustes de diferencia se aplicaron al inventario.')
+      toast.success(
+        t('inventory.conteo-confirmado'),
+        t('inventory.los-ajustes-de-diferencia-se-aplicaron-al-inventario'),
+      )
       closeDetail()
       reload()
     } catch (reason: unknown) {
       toast.error(
-        'No se pudo confirmar',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('inventory.no-se-pudo-confirmar'),
+        reason instanceof Error ? reason.message : t('inventory.error-inesperado'),
       )
     } finally {
       setConfirming(false)
@@ -191,11 +203,13 @@ export default function StockCountsPanel() {
     setDeleteError(null)
     try {
       await deleteStockCount(deleting.id)
-      toast.success('Conteo eliminado', `${deleting.count_number} se descartó.`)
+      toast.success(t('inventory.conteo-eliminado'), `${deleting.count_number} ${t('inventory.se-descarto')}`)
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar el conteo.')
+      setDeleteError(
+        reason instanceof Error ? reason.message : t('inventory.no-se-pudo-eliminar-el-conteo'),
+      )
     }
   }
 
@@ -203,12 +217,13 @@ export default function StockCountsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Conteo cíclico por almacén: registra las cantidades contadas y confirma para ajustar el
-          stock.
+          {t(
+            'inventory.conteo-ciclico-por-almacen-registra-las-cantidades-contadas-y-confirma-para-ajustar-el-stock',
+          )}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo conteo
+          {t('inventory.nuevo-conteo')}
         </Button>
       </div>
 
@@ -218,18 +233,26 @@ export default function StockCountsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('inventory.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && counts.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Conteo', 'Almacén', 'Ítems', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('inventory.conteo'),
+              t('inventory.almacen'),
+              t('inventory.items'),
+              t('inventory.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={5}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando conteos…
+                {t('inventory.cargando-conteos')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -238,19 +261,29 @@ export default function StockCountsPanel() {
         <div className="card">
           <EmptyState
             icon={ClipboardList}
-            title="Sin conteos"
-            description="Aún no hay conteos de inventario. Crea el primero para comparar lo esperado con lo contado."
+            title={t('inventory.sin-conteos')}
+            description={t(
+              'inventory.aun-no-hay-conteos-de-inventario-crea-el-primero-para-comparar-lo-esperado-con-lo-contado',
+            )}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo conteo
+                {t('inventory.nuevo-conteo')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Conteo', 'Almacén', 'Ítems', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('inventory.conteo'),
+              t('inventory.almacen'),
+              t('inventory.items'),
+              t('inventory.estado'),
+              t('inventory.acciones'),
+            ]}
+          >
             {counts.map((count) => {
               const badge = STATUS_BADGES[count.status]
               return (
@@ -264,15 +297,15 @@ export default function StockCountsPanel() {
                   <TableCell className="text-gray-600">{count.warehouse_name}</TableCell>
                   <TableCell>{count.item_count}</TableCell>
                   <TableCell>
-                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                    <Badge variant={badge.variant}>{t(badge.labelKey)}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => openDetail(count)}
-                        aria-label={`Ver ${count.count_number}`}
-                        title="Ver detalle"
+                        aria-label={`${t('inventory.ver')} ${count.count_number}`}
+                        title={t('inventory.ver-detalle')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <Eye aria-hidden="true" className="h-4 w-4" />
@@ -285,8 +318,8 @@ export default function StockCountsPanel() {
                               setDeleteError(null)
                               setDeleting(count)
                             }}
-                            aria-label={`Eliminar ${count.count_number}`}
-                            title="Eliminar"
+                            aria-label={`${t('inventory.eliminar')} ${count.count_number}`}
+                            title={t('inventory.eliminar')}
                             className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                           >
                             <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -306,28 +339,28 @@ export default function StockCountsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title="Nuevo conteo"
+        title={t('inventory.nuevo-conteo')}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('inventory.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              Crear conteo
+              {t('inventory.crear-conteo')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="Almacén"
+            label={t('inventory.almacen')}
             required
             value={form.warehouse_id}
             onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })}
             error={formError ?? undefined}
           >
-            <option value="">Selecciona un almacén…</option>
+            <option value="">{t('inventory.selecciona-un-almacen')}</option>
             {warehouses.map((warehouse) => (
               <option key={warehouse.id} value={warehouse.id}>
                 {warehouse.code} · {warehouse.name}
@@ -336,16 +369,18 @@ export default function StockCountsPanel() {
           </Select>
 
           <Textarea
-            label="Notas"
-            hint="Opcional. Observaciones del conteo."
+            label={t('inventory.notas')}
+            hint={t('inventory.opcional-observaciones-del-conteo')}
             value={form.notes}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="Ej. Conteo mensual del almacén central"
+            placeholder={t('inventory.ej-conteo-mensual-del-almacen-central')}
           />
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-body-sm font-medium text-gray-700">Productos contados</span>
+              <span className="text-body-sm font-medium text-gray-700">
+                {t('inventory.productos-contados')}
+              </span>
               <Button
                 size="sm"
                 variant="outline"
@@ -357,7 +392,7 @@ export default function StockCountsPanel() {
                 }
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Agregar línea
+                {t('inventory.agregar-linea')}
               </Button>
             </div>
 
@@ -367,11 +402,11 @@ export default function StockCountsPanel() {
                 <div key={index} className="flex flex-wrap items-end gap-3 rounded-lg bg-gray-50 p-3">
                   <div className="min-w-52 flex-1">
                     <Select
-                      label="Producto"
+                      label={t('inventory.producto')}
                       value={line.product_id}
                       onChange={(event) => setLine(index, { product_id: event.target.value })}
                     >
-                      <option value="">Selecciona un producto…</option>
+                      <option value="">{t('inventory.selecciona-un-producto-2')}</option>
                       {products.map((entry) => (
                         <option key={entry.id} value={entry.id}>
                           {entry.sku} · {entry.name}
@@ -381,7 +416,7 @@ export default function StockCountsPanel() {
                   </div>
                   <div className="w-36">
                     <Input
-                      label="Contado"
+                      label={t('inventory.contado')}
                       type="number"
                       min={0}
                       step={1}
@@ -390,7 +425,10 @@ export default function StockCountsPanel() {
                     />
                   </div>
                   <p className="pb-2.5 text-caption text-gray-500">
-                    Esperado: <span className="font-semibold text-gray-700">{product ? product.current_stock : '—'}</span>
+                    {t('inventory.esperado-2')}{' '}
+                    <span className="font-semibold text-gray-700">
+                      {product ? product.current_stock : '—'}
+                    </span>
                   </p>
                   <button
                     type="button"
@@ -400,8 +438,8 @@ export default function StockCountsPanel() {
                         lines: previous.lines.filter((_, position) => position !== index),
                       }))
                     }
-                    aria-label="Quitar línea"
-                    title="Quitar línea"
+                    aria-label={t('inventory.quitar-linea')}
+                    title={t('inventory.quitar-linea')}
                     className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                   >
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -417,18 +455,18 @@ export default function StockCountsPanel() {
       <Modal
         open={detailOpen}
         onClose={closeDetail}
-        title={detail ? `Conteo ${detail.count_number}` : 'Conteo'}
+        title={detail ? `${t('inventory.conteo')} ${detail.count_number}` : t('inventory.conteo')}
         size="lg"
         footer={
           detail ? (
             <>
               <Button variant="outline" onClick={closeDetail}>
-                Cerrar
+                {t('inventory.cerrar')}
               </Button>
               {detail.status === 'draft' && (
                 <Button onClick={handleConfirm} loading={confirming}>
                   <Check aria-hidden="true" className="h-4 w-4" />
-                  Confirmar conteo
+                  {t('inventory.confirmar-conteo')}
                 </Button>
               )}
             </>
@@ -438,25 +476,32 @@ export default function StockCountsPanel() {
         {detailBusy || !detail ? (
           <p className="flex items-center justify-center gap-2 py-8 text-body-sm text-gray-500">
             <Spinner size={16} className="text-loading" />
-            Cargando detalle…
+            {t('inventory.cargando-detalle')}
           </p>
         ) : (
           <div className="space-y-4">
             <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Almacén</dt>
+                <dt className="text-gray-600">{t('inventory.almacen')}</dt>
                 <dd className="font-medium text-gray-900">{detail.warehouse_name}</dd>
               </div>
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Estado</dt>
+                <dt className="text-gray-600">{t('inventory.estado')}</dt>
                 <dd>
                   <Badge variant={STATUS_BADGES[detail.status].variant}>
-                    {STATUS_BADGES[detail.status].label}
+                    {t(STATUS_BADGES[detail.status].labelKey)}
                   </Badge>
                 </dd>
               </div>
             </dl>
-            <DataTable headers={['Producto', 'Esperado', 'Contado', 'Diferencia']}>
+            <DataTable
+              headers={[
+                t('inventory.producto'),
+                t('inventory.esperado'),
+                t('inventory.contado'),
+                t('inventory.diferencia'),
+              ]}
+            >
               {detail.items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium text-gray-900">{item.product_name}</TableCell>
@@ -480,21 +525,21 @@ export default function StockCountsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar conteo"
+        title={t('inventory.eliminar-conteo')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('inventory.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('inventory.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar el conteo <strong>{deleting?.count_number}</strong>? Solo se pueden eliminar
-          los conteos en borrador.
+          {t('inventory.eliminar-el-conteo')} <strong>{deleting?.count_number}</strong>?{' '}
+          {t('inventory.solo-se-pueden-eliminar-los-conteos-en-borrador')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Paginación (txt §5.4): botones outline con hover cyan y
@@ -35,16 +36,18 @@ export default function Pagination({
   total,
   pageSize = 10,
 }: PaginationProps) {
+  const { t } = useLang()
+
   if (pageCount <= 1 && total === undefined) return null
 
   const from = total === undefined ? 0 : (page - 1) * pageSize + 1
   const to = total === undefined ? 0 : Math.min(page * pageSize, total)
 
   return (
-    <nav aria-label="Paginación" className="flex flex-wrap items-center justify-between gap-3">
+    <nav aria-label={t('common.paginacion')} className="flex flex-wrap items-center justify-between gap-3">
       {total !== undefined && (
         <p className="text-caption text-gray-500">
-          Mostrando {from}–{to} de {total}
+          {t('common.mostrando')} {from}–{to} {t('common.de')} {total}
         </p>
       )}
       <div className="flex items-center gap-1.5">
@@ -52,7 +55,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Página anterior"
+          aria-label={t('common.pagina-anterior')}
           className={cn('flex h-9 w-9 items-center justify-center rounded-md border transition-colors', OUTLINE)}
         >
           <ChevronLeft aria-hidden="true" className="h-4 w-4" />
@@ -68,7 +71,7 @@ export default function Pagination({
               key={item}
               type="button"
               onClick={() => onPageChange(item)}
-              aria-label={`Página ${item}`}
+              aria-label={`${t('common.pagina')} ${item}`}
               aria-current={item === page ? 'page' : undefined}
               className={cn(
                 'flex h-9 min-w-9 items-center justify-center rounded-md border px-2 text-body-sm font-medium transition-colors',
@@ -84,7 +87,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pageCount}
-          aria-label="Página siguiente"
+          aria-label={t('common.pagina-siguiente')}
           className={cn('flex h-9 w-9 items-center justify-center rounded-md border transition-colors', OUTLINE)}
         >
           <ChevronRight aria-hidden="true" className="h-4 w-4" />

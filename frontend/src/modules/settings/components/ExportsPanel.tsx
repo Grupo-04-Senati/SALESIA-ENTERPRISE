@@ -9,9 +9,9 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatDateTime, formatNumber } from '@/utils/formatters'
 import {
-  EXPORT_TYPE_LABELS,
   createDataExport,
   deleteDataExport,
   listDataExports,
@@ -33,8 +33,18 @@ const FORMATS: ExportFormat[] = ['csv', 'xlsx', 'json']
 
 const EMPTY_FORM = { export_type: 'sales' as ExportType, format: 'csv' as ExportFormat }
 
+const EXPORT_TYPE_KEYS: Record<ExportType, string> = {
+  sales: 'settings.export-ventas',
+  products: 'settings.export-productos',
+  customers: 'settings.export-clientes',
+  inventory: 'settings.export-inventario',
+  returns: 'settings.export-devoluciones',
+  quotes: 'settings.export-cotizaciones',
+}
+
 export default function ExportsPanel() {
   const toast = useToast()
+  const { t } = useLang()
 
   const [items, setItems] = useState<DataExport[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +69,9 @@ export default function ExportsPanel() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las exportaciones',
+            reason instanceof Error
+              ? reason.message
+              : t('settings.no-se-pudieron-cargar-las-exportaciones'),
           )
         }
       })
@@ -78,15 +90,15 @@ export default function ExportsPanel() {
     try {
       const created = await createDataExport(form)
       toast.success(
-        'Exportación generada',
-        `${EXPORT_TYPE_LABELS[created.export_type]} · ${created.format.toUpperCase()} con ${formatNumber(created.row_count)} filas.`,
+        t('settings.exportacion-generada'),
+        `${t(EXPORT_TYPE_KEYS[created.export_type])} · ${created.format.toUpperCase()} ${t('settings.con')} ${formatNumber(created.row_count)} ${t('settings.filas-punto')}`,
       )
       setFormOpen(false)
       setForm(EMPTY_FORM)
       reload()
     } catch (reason: unknown) {
       setFormError(
-        reason instanceof Error ? reason.message : 'No se pudo crear la exportación.',
+        reason instanceof Error ? reason.message : t('settings.no-se-pudo-crear-la-exportacion'),
       )
     } finally {
       setSaving(false)
@@ -98,12 +110,17 @@ export default function ExportsPanel() {
     setDeleteError(null)
     try {
       await deleteDataExport(deleting.id)
-      toast.success('Exportación eliminada', 'Se quitó del historial de exportaciones.')
+      toast.success(
+        t('settings.exportacion-eliminada'),
+        t('settings.se-quito-del-historial-de-exportaciones'),
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
       setDeleteError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la exportación.',
+        reason instanceof Error
+          ? reason.message
+          : t('settings.no-se-pudo-eliminar-la-exportacion'),
       )
     }
   }
@@ -111,10 +128,7 @@ export default function ExportsPanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-body-sm text-gray-600">
-          Exporta datos del negocio en CSV, Excel o JSON. El backend calcula las filas de cada
-          archivo.
-        </p>
+        <p className="text-body-sm text-gray-600">{t('settings.exporta-datos-del-negocio')}</p>
         <Button
           onClick={() => {
             setForm(EMPTY_FORM)
@@ -123,7 +137,7 @@ export default function ExportsPanel() {
           }}
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva exportación
+          {t('settings.nueva-exportacion')}
         </Button>
       </div>
 
@@ -133,18 +147,27 @@ export default function ExportsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('settings.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && items.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Tipo', 'Formato', 'Filas', 'Estado', 'Fecha', '']}>
+          <DataTable
+            headers={[
+              t('settings.tipo'),
+              t('settings.formato'),
+              t('settings.filas'),
+              t('settings.estado'),
+              t('settings.fecha'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando exportaciones…
+                {t('settings.cargando-exportaciones')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -153,8 +176,8 @@ export default function ExportsPanel() {
         <div className="card">
           <EmptyState
             icon={Download}
-            title="Sin exportaciones"
-            description="Genera la primera exportación para descargar datos de ventas, productos o clientes."
+            title={t('settings.sin-exportaciones')}
+            description={t('settings.genera-la-primera-exportacion')}
             action={
               <Button
                 onClick={() => {
@@ -164,18 +187,27 @@ export default function ExportsPanel() {
                 }}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva exportación
+                {t('settings.nueva-exportacion')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Tipo', 'Formato', 'Filas', 'Estado', 'Fecha', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('settings.tipo'),
+              t('settings.formato'),
+              t('settings.filas'),
+              t('settings.estado'),
+              t('settings.fecha'),
+              t('settings.acciones'),
+            ]}
+          >
             {items.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="font-medium text-gray-900">
-                  {EXPORT_TYPE_LABELS[row.export_type]}
+                  {t(EXPORT_TYPE_KEYS[row.export_type])}
                 </TableCell>
                 <TableCell>
                   <Badge variant="primary">{row.format.toUpperCase()}</Badge>
@@ -183,7 +215,7 @@ export default function ExportsPanel() {
                 <TableCell>{formatNumber(row.row_count)}</TableCell>
                 <TableCell>
                   <Badge variant={row.status === 'completed' ? 'success' : 'warning'}>
-                    {row.status === 'completed' ? 'Completada' : 'En proceso'}
+                    {row.status === 'completed' ? t('settings.completada') : t('settings.en-proceso')}
                   </Badge>
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{formatDateTime(row.created_at)}</TableCell>
@@ -195,8 +227,8 @@ export default function ExportsPanel() {
                         setDeleteError(null)
                         setDeleting(row)
                       }}
-                      aria-label="Eliminar exportación"
-                      title="Eliminar"
+                      aria-label={t('settings.eliminar-exportacion')}
+                      title={t('settings.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -212,21 +244,21 @@ export default function ExportsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title="Nueva exportación"
+        title={t('settings.nueva-exportacion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              Generar exportación
+              {t('settings.generar-exportacion')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="Tipo de dato"
+            label={t('settings.tipo-de-dato')}
             required
             value={form.export_type}
             onChange={(event) =>
@@ -236,12 +268,12 @@ export default function ExportsPanel() {
           >
             {EXPORT_TYPES.map((type) => (
               <option key={type} value={type}>
-                {EXPORT_TYPE_LABELS[type]}
+                {t(EXPORT_TYPE_KEYS[type])}
               </option>
             ))}
           </Select>
           <Select
-            label="Formato"
+            label={t('settings.formato')}
             required
             value={form.format}
             onChange={(event) => setForm({ ...form, format: event.target.value as ExportFormat })}
@@ -253,7 +285,7 @@ export default function ExportsPanel() {
             ))}
           </Select>
           <p className="text-caption text-gray-500">
-            El backend calcula el número real de filas y lo muestra al terminar.
+            {t('settings.el-backend-calcula-el-numero-real-de-filas')}
           </p>
         </div>
       </Modal>
@@ -261,21 +293,21 @@ export default function ExportsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar exportación"
+        title={t('settings.eliminar-exportacion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('settings.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la exportación de{' '}
-          <strong>{deleting ? EXPORT_TYPE_LABELS[deleting.export_type] : ''}</strong>?
+          {t('settings.eliminar-la-exportacion-de')}{' '}
+          <strong>{deleting ? t(EXPORT_TYPE_KEYS[deleting.export_type]) : ''}</strong>?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

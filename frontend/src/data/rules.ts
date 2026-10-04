@@ -39,18 +39,18 @@ export const DEFAULT_RULES: AutomationRule[] = [
   /* ---------------------------- Ventas ---------------------------- */
   {
     code: 'RN-10_STOCK_INSUFICIENTE',
-    name: 'Bloquear venta sin stock',
+    name: 'automation.regla-bloquear-venta-sin-stock',
     description:
-      'Antes de registrar la venta verifica que exista stock suficiente de cada producto y rechaza la operación si no alcanza.',
+      'automation.regla-bloquear-venta-sin-stock-desc',
     module: 'Ventas',
     enabled: true,
     params: [],
   },
   {
     code: 'RN-11_TOTALES',
-    name: 'Calcular totales e IGV automático',
+    name: 'automation.regla-calcular-totales-igv',
     description:
-      'Calcula subtotal, descuento, impuesto y total de cada venta con la tasa configurada, sin intervención manual.',
+      'automation.regla-calcular-totales-igv-desc',
     module: 'Ventas',
     enabled: true,
     params: [
@@ -69,35 +69,35 @@ export const DEFAULT_RULES: AutomationRule[] = [
   },
   {
     code: 'RN-16_PAGO_MAXIMO',
-    name: 'Impedir pago mayor al total',
-    description: 'Rechaza el pago cuando el monto cobrado supera el total de la venta.',
+    name: 'automation.regla-impedir-pago-mayor',
+    description: 'automation.regla-impedir-pago-mayor-desc',
     module: 'Ventas',
     enabled: true,
     params: [],
   },
   {
     code: 'RF-08_STOCK_AUTOMATICO',
-    name: 'Descontar stock y generar kardex',
+    name: 'automation.regla-descontar-stock-kardex',
     description:
-      'Al confirmar la venta descuenta el stock de cada línea y registra el movimiento de salida en el kardex.',
+      'automation.regla-descontar-stock-kardex-desc',
     module: 'Ventas',
     enabled: true,
     params: [],
   },
   {
     code: 'RF-07_HISTORIAL_CLIENTE',
-    name: 'Actualizar historial del cliente',
+    name: 'automation.regla-actualizar-historial-cliente',
     description:
-      'Suma la venta al historial y al total acumulado del cliente, y clasifica su estado de pago.',
+      'automation.regla-actualizar-historial-cliente-desc',
     module: 'Ventas',
     enabled: true,
     params: [],
   },
   {
     code: 'RF-09_INDICADORES',
-    name: 'Recalcular indicadores',
+    name: 'automation.regla-recalcular-indicadores',
     description:
-      'Actualiza Dashboard, Analytics, Insights y Reportes con la venta recién registrada.',
+      'automation.regla-recalcular-indicadores-desc',
     module: 'Ventas',
     enabled: true,
     params: [],
@@ -106,25 +106,25 @@ export const DEFAULT_RULES: AutomationRule[] = [
   /* --------------------------- Inventario -------------------------- */
   {
     code: 'RN-20_STOCK_NEGATIVO',
-    name: 'Nunca permitir stock negativo',
-    description: 'Bloquea salidas, mermas y ajustes que dejen el stock por debajo de cero.',
+    name: 'automation.regla-nunca-stock-negativo',
+    description: 'automation.regla-nunca-stock-negativo-desc',
     module: 'Inventario',
     enabled: true,
     params: [],
   },
   {
     code: 'RN-21_MOTIVO_MERMA',
-    name: 'Exigir motivo en merma y ajuste',
-    description: 'No permite registrar mermas ni ajustes sin un motivo escrito.',
+    name: 'automation.regla-exigir-motivo-merma',
+    description: 'automation.regla-exigir-motivo-merma-desc',
     module: 'Inventario',
     enabled: true,
     params: [],
   },
   {
     code: 'ALERTA_STOCK',
-    name: 'Alerta de stock bajo',
+    name: 'automation.regla-alerta-stock-bajo',
     description:
-      'Marca los productos cuyo stock iguala o supera por poco el mínimo, y los muestra en el panel de alertas.',
+      'automation.regla-alerta-stock-bajo-desc',
     module: 'Inventario',
     enabled: true,
     params: [
@@ -145,24 +145,24 @@ export const DEFAULT_RULES: AutomationRule[] = [
   /* ------------------------ Clientes y Productos -------------------- */
   {
     code: 'RN-01_DOCUMENTO_UNICO',
-    name: 'Documento único por cliente',
-    description: 'Impide registrar dos clientes con el mismo número de documento.',
+    name: 'automation.regla-documento-unico',
+    description: 'automation.regla-documento-unico-desc',
     module: 'Clientes',
     enabled: true,
     params: [],
   },
   {
     code: 'RN-03_SKU_UNICO',
-    name: 'SKU único de producto',
-    description: 'Impide registrar dos productos con el mismo SKU.',
+    name: 'automation.regla-sku-unico',
+    description: 'automation.regla-sku-unico-desc',
     module: 'Productos',
     enabled: true,
     params: [],
   },
   {
     code: 'RN-05_PRECIO_VENTA',
-    name: 'Precio de venta ≥ costo',
-    description: 'Rechaza productos cuyo precio de venta sea menor al costo.',
+    name: 'automation.regla-precio-venta-costo',
+    description: 'automation.regla-precio-venta-costo-desc',
     module: 'Productos',
     enabled: true,
     params: [],
@@ -171,9 +171,9 @@ export const DEFAULT_RULES: AutomationRule[] = [
   /* --------------------------- Analítica --------------------------- */
   {
     code: 'REG-03_CONCENTRACION',
-    name: 'Alerta de concentración de ventas',
+    name: 'automation.regla-alerta-concentracion-ventas',
     description:
-      'Genera un insight de alerta cuando un vendedor concentra demasiados ingresos del periodo.',
+      'automation.regla-alerta-concentracion-ventas-desc',
     module: 'Analítica',
     enabled: true,
     params: [
@@ -192,9 +192,9 @@ export const DEFAULT_RULES: AutomationRule[] = [
   },
   {
     code: 'REG-01_TENDENCIA',
-    name: 'Alerta de variación mensual',
+    name: 'automation.regla-alerta-variacion-mensual',
     description:
-      'Genera un insight cuando la variación de ingresos de un mes supera el margen definido.',
+      'automation.regla-alerta-variacion-mensual-desc',
     module: 'Analítica',
     enabled: true,
     params: [
@@ -213,8 +213,8 @@ export const DEFAULT_RULES: AutomationRule[] = [
   },
   {
     code: 'REG-07_STOCK_INSIGHT',
-    name: 'Insight de stock bajo',
-    description: 'Genera el insight de productos agotados o por debajo del mínimo.',
+    name: 'automation.regla-insight-stock-bajo',
+    description: 'automation.regla-insight-stock-bajo-desc',
     module: 'Analítica',
     enabled: true,
     params: [],
@@ -223,9 +223,9 @@ export const DEFAULT_RULES: AutomationRule[] = [
   /* -------------------------- Probabilidad ------------------------- */
   {
     code: 'RN-40_MINIMO_DATOS',
-    name: 'Mínimo de observaciones',
+    name: 'automation.regla-minimo-observaciones',
     description:
-      'Exige al menos esta cantidad de datos para calcular media, mediana o clasificar una variable.',
+      'automation.regla-minimo-observaciones-desc',
     module: 'Probabilidad',
     enabled: true,
     params: [
@@ -243,16 +243,16 @@ export const DEFAULT_RULES: AutomationRule[] = [
   },
   {
     code: 'RN-43_BAYES_CERO',
-    name: 'Bloquear Bayes con P(B) = 0',
-    description: 'No permite calcular el posterior cuando la evidencia es cero (resultado indefinido).',
+    name: 'automation.regla-bloquear-bayes-pb0',
+    description: 'automation.regla-bloquear-bayes-pb0-desc',
     module: 'Probabilidad',
     enabled: true,
     params: [],
   },
   {
     code: 'RF-21_HISTORIAL',
-    name: 'Registrar historial de análisis',
-    description: 'Guarda cada cálculo realizado en el módulo para poder consultarlo después.',
+    name: 'automation.regla-registrar-historial-analisis',
+    description: 'automation.regla-registrar-historial-analisis-desc',
     module: 'Probabilidad',
     enabled: true,
     params: [],

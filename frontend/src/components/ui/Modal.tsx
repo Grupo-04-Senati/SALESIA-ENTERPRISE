@@ -2,6 +2,7 @@ import { useEffect, useId } from 'react'
 import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Modal del sistema de diseño (txt §5.4): overlay gris-900/50,
@@ -27,6 +28,7 @@ const SIZES = {
 
 export default function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const titleId = useId()
+  const { t } = useLang()
 
   useEffect(() => {
     if (!open) return
@@ -60,12 +62,12 @@ export default function Modal({ open, onClose, title, children, footer, size = '
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-h3 text-gray-900">
-            {title}
+            {t(title)}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={t('common.cerrar')}
             className="-m-1 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
           >
             <X aria-hidden="true" className="h-5 w-5" />

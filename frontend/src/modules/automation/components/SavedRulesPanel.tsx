@@ -10,8 +10,8 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import {
-  SEVERITY_LABELS,
   createSavedRule,
   deleteSavedRule,
   listSavedRules,
@@ -29,6 +29,12 @@ const SEVERITY_BADGES: Record<RuleSeverity, BadgeVariant> = {
   critical: 'error',
 }
 
+const SEVERITY_KEYS: Record<RuleSeverity, string> = {
+  info: 'automation.severidad-informativa',
+  warning: 'automation.severidad-advertencia',
+  critical: 'automation.severidad-critica',
+}
+
 const EMPTY_FORM = {
   code: '',
   name: '',
@@ -38,23 +44,9 @@ const EMPTY_FORM = {
   action: '',
 }
 
-function parseJsonObject(
-  raw: string,
-): { value: Record<string, unknown> | null; error: string | null } {
-  if (!raw.trim()) return { value: null, error: null }
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return { value: null, error: 'Debe ser un objeto JSON, p. ej. {"umbral": 10}.' }
-    }
-    return { value: parsed as Record<string, unknown>, error: null }
-  } catch {
-    return { value: null, error: 'El JSON no es válido: revisa comas y comillas.' }
-  }
-}
-
 export default function SavedRulesPanel() {
   const toast = useToast()
+  const { t } = useLang()
 
   const [rules, setRules] = useState<SavedRule[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,7 +73,7 @@ export default function SavedRulesPanel() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar las reglas')
+          setError(reason instanceof Error ? reason.message : t('automation.no-se-pudieron-cargar-las-reglas'))
         }
       })
       .finally(() => {
@@ -119,15 +111,30 @@ export default function SavedRulesPanel() {
     setFormOpen(true)
   }
 
+  const parseJsonObject = (
+    raw: string,
+  ): { value: Record<string, unknown> | null; error: string | null } => {
+    if (!raw.trim()) return { value: null, error: null }
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { value: null, error: t('automation.debe-ser-un-objeto-json') }
+      }
+      return { value: parsed as Record<string, unknown>, error: null }
+    } catch {
+      return { value: null, error: t('automation.el-json-no-es-valido-revisa-comas-y-comillas') }
+    }
+  }
+
   const handleSubmit = async () => {
     const code = form.code.trim()
     const name = form.name.trim()
     if (code.length < 1 || code.length > 50) {
-      setFormError('El código debe tener entre 1 y 50 caracteres.')
+      setFormError(t('automation.el-codigo-debe-tener-entre-1-y-50-caracteres'))
       return
     }
     if (name.length < 3) {
-      setFormError('El nombre debe tener al menos 3 caracteres.')
+      setFormError(t('automation.el-nombre-debe-tener-al-menos-3-caracteres'))
       return
     }
     const condition = parseJsonObject(form.condition)
@@ -148,15 +155,15 @@ export default function SavedRulesPanel() {
     try {
       if (editing) {
         await updateSavedRule(editing.id, input)
-        toast.success('Regla actualizada', `${name} se guardó correctamente.`)
+        toast.success(t('automation.regla-actualizada'), `${name} ${t('automation.se-guardo-correctamente')}`)
       } else {
         await createSavedRule(input)
-        toast.success('Regla creada', `${name} ya está registrada en el backend.`)
+        toast.success(t('automation.regla-creada'), `${name} ${t('automation.ya-esta-registrada-en-el-backend')}`)
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la regla.')
+      setFormError(reason instanceof Error ? reason.message : t('automation.no-se-pudo-guardar-la-regla'))
     } finally {
       setSaving(false)
     }
@@ -167,11 +174,11 @@ export default function SavedRulesPanel() {
     setDeleteError(null)
     try {
       await deleteSavedRule(deleting.id)
-      toast.success('Regla eliminada', `${deleting.name} se quitó del listado.`)
+      toast.success(t('automation.regla-eliminada'), `${deleting.name} ${t('automation.se-quito-del-listado')}`)
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar la regla.')
+      setDeleteError(reason instanceof Error ? reason.message : t('automation.no-se-pudo-eliminar-la-regla'))
     }
   }
 
@@ -179,11 +186,11 @@ export default function SavedRulesPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Reglas guardadas en el backend: código, severidad, condición y acción en JSON.
+          {t('automation.reglas-guardadas-en-el-backend-codigo-severidad-condicion-y-accion-en-json')}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva regla
+          {t('automation.nueva-regla')}
         </Button>
       </div>
 
@@ -193,18 +200,18 @@ export default function SavedRulesPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('automation.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && rules.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Código', 'Nombre', 'Severidad', 'Estado', '']}>
+          <DataTable headers={[t('automation.codigo'), t('automation.nombre'), t('automation.severidad'), t('automation.estado'), '']}>
             <TableStateRow colSpan={5}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando reglas…
+                {t('automation.cargando-reglas')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -213,19 +220,19 @@ export default function SavedRulesPanel() {
         <div className="card">
           <EmptyState
             icon={ListChecks}
-            title="Sin reglas guardadas"
-            description="Crea la primera regla para que el backend automatice decisiones de negocio."
+            title={t('automation.sin-reglas-guardadas')}
+            description={t('automation.crea-la-primera-regla-para-que-el-backend-automatice-decisiones-de-negocio')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva regla
+                {t('automation.nueva-regla')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Código', 'Nombre', 'Severidad', 'Estado', 'Acciones']}>
+          <DataTable headers={[t('automation.codigo'), t('automation.nombre'), t('automation.severidad'), t('automation.estado'), t('automation.acciones')]}>
             {rules.map((rule) => (
               <TableRow key={rule.id}>
                 <TableCell className="font-mono font-medium text-gray-900">{rule.code}</TableCell>
@@ -239,12 +246,12 @@ export default function SavedRulesPanel() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={SEVERITY_BADGES[rule.severity]}>
-                    {SEVERITY_LABELS[rule.severity]}
+                    {t(SEVERITY_KEYS[rule.severity])}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={rule.status === 'inactive' ? 'neutral' : 'success'}>
-                    {rule.status === 'inactive' ? 'Inactiva' : 'Activa'}
+                    {rule.status === 'inactive' ? t('automation.inactiva') : t('automation.activa')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -252,8 +259,8 @@ export default function SavedRulesPanel() {
                     <button
                       type="button"
                       onClick={() => openEdit(rule)}
-                      aria-label={`Editar ${rule.name}`}
-                      title="Editar"
+                      aria-label={`${t('automation.editar')} ${rule.name}`}
+                      title={t('automation.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -264,8 +271,8 @@ export default function SavedRulesPanel() {
                         setDeleteError(null)
                         setDeleting(rule)
                       }}
-                      aria-label={`Eliminar ${rule.name}`}
-                      title="Eliminar"
+                      aria-label={`${t('automation.eliminar')} ${rule.name}`}
+                      title={t('automation.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -281,15 +288,15 @@ export default function SavedRulesPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar regla' : 'Nueva regla'}
+        title={editing ? t('automation.editar-regla') : t('automation.nueva-regla')}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('automation.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear regla'}
+              {editing ? t('automation.guardar-cambios') : t('automation.crear-regla')}
             </Button>
           </>
         }
@@ -297,17 +304,17 @@ export default function SavedRulesPanel() {
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Código"
+              label={t('automation.codigo')}
               required
               maxLength={50}
               value={form.code}
               onChange={(event) => setForm({ ...form, code: event.target.value })}
-              placeholder="Ej. ALERTA_STOCK_CRITICO"
+              placeholder={t('automation.ej-alerta-stock-critico')}
               error={formError ?? undefined}
               autoFocus
             />
             <Select
-              label="Severidad"
+              label={t('automation.severidad')}
               required
               value={form.severity}
               onChange={(event) =>
@@ -316,30 +323,30 @@ export default function SavedRulesPanel() {
             >
               {SEVERITIES.map((severity) => (
                 <option key={severity} value={severity}>
-                  {SEVERITY_LABELS[severity]}
+                  {t(SEVERITY_KEYS[severity])}
                 </option>
               ))}
             </Select>
           </div>
           <Input
-            label="Nombre"
+            label={t('automation.nombre')}
             required
             minLength={3}
             maxLength={150}
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="Ej. Alerta de stock crítico"
+            placeholder={t('automation.ej-alerta-de-stock-critico')}
           />
           <Textarea
-            label="Descripción"
-            hint="Opcional. Qué hace esta regla."
+            label={t('automation.descripcion')}
+            hint={t('automation.opcional-que-hace-esta-regla')}
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Ej. Avisa cuando un producto baje del stock mínimo"
+            placeholder={t('automation.ej-avisa-cuando-un-producto-baje-del-stock-minimo')}
           />
           <Textarea
-            label="Condición (JSON)"
-            hint="Opcional. Se valida como objeto JSON."
+            label={t('automation.condicion-json')}
+            hint={t('automation.opcional-se-valida-como-objeto-json')}
             value={form.condition}
             onChange={(event) => {
               setForm({ ...form, condition: event.target.value })
@@ -350,8 +357,8 @@ export default function SavedRulesPanel() {
             className="font-mono text-caption"
           />
           <Textarea
-            label="Acción (JSON)"
-            hint="Opcional. Se valida como objeto JSON."
+            label={t('automation.accion-json')}
+            hint={t('automation.opcional-se-valida-como-objeto-json')}
             value={form.action}
             onChange={(event) => {
               setForm({ ...form, action: event.target.value })
@@ -367,20 +374,20 @@ export default function SavedRulesPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar regla"
+        title={t('automation.eliminar-regla')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('automation.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('automation.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la regla <strong>{deleting?.name}</strong> ({deleting?.code})?
+          {t('automation.eliminar-la-regla')}{' '}<strong>{deleting?.name}</strong> ({deleting?.code})?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/formatters'
 import {
   CUSTOMER_SEGMENTS,
+  SEGMENT_KEYS,
   createCustomer,
   deactivateCustomer,
   listCustomers,
@@ -25,6 +26,7 @@ import CustomerHistoryModal from '../components/CustomerHistoryModal'
 import SegmentsPanel from '../components/SegmentsPanel'
 import InteractionsPanel from '../components/InteractionsPanel'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Página de Clientes (Fase 07 · RF-03): listado con búsqueda y filtros,
@@ -35,19 +37,20 @@ import { useDataVersion } from '@/data/DataProvider'
 
 const PAGE_SIZE = 10
 
-const TAB_ITEMS = [
-  { id: 'directorio', label: 'Directorio' },
-  { id: 'segmentos', label: 'Segmentos' },
-  { id: 'interacciones', label: 'Interacciones' },
-]
-
-const STATUS_LABELS: Record<Customer['status'], { variant: 'success' | 'neutral'; label: string }> = {
-  active: { variant: 'success', label: 'Activo' },
-  inactive: { variant: 'neutral', label: 'Inactivo' },
-}
-
 export default function CustomersPage() {
+  const { t } = useLang()
   const toast = useToast()
+
+  const TAB_ITEMS = [
+    { id: 'directorio', label: t('customers.directorio') },
+    { id: 'segmentos', label: t('customers.segmentos') },
+    { id: 'interacciones', label: t('customers.interacciones') },
+  ]
+
+  const STATUS_LABELS: Record<Customer['status'], { variant: 'success' | 'neutral'; label: string }> = {
+    active: { variant: 'success', label: t('customers.activo') },
+    inactive: { variant: 'neutral', label: t('customers.inactivo') },
+  }
 
   // Listado
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -95,7 +98,11 @@ export default function CustomersPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los clientes')
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : t('customers.no-se-pudieron-cargar-los-clientes'),
+          )
         }
       })
       .finally(() => {
@@ -129,15 +136,24 @@ export default function CustomersPage() {
     try {
       if (editing) {
         await updateCustomer(editing.id, input)
-        toast.success('Cliente actualizado', `${input.name} se guardó correctamente.`)
+        toast.success(
+          t('customers.cliente-actualizado'),
+          `${input.name} ${t('customers.se-guardo-correctamente')}`,
+        )
       } else {
         await createCustomer(input)
-        toast.success('Cliente creado', `${input.name} se agregó al directorio.`)
+        toast.success(
+          t('customers.cliente-creado'),
+          `${input.name} ${t('customers.se-agrego-al-directorio')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      toast.error('No se pudo guardar', reason instanceof Error ? reason.message : 'Error inesperado')
+      toast.error(
+        t('customers.no-se-pudo-guardar'),
+        reason instanceof Error ? reason.message : t('customers.error-inesperado'),
+      )
     }
   }
 
@@ -146,11 +162,17 @@ export default function CustomersPage() {
     setDeletingBusy(true)
     try {
       await deactivateCustomer(deleting.id)
-      toast.success('Cliente dado de baja', `${deleting.name} pasó a estado inactivo.`)
+      toast.success(
+        t('customers.cliente-dado-de-baja'),
+        `${deleting.name} ${t('customers.paso-a-estado-inactivo')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      toast.error('No se pudo dar de baja', reason instanceof Error ? reason.message : 'Error inesperado')
+      toast.error(
+        t('customers.no-se-pudo-dar-de-baja'),
+        reason instanceof Error ? reason.message : t('customers.error-inesperado'),
+      )
     } finally {
       setDeletingBusy(false)
     }
@@ -161,14 +183,14 @@ export default function CustomersPage() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Clientes</h1>
+          <h1>{t('customers.clientes')}</h1>
           <p className="mt-1 text-body-sm text-gray-600">
-            Directorio de clientes: fichas, segmentación, historial y estados (RF-03).
+            {t('customers.directorio-de-clientes-fichas-segmentacion-historial-y-estados-rf-03')}
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo cliente
+          {t('customers.nuevo-cliente')}
         </Button>
       </div>
 
@@ -180,34 +202,34 @@ export default function CustomersPage() {
       <div className="card flex flex-col gap-3 md:flex-row md:items-end">
         <Input
           type="search"
-          aria-label="Buscar clientes"
-          placeholder="Buscar por nombre, documento o correo…"
+          aria-label={t('customers.buscar-clientes')}
+          placeholder={t('customers.buscar-por-nombre-documento-o-correo')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="md:flex-1"
         />
         <Select
-          aria-label="Filtrar por segmento"
+          aria-label={t('customers.filtrar-por-segmento')}
           value={segment}
           onChange={(event) => setSegment(event.target.value)}
           className="md:w-44"
         >
-          <option value="">Todos los segmentos</option>
+          <option value="">{t('customers.todos-los-segmentos')}</option>
           {CUSTOMER_SEGMENTS.map((value) => (
             <option key={value} value={value}>
-              {value}
+              {t(SEGMENT_KEYS[value] ?? value)}
             </option>
           ))}
         </Select>
         <Select
-          aria-label="Filtrar por estado"
+          aria-label={t('customers.filtrar-por-estado')}
           value={status}
           onChange={(event) => setStatus(event.target.value as 'active' | 'inactive' | '')}
           className="md:w-40"
         >
-          <option value="">Todos</option>
-          <option value="active">Activos</option>
-          <option value="inactive">Inactivos</option>
+          <option value="">{t('customers.todos')}</option>
+          <option value="active">{t('customers.activos')}</option>
+          <option value="inactive">{t('customers.inactivos')}</option>
         </Select>
       </div>
 
@@ -218,18 +240,18 @@ export default function CustomersPage() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('customers.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && customers.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', '']}>
+          <DataTable headers={[t('customers.cliente'), t('customers.documento'), t('customers.segmento'), t('customers.compras'), t('customers.estado'), '']}>
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando clientes…
+                {t('customers.cargando-clientes')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -237,19 +259,19 @@ export default function CustomersPage() {
       ) : customers.length === 0 ? (
         <div className="card">
           <EmptyState
-            title="Sin clientes"
-            description="No hay registros que coincidan con la búsqueda."
+            title={t('customers.sin-clientes')}
+            description={t('customers.no-hay-registros-que-coincidan-con-la-busqueda')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo cliente
+                {t('customers.nuevo-cliente')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="space-y-4">
-          <DataTable headers={['Cliente', 'Documento', 'Segmento', 'Compras', 'Estado', 'Acciones']}>
+          <DataTable headers={[t('customers.cliente'), t('customers.documento'), t('customers.segmento'), t('customers.compras'), t('customers.estado'), t('customers.acciones')]}>
             {visible.map((customer) => {
               const statusLabel = STATUS_LABELS[customer.status]
               return (
@@ -263,10 +285,10 @@ export default function CustomersPage() {
                     <span className="font-mono text-body-sm">{customer.document_number}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="primary">{customer.segment}</Badge>
+                    <Badge variant="primary">{t(SEGMENT_KEYS[customer.segment] ?? customer.segment)}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{customer.purchase_count} compras</div>
+                    <div className="font-medium">{t('customers.n-compras', { n: customer.purchase_count })}</div>
                     <div className="text-caption text-gray-500">
                       {formatCurrency(customer.total_purchased)}
                     </div>
@@ -279,8 +301,8 @@ export default function CustomersPage() {
                       <button
                         type="button"
                         onClick={() => setHistoryCustomer(customer)}
-                        aria-label={`Ver historial de ${customer.name}`}
-                        title="Ver historial"
+                        aria-label={`${t('customers.ver-historial-de')} ${customer.name}`}
+                        title={t('customers.ver-historial')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <History aria-hidden="true" className="h-4 w-4" />
@@ -288,8 +310,8 @@ export default function CustomersPage() {
                       <button
                         type="button"
                         onClick={() => openEdit(customer)}
-                        aria-label={`Editar ${customer.name}`}
-                        title="Editar"
+                        aria-label={`${t('customers.editar')} ${customer.name}`}
+                        title={t('customers.editar')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -298,8 +320,8 @@ export default function CustomersPage() {
                         <button
                           type="button"
                           onClick={() => setDeleting(customer)}
-                          aria-label={`Dar de baja a ${customer.name}`}
-                          title="Dar de baja"
+                          aria-label={`${t('customers.dar-de-baja-a')} ${customer.name}`}
+                          title={t('customers.dar-de-baja')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-error"
                         >
                           <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -348,23 +370,23 @@ export default function CustomersPage() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Dar de baja cliente"
+        title={t('customers.dar-de-baja-cliente')}
         size="sm"
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)} disabled={deletingBusy}>
-              Cancelar
+              {t('customers.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete} loading={deletingBusy}>
-              Dar de baja
+              {t('customers.dar-de-baja')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-600">
-          El cliente{' '}
-          <span className="font-semibold text-gray-900">{deleting?.name}</span> quedará en estado
-          inactivo (baja lógica). Su historial de compras se conserva.
+          {t('customers.el-cliente')}{' '}
+          <span className="font-semibold text-gray-900">{deleting?.name}</span>{' '}
+          {t('customers.quedara-en-estado-inactivo-baja-logica-su-historial-de-compras-se-conserva')}
         </p>
       </Modal>
     </div>

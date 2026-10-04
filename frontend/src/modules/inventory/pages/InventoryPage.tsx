@@ -11,8 +11,9 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
-import type { InventoryMovement } from '@/types/sale'
-import { MOVEMENT_LABELS, createMovement, listMovements, listStock } from '../services/inventoryService'
+import type { InventoryMovement, MovementType } from '@/types/sale'
+import { useLang } from '@/i18n/i18n'
+import { createMovement, listMovements, listStock } from '../services/inventoryService'
 import type { MovementInput, StockRow } from '../services/inventoryService'
 import MovementForm from '../components/MovementForm'
 import StockCountsPanel from '../components/StockCountsPanel'
@@ -32,17 +33,26 @@ import { useDataVersion } from '@/data/DataProvider'
 
 const PAGE_SIZE = 10
 
-const TAB_ITEMS = [
-  { id: 'existencias', label: 'Existencias' },
-  { id: 'movimientos', label: 'Movimientos' },
-  { id: 'conteos', label: 'Conteos' },
-  { id: 'almacenes', label: 'Almacenes' },
-  { id: 'unidades', label: 'Unidades' },
-  { id: 'sucursales', label: 'Sucursales' },
-]
+const MOVEMENT_KEYS: Record<MovementType, string> = {
+  IN: 'inventory.entrada',
+  OUT: 'inventory.salida',
+  RETURN: 'inventory.devolucion',
+  SHRINKAGE: 'inventory.merma',
+  ADJUSTMENT: 'inventory.ajuste',
+}
 
 export default function InventoryPage() {
+  const { t } = useLang()
   const toast = useToast()
+
+  const TAB_ITEMS = [
+    { id: 'existencias', label: t('inventory.existencias') },
+    { id: 'movimientos', label: t('inventory.movimientos') },
+    { id: 'conteos', label: t('inventory.conteos') },
+    { id: 'almacenes', label: t('inventory.almacenes') },
+    { id: 'unidades', label: t('inventory.unidades') },
+    { id: 'sucursales', label: t('inventory.sucursales') },
+  ]
 
   const [stock, setStock] = useState<StockRow[]>([])
   const [movements, setMovements] = useState<InventoryMovement[]>([])
@@ -69,7 +79,9 @@ export default function InventoryPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudo cargar el inventario')
+          setError(
+            reason instanceof Error ? reason.message : t('inventory.no-se-pudo-cargar-el-inventario'),
+          )
         }
       })
       .finally(() => {
@@ -109,13 +121,16 @@ export default function InventoryPage() {
     try {
       const { movement } = await createMovement(input)
       toast.success(
-        'Movimiento registrado',
-        `${MOVEMENT_LABELS[movement.type]} · ${movement.sku} → ${movement.resulting_stock} und.`,
+        t('inventory.movimiento-registrado'),
+        `${t(MOVEMENT_KEYS[movement.type])} · ${movement.sku} → ${movement.resulting_stock} ${t('inventory.und')}`,
       )
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      toast.error('No se pudo registrar', reason instanceof Error ? reason.message : 'Error inesperado')
+      toast.error(
+        t('inventory.no-se-pudo-registrar'),
+        reason instanceof Error ? reason.message : t('inventory.error-inesperado'),
+      )
     }
   }
 
@@ -123,14 +138,14 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Inventario</h1>
+          <h1>{t('inventory.inventario')}</h1>
           <p className="mt-1 text-body-sm text-gray-600">
-            Existencias, alertas de stock y kardex de movimientos (RF-08).
+            {t('inventory.existencias-alertas-de-stock-y-kardex-de-movimientos-rf-08')}
           </p>
         </div>
         <Button onClick={() => setFormOpen(true)}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo movimiento
+          {t('inventory.nuevo-movimiento')}
         </Button>
       </div>
 
@@ -140,7 +155,7 @@ export default function InventoryPage() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('inventory.reintentar')}
               </Button>
             }
           />
@@ -158,42 +173,67 @@ export default function InventoryPage() {
                   <AlertTriangle aria-hidden="true" className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-body-sm font-semibold text-gray-900">
-                      {alerts.length} producto{alerts.length === 1 ? '' : 's'} en alerta de stock
+                      {t('inventory.productos-en-alerta-de-stock', { n: alerts.length })}
                     </p>
                     <p className="text-caption text-gray-500">
-                      Alerta según el umbral configurado en Automatizaciones (regla ALERTA_STOCK).
+                      {t(
+                        'inventory.alerta-segun-el-umbral-configurado-en-automatizaciones-regla-alerta-stock',
+                      )}
                     </p>
                   </div>
                 </div>
-                <Checkbox label="Solo productos con alerta" checked={onlyAlerts} onChange={(event) => setOnlyAlerts(event.target.checked)} />
+                <Checkbox
+                  label={t('inventory.solo-productos-con-alerta')}
+                  checked={onlyAlerts}
+                  onChange={(event) => setOnlyAlerts(event.target.checked)}
+                />
               </div>
 
               <Input
                 type="search"
-                aria-label="Buscar productos en inventario"
-                placeholder="Buscar por nombre o SKU…"
+                aria-label={t('inventory.buscar-productos-en-inventario')}
+                placeholder={t('inventory.buscar-por-nombre-o-sku')}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
 
               {loading && stock.length === 0 ? (
                 <div className="card">
-                  <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                  <DataTable
+                    headers={[
+                      t('inventory.producto'),
+                      t('inventory.categoria'),
+                      t('inventory.stock'),
+                      t('inventory.minimo'),
+                      t('inventory.estado'),
+                    ]}
+                  >
                     <TableStateRow colSpan={5}>
                       <span className="inline-flex items-center gap-2">
                         <Spinner size={16} className="text-loading" />
-                        Cargando inventario…
+                        {t('inventory.cargando-inventario')}
                       </span>
                     </TableStateRow>
                   </DataTable>
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="card">
-                  <EmptyState title="Sin existencias" description="No hay productos que coincidan con el filtro." />
+                  <EmptyState
+                    title={t('inventory.sin-existencias')}
+                    description={t('inventory.no-hay-productos-que-coincidan-con-el-filtro')}
+                  />
                 </div>
               ) : (
                 <>
-                  <DataTable headers={['Producto', 'Categoría', 'Stock', 'Mínimo', 'Estado']}>
+                  <DataTable
+                    headers={[
+                      t('inventory.producto'),
+                      t('inventory.categoria'),
+                      t('inventory.stock'),
+                      t('inventory.minimo'),
+                      t('inventory.estado'),
+                    ]}
+                  >
                     {visible.map((row) => {
                       const isEmpty = row.current_stock === 0
                       const isLow = !isEmpty && isLowStock(row)
@@ -212,11 +252,11 @@ export default function InventoryPage() {
                           <TableCell className="text-gray-500">{row.min_stock}</TableCell>
                           <TableCell>
                             {isEmpty ? (
-                              <Badge variant="error">Sin stock</Badge>
+                              <Badge variant="error">{t('inventory.sin-stock')}</Badge>
                             ) : isLow ? (
-                              <Badge variant="warning">Stock bajo</Badge>
+                              <Badge variant="warning">{t('inventory.stock-bajo')}</Badge>
                             ) : (
-                              <Badge variant="success">Disponible</Badge>
+                              <Badge variant="success">{t('inventory.disponible')}</Badge>
                             )}
                           </TableCell>
                         </TableRow>
@@ -232,22 +272,32 @@ export default function InventoryPage() {
           {/* Kardex */}
           <TabPanel tabId="movimientos" active={tab === 'movimientos'}>
             <div className="space-y-4">
-              <h2>Movimientos recientes</h2>
+              <h2>{t('inventory.movimientos-recientes')}</h2>
               {movements.length === 0 ? (
                 <div className="card">
                   <EmptyState
-                    title="Sin movimientos"
-                    description="Aún no hay entradas ni salidas registradas."
+                    title={t('inventory.sin-movimientos')}
+                    description={t('inventory.aun-no-hay-entradas-ni-salidas-registradas')}
                     action={
                       <Button onClick={() => setFormOpen(true)}>
                         <Plus aria-hidden="true" className="h-4 w-4" />
-                        Nuevo movimiento
+                        {t('inventory.nuevo-movimiento')}
                       </Button>
                     }
                   />
                 </div>
               ) : (
-                <DataTable headers={['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock resultante', 'Motivo', 'Usuario']}>
+                <DataTable
+                  headers={[
+                    t('inventory.fecha'),
+                    t('inventory.producto'),
+                    t('inventory.tipo'),
+                    t('inventory.cantidad'),
+                    t('inventory.stock-resultante'),
+                    t('inventory.motivo'),
+                    t('inventory.usuario'),
+                  ]}
+                >
                   {movements.slice(0, 8).map((movement) => {
                     const isIn = movement.type === 'IN' || movement.type === 'RETURN'
                     const Icon = isIn ? TrendingUp : TrendingDown
@@ -260,7 +310,7 @@ export default function InventoryPage() {
                             className={`inline-flex items-center gap-1 text-caption font-medium ${isIn ? 'text-success' : 'text-error'}`}
                           >
                             <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                            {MOVEMENT_LABELS[movement.type]}
+                            {t(MOVEMENT_KEYS[movement.type])}
                           </span>
                         </TableCell>
                         <TableCell className="font-medium">
@@ -277,7 +327,7 @@ export default function InventoryPage() {
               )}
 
               {/* Trazabilidad de movimientos */}
-              <ProcessTraceList limit={3} title="Procesos ejecutados en Inventario" />
+              <ProcessTraceList limit={3} title={t('inventory.procesos-ejecutados-en-inventario')} />
             </div>
           </TabPanel>
 

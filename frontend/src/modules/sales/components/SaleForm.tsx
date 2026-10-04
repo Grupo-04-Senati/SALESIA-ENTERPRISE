@@ -5,6 +5,7 @@ import type { PaymentMethod } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/form'
+import { useLang } from '@/i18n/i18n'
 import { formatCurrency } from '@/utils/formatters'
 import { useDataVersion } from '@/data/DataProvider'
 import {
@@ -36,13 +37,14 @@ interface CartItem {
 }
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'card', label: 'Tarjeta' },
-  { value: 'transfer', label: 'Transferencia' },
+  { value: 'cash', label: 'sales.efectivo' },
+  { value: 'card', label: 'sales.tarjeta' },
+  { value: 'transfer', label: 'sales.transferencia' },
 ]
 
 export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   const version = useDataVersion()
+  const { t } = useLang()
   // Clientes, vendedores y productos leídos del almacén compartido:
   // reflejan al instante el stock y el directorio vigentes.
   const customers = useMemo(() => getSaleCustomers(), [version])
@@ -91,7 +93,9 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
       if (existing) {
         const nextQuantity = existing.quantity + parsedQuantity
         if (nextQuantity > product.stock) {
-          setError(`Stock insuficiente de ${product.name} (disponible: ${product.stock}).`)
+          setError(
+            `${t('sales.stock-insuficiente-de')} ${product.name} (${t('sales.disponible')}: ${product.stock}).`,
+          )
           return previous
         }
         return previous.map((item) =>
@@ -101,7 +105,9 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
         )
       }
       if (parsedQuantity > product.stock) {
-        setError(`Stock insuficiente de ${product.name} (disponible: ${product.stock}).`)
+        setError(
+          `${t('sales.stock-insuficiente-de')} ${product.name} (${t('sales.disponible')}: ${product.stock}).`,
+        )
         return previous
       }
       return [
@@ -122,16 +128,16 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!customerId) {
-      setError('Selecciona un cliente.')
+      setError(t('sales.selecciona-un-cliente-2'))
       return
     }
     if (items.length === 0) {
-      setError('Agrega al menos un producto a la venta.')
+      setError(t('sales.agrega-al-menos-un-producto-a-la-venta'))
       return
     }
     const payment = amount.trim() === '' ? totals.total : Number(amount)
     if (Number.isNaN(payment) || payment < 0) {
-      setError('Ingresa un monto de pago válido.')
+      setError(t('sales.ingresa-un-monto-de-pago-valido'))
       return
     }
     setError(null)
@@ -154,15 +160,15 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
     <Modal
       open={open}
       onClose={handleClose}
-      title="Registrar venta"
+      title={t('sales.registrar-venta')}
       size="lg"
       footer={
         <>
           <Button variant="outline" onClick={handleClose} disabled={submitting}>
-            Cancelar
+            {t('sales.cancelar')}
           </Button>
           <Button type="submit" form="sale-form" loading={submitting}>
-            Registrar venta
+            {t('sales.registrar-venta')}
           </Button>
         </>
       }
@@ -171,13 +177,13 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
         {/* Cliente y vendedor */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
-            label="Cliente"
+            label={t('sales.cliente')}
             required
             value={customerId}
             onChange={(event) => setCustomerId(event.target.value)}
-            hint={customers.length === 0 ? 'Crea clientes en el menú Clientes.' : undefined}
+            hint={customers.length === 0 ? t('sales.crea-clientes-en-el-menu-clientes') : undefined}
           >
-            <option value="">Selecciona un cliente…</option>
+            <option value="">{t('sales.selecciona-un-cliente')}</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.name}
@@ -185,10 +191,10 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             ))}
           </Select>
           <Select
-            label="Vendedor"
+            label={t('sales.vendedor')}
             value={effectiveSellerId}
             onChange={(event) => setSellerId(event.target.value)}
-            hint={sellers.length === 0 ? 'Crea vendedores en el menú Vendedores.' : undefined}
+            hint={sellers.length === 0 ? t('sales.crea-vendedores-en-el-menu-vendedores') : undefined}
           >
             {sellers.map((seller) => (
               <option key={seller.id} value={seller.id}>
@@ -200,26 +206,28 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
 
         {/* Agregar producto */}
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <p className="mb-3 text-body-sm font-semibold text-gray-700">Agregar producto</p>
+          <p className="mb-3 text-body-sm font-semibold text-gray-700">
+            {t('sales.agregar-producto')}
+          </p>
           <div className="grid gap-3 sm:grid-cols-12">
             <div className="sm:col-span-6">
               <Select
-                aria-label="Producto"
+                aria-label={t('sales.producto')}
                 value={productId}
                 onChange={(event) => setProductId(event.target.value)}
-                hint={products.length === 0 ? 'Crea productos en el menú Productos.' : undefined}
+                hint={products.length === 0 ? t('sales.crea-productos-en-el-menu-productos') : undefined}
               >
-                <option value="">Producto…</option>
+                <option value="">{t('sales.producto-2')}</option>
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} ({product.sku}) · stock {product.stock}
+                    {product.name} ({product.sku}) · {t('sales.stock')} {product.stock}
                   </option>
                 ))}
               </Select>
             </div>
             <div className="sm:col-span-2">
               <Input
-                aria-label="Cantidad"
+                aria-label={t('sales.cantidad')}
                 type="number"
                 min="1"
                 step="1"
@@ -230,7 +238,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             </div>
             <div className="sm:col-span-2">
               <Input
-                aria-label="Descuento"
+                aria-label={t('sales.descuento')}
                 type="number"
                 min="0"
                 step="0.01"
@@ -241,7 +249,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             </div>
             <div className="sm:col-span-2">
               <Button variant="secondary" onClick={addItem} className="w-full">
-                Agregar
+                {t('sales.agregar')}
               </Button>
             </div>
           </div>
@@ -250,7 +258,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
         {/* Detalle del carrito */}
         {items.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-body-sm text-gray-400">
-            Aún no agregaste productos a la venta.
+            {t('sales.aun-no-agregaste-productos-a-la-venta')}
           </p>
         ) : (
           <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
@@ -262,7 +270,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
                     <p className="truncate text-body-sm font-medium text-gray-900">{product?.name}</p>
                     <p className="text-caption text-gray-500">
                       {item.quantity} × {formatCurrency(item.unit_price)}
-                      {item.discount > 0 && ` · desc. ${formatCurrency(item.discount)}`}
+                      {item.discount > 0 && ` · ${t('sales.desc')} ${formatCurrency(item.discount)}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -272,10 +280,10 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
                     <button
                       type="button"
                       onClick={() => removeItem(item.product_id)}
-                      aria-label={`Quitar ${product?.name}`}
+                      aria-label={`${t('sales.quitar')} ${product?.name}`}
                       className="text-caption text-gray-400 transition-colors hover:text-error"
                     >
-                      Quitar
+                      {t('sales.quitar')}
                     </button>
                   </div>
                 </li>
@@ -288,33 +296,37 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Subtotal</span>
+              <span className="text-gray-600">{t('sales.subtotal')}</span>
               <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Descuento</span>
+              <span className="text-gray-600">{t('sales.descuento')}</span>
               <span className="font-medium text-error">− {formatCurrency(totals.discount)}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Impuesto (18%)</span>
+              <span className="text-gray-600">{t('sales.impuesto-18')}</span>
               <span className="font-medium">{formatCurrency(totals.tax)}</span>
             </div>
             <div className="mt-2 flex justify-between border-t border-gray-200 pt-2">
-              <span className="font-semibold text-gray-900">Total</span>
+              <span className="font-semibold text-gray-900">{t('sales.total')}</span>
               <span className="text-h4 font-bold text-primary">{formatCurrency(totals.total)}</span>
             </div>
           </div>
 
           <div className="space-y-4">
-            <Select label="Método de pago" value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)}>
+            <Select
+              label={t('sales.metodo-de-pago')}
+              value={method}
+              onChange={(event) => setMethod(event.target.value as PaymentMethod)}
+            >
               {PAYMENT_METHODS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.label)}
                 </option>
               ))}
             </Select>
             <Input
-              label="Monto pagado (S/)"
+              label={t('sales.monto-pagado-s')}
               type="number"
               min="0"
               step="0.01"
@@ -322,7 +334,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
               placeholder={totals.total > 0 ? String(totals.total) : '0.00'}
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              hint="Vacío = pago total"
+              hint={t('sales.vacio-pago-total')}
             />
           </div>
         </div>

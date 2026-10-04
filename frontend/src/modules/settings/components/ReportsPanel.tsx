@@ -9,10 +9,9 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
 import {
-  FREQUENCY_LABELS,
-  REPORT_TYPE_LABELS,
   createScheduledReport,
   deleteScheduledReport,
   listScheduledReports,
@@ -29,6 +28,20 @@ import type {
 
 const REPORT_TYPES: ReportType[] = ['ventas', 'estadistico', 'productos', 'clientes', 'vendedores']
 const FREQUENCIES: ReportFrequency[] = ['daily', 'weekly', 'monthly']
+
+const REPORT_TYPE_KEYS: Record<ReportType, string> = {
+  ventas: 'settings.tipo-reporte-ventas',
+  estadistico: 'settings.tipo-reporte-estadistico',
+  productos: 'settings.tipo-reporte-productos',
+  clientes: 'settings.tipo-reporte-clientes',
+  vendedores: 'settings.tipo-reporte-vendedores',
+}
+
+const FREQUENCY_KEYS: Record<ReportFrequency, string> = {
+  daily: 'settings.frecuencia-diaria',
+  weekly: 'settings.frecuencia-semanal',
+  monthly: 'settings.frecuencia-mensual',
+}
 
 const EMPTY_FORM = {
   report_type: 'ventas' as ReportType,
@@ -49,6 +62,7 @@ function toInputDateTime(value: string | null): string {
 
 export default function ReportsPanel() {
   const toast = useToast()
+  const { t } = useLang()
 
   const [items, setItems] = useState<ScheduledReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -74,7 +88,9 @@ export default function ReportsPanel() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar los reportes',
+            reason instanceof Error
+              ? reason.message
+              : t('settings.no-se-pudieron-cargar-los-reportes'),
           )
         }
       })
@@ -111,7 +127,7 @@ export default function ReportsPanel() {
   const handleSubmit = async () => {
     const title = form.title.trim()
     if (title.length < 3) {
-      setFormError('El título debe tener al menos 3 caracteres.')
+      setFormError(t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))
       return
     }
     const input: ScheduledReportInput = {
@@ -125,15 +141,23 @@ export default function ReportsPanel() {
     try {
       if (editing) {
         await updateScheduledReport(editing.id, input)
-        toast.success('Reporte actualizado', `${title} se guardó correctamente.`)
+        toast.success(
+          t('settings.reporte-actualizado'),
+          `${title} ${t('settings.se-guardo-correctamente')}`,
+        )
       } else {
         await createScheduledReport(input)
-        toast.success('Reporte programado', `${title} quedó en el calendario.`)
+        toast.success(
+          t('settings.reporte-programado'),
+          `${title} ${t('settings.quedo-en-el-calendario')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar el reporte.')
+      setFormError(
+        reason instanceof Error ? reason.message : t('settings.no-se-pudo-guardar-el-reporte'),
+      )
     } finally {
       setSaving(false)
     }
@@ -144,11 +168,16 @@ export default function ReportsPanel() {
     setDeleteError(null)
     try {
       await deleteScheduledReport(deleting.id)
-      toast.success('Reporte eliminado', `${deleting.title} se quitó del calendario.`)
+      toast.success(
+        t('settings.reporte-eliminado'),
+        `${deleting.title} ${t('settings.se-quito-del-calendario')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar el reporte.')
+      setDeleteError(
+        reason instanceof Error ? reason.message : t('settings.no-se-pudo-eliminar-el-reporte'),
+      )
     }
   }
 
@@ -156,11 +185,11 @@ export default function ReportsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Reportes que se generan solos con la frecuencia que indiques.
+          {t('settings.reportes-que-se-generan-solos')}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo reporte
+          {t('settings.nuevo-reporte')}
         </Button>
       </div>
 
@@ -170,18 +199,27 @@ export default function ReportsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('settings.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && items.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Reporte', 'Título', 'Frecuencia', 'Próxima ejecución', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('settings.reporte'),
+              t('settings.titulo'),
+              t('settings.frecuencia'),
+              t('settings.proxima-ejecucion'),
+              t('settings.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando reportes…
+                {t('settings.cargando-reportes')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -190,12 +228,12 @@ export default function ReportsPanel() {
         <div className="card">
           <EmptyState
             icon={FileText}
-            title="Sin reportes programados"
-            description="Programa tu primer reporte para recibirlo con la periodicidad que necesites."
+            title={t('settings.sin-reportes-programados')}
+            description={t('settings.programa-tu-primer-reporte')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo reporte
+                {t('settings.nuevo-reporte')}
               </Button>
             }
           />
@@ -203,23 +241,30 @@ export default function ReportsPanel() {
       ) : (
         <div className="card">
           <DataTable
-            headers={['Reporte', 'Título', 'Frecuencia', 'Próxima ejecución', 'Estado', 'Acciones']}
+            headers={[
+              t('settings.reporte'),
+              t('settings.titulo'),
+              t('settings.frecuencia'),
+              t('settings.proxima-ejecucion'),
+              t('settings.estado'),
+              t('settings.acciones'),
+            ]}
           >
             {items.map((report) => (
               <TableRow key={report.id}>
                 <TableCell>
-                  <Badge variant="primary">{REPORT_TYPE_LABELS[report.report_type]}</Badge>
+                  <Badge variant="primary">{t(REPORT_TYPE_KEYS[report.report_type])}</Badge>
                 </TableCell>
                 <TableCell className="font-medium text-gray-900">{report.title}</TableCell>
                 <TableCell className="text-gray-600">
-                  {FREQUENCY_LABELS[report.frequency]}
+                  {t(FREQUENCY_KEYS[report.frequency])}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {report.next_run_at ? formatDateTime(report.next_run_at) : '—'}
                 </TableCell>
                 <TableCell>
                   <Badge variant={report.status === 'active' ? 'success' : 'neutral'}>
-                    {report.status === 'active' ? 'Activo' : 'Inactivo'}
+                    {report.status === 'active' ? t('settings.activo') : t('settings.inactivo')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -227,8 +272,8 @@ export default function ReportsPanel() {
                     <button
                       type="button"
                       onClick={() => openEdit(report)}
-                      aria-label={`Editar ${report.title}`}
-                      title="Editar"
+                      aria-label={`${t('settings.editar')} ${report.title}`}
+                      title={t('settings.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -239,8 +284,8 @@ export default function ReportsPanel() {
                         setDeleteError(null)
                         setDeleting(report)
                       }}
-                      aria-label={`Eliminar ${report.title}`}
-                      title="Eliminar"
+                      aria-label={`${t('settings.eliminar')} ${report.title}`}
+                      title={t('settings.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -256,14 +301,14 @@ export default function ReportsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar reporte' : 'Nuevo reporte programado'}
+        title={editing ? t('settings.editar-reporte') : t('settings.nuevo-reporte-programado')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear reporte'}
+              {editing ? t('settings.guardar-cambios') : t('settings.crear-reporte')}
             </Button>
           </>
         }
@@ -271,7 +316,7 @@ export default function ReportsPanel() {
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
-              label="Tipo de reporte"
+              label={t('settings.tipo-de-reporte')}
               required
               value={form.report_type}
               onChange={(event) =>
@@ -280,12 +325,12 @@ export default function ReportsPanel() {
             >
               {REPORT_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {REPORT_TYPE_LABELS[type]}
+                  {t(REPORT_TYPE_KEYS[type])}
                 </option>
               ))}
             </Select>
             <Select
-              label="Frecuencia"
+              label={t('settings.frecuencia')}
               required
               value={form.frequency}
               onChange={(event) =>
@@ -294,37 +339,37 @@ export default function ReportsPanel() {
             >
               {FREQUENCIES.map((frequency) => (
                 <option key={frequency} value={frequency}>
-                  {FREQUENCY_LABELS[frequency]}
+                  {t(FREQUENCY_KEYS[frequency])}
                 </option>
               ))}
             </Select>
           </div>
           <Input
-            label="Título"
+            label={t('settings.titulo')}
             required
             minLength={3}
             maxLength={150}
             value={form.title}
             onChange={(event) => setForm({ ...form, title: event.target.value })}
-            placeholder="Ej. Ventas semanales por vendedor"
+            placeholder={t('settings.ej-ventas-semanales-por-vendedor')}
             error={formError ?? undefined}
             autoFocus
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Próxima ejecución"
+              label={t('settings.proxima-ejecucion')}
               type="datetime-local"
               value={form.next_run_at}
               onChange={(event) => setForm({ ...form, next_run_at: event.target.value })}
-              hint="Opcional"
+              hint={t('settings.opcional')}
             />
             <Select
-              label="Estado"
+              label={t('settings.estado')}
               value={form.status}
               onChange={(event) => setForm({ ...form, status: event.target.value })}
             >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
+              <option value="active">{t('settings.activo')}</option>
+              <option value="inactive">{t('settings.inactivo')}</option>
             </Select>
           </div>
         </div>
@@ -333,20 +378,20 @@ export default function ReportsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar reporte"
+        title={t('settings.eliminar-reporte')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('settings.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar el reporte <strong>{deleting?.title}</strong>?
+          {t('settings.eliminar-el-reporte')} <strong>{deleting?.title}</strong>?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

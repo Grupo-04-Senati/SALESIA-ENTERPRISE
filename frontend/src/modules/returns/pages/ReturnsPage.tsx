@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
 import {
@@ -35,22 +36,22 @@ import type { ReturnInput, ReturnItem, ReturnLine, ReturnStatus, SalesReturn } f
  */
 
 const TAB_ITEMS = [
-  { id: 'solicitudes', label: 'Solicitudes' },
-  { id: 'articulos', label: 'Artículos devueltos' },
+  { id: 'solicitudes', label: 'returns.solicitudes' },
+  { id: 'articulos', label: 'returns.articulos-devueltos' },
 ]
 
 const STATUS_BADGE: Record<ReturnStatus, { variant: BadgeVariant; label: string }> = {
-  pending: { variant: 'warning', label: 'Pendiente' },
-  completed: { variant: 'success', label: 'Aprobada' },
-  rejected: { variant: 'error', label: 'Rechazada' },
+  pending: { variant: 'warning', label: 'returns.pendiente' },
+  completed: { variant: 'success', label: 'returns.aprobada' },
+  rejected: { variant: 'error', label: 'returns.rechazada' },
 }
 
 type ConfirmKind = 'approve' | 'reject' | 'delete'
 
 const CONFIRM_COPY: Record<ConfirmKind, { title: string; action: string; variant: ButtonVariant }> = {
-  approve: { title: 'Aprobar devolución', action: 'Aprobar', variant: 'primary' },
-  reject: { title: 'Rechazar devolución', action: 'Rechazar', variant: 'danger' },
-  delete: { title: 'Eliminar devolución', action: 'Eliminar', variant: 'danger' },
+  approve: { title: 'returns.aprobar-devolucion', action: 'returns.aprobar', variant: 'primary' },
+  reject: { title: 'returns.rechazar-devolucion', action: 'returns.rechazar', variant: 'danger' },
+  delete: { title: 'returns.eliminar-devolucion', action: 'returns.eliminar', variant: 'danger' },
 }
 
 const EMPTY_FORM = { sale_id: '', reason: '' }
@@ -64,6 +65,7 @@ const EMPTY_LINE: DraftLine = { product_id: '', quantity: '1' }
 
 export default function ReturnsPage() {
   const toast = useToast()
+  const { t } = useLang()
   const version = useDataVersion()
 
   const [tab, setTab] = useState('solicitudes')
@@ -108,7 +110,9 @@ export default function ReturnsPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar las devoluciones')
+          setError(
+            reason instanceof Error ? reason.message : t('returns.no-se-pudieron-cargar-las-devoluciones'),
+          )
         }
       })
       .finally(() => {
@@ -144,7 +148,7 @@ export default function ReturnsPage() {
         if (!cancelled) {
           setSelected(null)
           setSelectedError(
-            reason instanceof Error ? reason.message : 'No se pudo cargar el detalle de la devolución',
+            reason instanceof Error ? reason.message : t('returns.no-se-pudo-cargar-el-detalle-de-la-devolucion'),
           )
         }
       })
@@ -228,7 +232,7 @@ export default function ReturnsPage() {
     } catch (reason: unknown) {
       setLines([EMPTY_LINE])
       setFormError(
-        reason instanceof Error ? reason.message : 'No se pudo cargar el detalle de la devolución.',
+        reason instanceof Error ? reason.message : t('returns.no-se-pudo-cargar-el-detalle-de-la-devolucion-2'),
       )
     } finally {
       setFormLoading(false)
@@ -239,11 +243,11 @@ export default function ReturnsPage() {
     const saleId = Number(form.sale_id)
     const reason = form.reason.trim()
     if (!saleId) {
-      setFormError('Selecciona una venta.')
+      setFormError(t('returns.selecciona-una-venta-2'))
       return
     }
     if (reason.length < 3) {
-      setFormError('El motivo debe tener al menos 3 caracteres.')
+      setFormError(t('returns.el-motivo-debe-tener-al-menos-3-caracteres'))
       return
     }
     const items: ReturnLine[] = []
@@ -252,19 +256,19 @@ export default function ReturnsPage() {
       if (!line.product_id) continue
       const quantity = Math.max(Number(line.quantity) || 0, 0)
       if (quantity < 1) {
-        setFormError('Cada producto debe tener una cantidad mayor o igual a 1.')
+        setFormError(t('returns.cada-producto-debe-tener-una-cantidad-mayor-o-igual-a-1'))
         return
       }
       const productId = Number(line.product_id)
       if (seen.has(productId)) {
-        setFormError('Cada producto solo puede aparecer una vez en la devolución.')
+        setFormError(t('returns.cada-producto-solo-puede-aparecer-una-vez-en-la-devolucion'))
         return
       }
       seen.add(productId)
       items.push({ product_id: productId, quantity })
     }
     if (items.length === 0) {
-      setFormError('Agrega al menos un producto a la devolución.')
+      setFormError(t('returns.agrega-al-menos-un-producto-a-la-devolucion'))
       return
     }
     setFormError(null)
@@ -273,20 +277,23 @@ export default function ReturnsPage() {
       const payload: ReturnInput = { sale_id: saleId, reason, items }
       if (editing) {
         await updateReturn(editing.id, payload)
-        toast.success('Devolución actualizada', `${editing.return_number} se guardó correctamente.`)
+        toast.success(
+          t('returns.devolucion-actualizada'),
+          `${editing.return_number} ${t('returns.se-guardo-correctamente')}`,
+        )
       } else {
         const created = await createReturn(payload)
         toast.success(
-          'Devolución registrada',
+          t('returns.devolucion-registrada'),
           created?.return_number
-            ? `${created.return_number} quedó pendiente de aprobación.`
-            : 'La solicitud quedó pendiente de aprobación.',
+            ? `${created.return_number} ${t('returns.quedo-pendiente-de-aprobacion')}`
+            : t('returns.la-solicitud-quedo-pendiente-de-aprobacion'),
         )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la devolución.')
+      setFormError(reason instanceof Error ? reason.message : t('returns.no-se-pudo-guardar-la-devolucion'))
     } finally {
       setSaving(false)
     }
@@ -301,7 +308,7 @@ export default function ReturnsPage() {
       .then((full) => setDetail(full))
       .catch((reason: unknown) =>
         setDetailError(
-          reason instanceof Error ? reason.message : 'No se pudo cargar el detalle de la devolución',
+          reason instanceof Error ? reason.message : t('returns.no-se-pudo-cargar-el-detalle-de-la-devolucion'),
         ),
       )
       .finally(() => setDetailLoading(false))
@@ -320,19 +327,28 @@ export default function ReturnsPage() {
     try {
       if (kind === 'approve') {
         await approveReturn(ret.id)
-        toast.success('Devolución aprobada', 'El stock de los productos devueltos fue repuesto.')
+        toast.success(
+          t('returns.devolucion-aprobada'),
+          t('returns.el-stock-de-los-productos-devueltos-fue-repuesto'),
+        )
       } else if (kind === 'reject') {
         await setReturnStatus(ret.id, 'rejected')
-        toast.success('Devolución rechazada', `${ret.return_number} quedó marcada como rechazada.`)
+        toast.success(
+          t('returns.devolucion-rechazada'),
+          `${ret.return_number} ${t('returns.quedo-marcada-como-rechazada')}`,
+        )
       } else {
         await deleteReturn(ret.id)
-        toast.success('Devolución eliminada', `${ret.return_number} se quitó del listado.`)
+        toast.success(
+          t('returns.devolucion-eliminada'),
+          `${ret.return_number} ${t('returns.se-quito-del-listado')}`,
+        )
       }
       setAction(null)
       reload()
     } catch (reason: unknown) {
       setActionError(
-        reason instanceof Error ? reason.message : 'No se pudo completar la operación.',
+        reason instanceof Error ? reason.message : t('returns.no-se-pudo-completar-la-operacion'),
       )
     } finally {
       setActionBusy(false)
@@ -347,11 +363,13 @@ export default function ReturnsPage() {
     ) ?? 0
 
   const renderDetailTable = (items: ReturnItem[]) => (
-    <DataTable headers={['Producto', 'Cantidad', 'Precio', 'Subtotal']}>
+    <DataTable
+      headers={[t('returns.producto'), t('returns.cantidad'), t('returns.precio'), t('returns.subtotal')]}
+    >
       {items.map((item, index) => (
         <TableRow key={item.id ?? `${item.product_id}-${index}`}>
           <TableCell className="font-medium text-gray-900">
-            {item.product_name ?? `Producto #${item.product_id}`}
+            {item.product_name ?? `${t('returns.producto')} #${item.product_id}`}
           </TableCell>
           <TableCell>{formatNumber(item.quantity)}</TableCell>
           <TableCell>{formatCurrency(item.unit_price ?? 0)}</TableCell>
@@ -366,34 +384,36 @@ export default function ReturnsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1>Devoluciones</h1>
-        <p className="mt-1 text-body-sm text-gray-600">
-          Solicitudes de nota de crédito (NC): registra los productos devueltos, apruébalas para
-          reponer el stock o recházalas desde aquí.
-        </p>
+        <h1>{t('returns.devoluciones')}</h1>
+        <p className="mt-1 text-body-sm text-gray-600">{t('returns.solicitudes-de-nota-de-credito')}</p>
       </div>
 
-      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="devoluciones" />
+      <Tabs
+        items={TAB_ITEMS.map((item) => ({ ...item, label: t(item.label) }))}
+        value={tab}
+        onChange={setTab}
+        id="devoluciones"
+      />
 
       <TabPanel tabId="solicitudes" active={tab === 'solicitudes'}>
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-body-sm text-gray-600">
               {returns.length === 0
-                ? 'Aún no hay solicitudes de devolución.'
-                : `${formatNumber(returns.length)} solicitud(es) registrada(s).`}
+                ? t('returns.aun-no-hay-solicitudes-de-devolucion')
+                : `${formatNumber(returns.length)} ${t('returns.solicitud-es-registrada-s')}`}
             </p>
             <Button onClick={openCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Nueva devolución
+              {t('returns.nueva-devolucion')}
             </Button>
           </div>
 
           <div className="card">
             <Input
               type="search"
-              aria-label="Buscar devoluciones"
-              placeholder="Buscar por devolución, venta o motivo…"
+              aria-label={t('returns.buscar-devoluciones')}
+              placeholder={t('returns.buscar-por-devolucion-venta-o-motivo')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -405,18 +425,27 @@ export default function ReturnsPage() {
                 description={error}
                 action={
                   <Button variant="outline" onClick={reload}>
-                    Reintentar
+                    {t('returns.reintentar')}
                   </Button>
                 }
               />
             </div>
           ) : loading && returns.length === 0 ? (
             <div className="card">
-              <DataTable headers={['Devolución', 'Venta', 'Motivo', 'Total', 'Estado', '']}>
+              <DataTable
+                headers={[
+                  t('returns.devolucion'),
+                  t('returns.venta'),
+                  t('returns.motivo'),
+                  t('returns.total'),
+                  t('returns.estado'),
+                  '',
+                ]}
+              >
                 <TableStateRow colSpan={6}>
                   <span className="inline-flex items-center gap-2">
                     <Spinner size={16} className="text-loading" />
-                    Cargando devoluciones…
+                    {t('returns.cargando-devoluciones')}
                   </span>
                 </TableStateRow>
               </DataTable>
@@ -425,19 +454,30 @@ export default function ReturnsPage() {
             <div className="card">
               <EmptyState
                 icon={Undo2}
-                title="Sin devoluciones"
-                description="Aún no hay solicitudes de devolución. Crea la primera para devolver productos de una venta."
+                title={t('returns.sin-devoluciones')}
+                description={t(
+                  'returns.aun-no-hay-solicitudes-de-devolucion-crea-la-primera-para-devolver-productos-de-una-venta',
+                )}
                 action={
                   <Button onClick={openCreate}>
                     <Plus aria-hidden="true" className="h-4 w-4" />
-                    Nueva devolución
+                    {t('returns.nueva-devolucion')}
                   </Button>
                 }
               />
             </div>
           ) : (
             <div className="card">
-              <DataTable headers={['Devolución', 'Venta', 'Motivo', 'Total', 'Estado', 'Acciones']}>
+              <DataTable
+                headers={[
+                  t('returns.devolucion'),
+                  t('returns.venta'),
+                  t('returns.motivo'),
+                  t('returns.total'),
+                  t('returns.estado'),
+                  t('returns.acciones'),
+                ]}
+              >
                 {visible.map((entry) => {
                   const badge = STATUS_BADGE[entry.status]
                   const pending = entry.status === 'pending'
@@ -450,34 +490,40 @@ export default function ReturnsPage() {
                       </TableCell>
                       <TableCell className="font-medium">{formatCurrency(entry.total)}</TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                        <Badge variant={badge.variant}>{t(badge.label)}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
-                          <ActionButton label={`Ver detalle de ${entry.return_number}`} onClick={() => openDetail(entry)}>
+                          <ActionButton
+                            label={`${t('returns.ver-detalle-de')} ${entry.return_number}`}
+                            onClick={() => openDetail(entry)}
+                          >
                             <Eye aria-hidden="true" className="h-4 w-4" />
                           </ActionButton>
                           {pending && (
                             <>
-                              <ActionButton label={`Editar ${entry.return_number}`} onClick={() => openEdit(entry)}>
+                              <ActionButton
+                                label={`${t('returns.editar')} ${entry.return_number}`}
+                                onClick={() => openEdit(entry)}
+                              >
                                 <Pencil aria-hidden="true" className="h-4 w-4" />
                               </ActionButton>
                               <ActionButton
-                                label={`Aprobar ${entry.return_number}`}
+                                label={`${t('returns.aprobar')} ${entry.return_number}`}
                                 tone="success"
                                 onClick={() => openAction('approve', entry)}
                               >
                                 <Check aria-hidden="true" className="h-4 w-4" />
                               </ActionButton>
                               <ActionButton
-                                label={`Rechazar ${entry.return_number}`}
+                                label={`${t('returns.rechazar')} ${entry.return_number}`}
                                 tone="error"
                                 onClick={() => openAction('reject', entry)}
                               >
                                 <Ban aria-hidden="true" className="h-4 w-4" />
                               </ActionButton>
                               <ActionButton
-                                label={`Eliminar ${entry.return_number}`}
+                                label={`${t('returns.eliminar')} ${entry.return_number}`}
                                 tone="error"
                                 onClick={() => openAction('delete', entry)}
                               >
@@ -502,20 +548,22 @@ export default function ReturnsPage() {
             <div className="card">
               <EmptyState
                 icon={PackageX}
-                title="Sin devoluciones"
-                description="Cuando existan solicitudes de devolución, aquí verás los artículos devueltos de cada una."
+                title={t('returns.sin-devoluciones')}
+                description={t(
+                  'returns.cuando-existan-solicitudes-de-devolucion-aqui-veras-los-articulos-devueltos-de-cada-una',
+                )}
               />
             </div>
           ) : (
             <>
               <div className="card">
                 <Select
-                  label="Devolución"
+                  label={t('returns.devolucion')}
                   value={selectedId}
                   onChange={(event) => setSelectedId(event.target.value)}
-                  hint="Selecciona una devolución para ver sus artículos."
+                  hint={t('returns.selecciona-una-devolucion-para-ver-sus-articulos')}
                 >
-                  <option value="">Selecciona una devolución…</option>
+                  <option value="">{t('returns.selecciona-una-devolucion')}</option>
                   {returns.map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.return_number} · {entry.sale_number} · {formatCurrency(entry.total)}
@@ -528,7 +576,7 @@ export default function ReturnsPage() {
                 <div className="card">
                   <p className="inline-flex items-center gap-2 text-body-sm text-gray-500">
                     <Spinner size={16} className="text-loading" />
-                    Cargando artículos…
+                    {t('returns.cargando-articulos')}
                   </p>
                 </div>
               ) : selectedError ? (
@@ -539,27 +587,27 @@ export default function ReturnsPage() {
                 <div className="card">
                   <EmptyState
                     icon={PackageX}
-                    title="Elige una devolución"
-                    description="Selecciona una devolución en el selector para ver sus artículos."
+                    title={t('returns.elige-una-devolucion')}
+                    description={t('returns.selecciona-una-devolucion-en-el-selector-para-ver-sus-articulos')}
                   />
                 </div>
               ) : (
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="card p-4">
-                      <p className="text-caption text-gray-500">Unidades devueltas</p>
+                      <p className="text-caption text-gray-500">{t('returns.unidades-devueltas')}</p>
                       <p className="mt-1 text-h3 text-gray-900">{formatNumber(unitsReturned)}</p>
                       <p className="mt-1 text-caption text-gray-400">
-                        {selected.return_number} · {selected.item_count} línea(s)
+                        {selected.return_number} · {selected.item_count} {t('returns.linea-s')}
                       </p>
                     </div>
                     <div className="card p-4">
-                      <p className="text-caption text-gray-500">Monto total devuelto</p>
+                      <p className="text-caption text-gray-500">{t('returns.monto-total-devuelto')}</p>
                       <p className="mt-1 text-h3 text-primary">{formatCurrency(amountReturned)}</p>
                       <p className="mt-1 text-caption text-gray-400">
-                        Venta {selected.sale_number} ·{' '}
+                        {t('returns.venta')} {selected.sale_number} ·{' '}
                         <Badge variant={STATUS_BADGE[selected.status].variant}>
-                          {STATUS_BADGE[selected.status].label}
+                          {t(STATUS_BADGE[selected.status].label)}
                         </Badge>
                       </p>
                     </div>
@@ -571,8 +619,8 @@ export default function ReturnsPage() {
                     ) : (
                       <EmptyState
                         icon={PackageX}
-                        title="Sin artículos"
-                        description="Esta devolución no tiene artículos registrados."
+                        title={t('returns.sin-articulos')}
+                        description={t('returns.esta-devolucion-no-tiene-articulos-registrados')}
                       />
                     )}
                   </div>
@@ -586,32 +634,32 @@ export default function ReturnsPage() {
       <Modal
         open={formOpen}
         onClose={() => !saving && setFormOpen(false)}
-        title={editing ? 'Editar devolución' : 'Nueva devolución'}
+        title={editing ? t('returns.editar-devolucion') : t('returns.nueva-devolucion')}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('returns.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving} disabled={formLoading}>
-              {editing ? 'Guardar cambios' : 'Registrar devolución'}
+              {editing ? t('returns.guardar-cambios') : t('returns.registrar-devolucion')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="Venta"
+            label={t('returns.venta')}
             required
             value={form.sale_id}
             onChange={(event) => setForm({ ...form, sale_id: event.target.value })}
             hint={
               sales.length === 0
-                ? 'Registra ventas en el menú Ventas.'
-                : 'El backend valida que los productos pertenezcan a esta venta.'
+                ? t('returns.registra-ventas-en-el-menu-ventas')
+                : t('returns.el-backend-valida-que-los-productos-pertenezcan-a-esta-venta')
             }
           >
-            <option value="">Selecciona una venta…</option>
+            <option value="">{t('returns.selecciona-una-venta')}</option>
             {sales.map((sale) => (
               <option key={sale.id} value={sale.id}>
                 {sale.sale_number} · {sale.customer.name} · {formatCurrency(sale.total)}
@@ -620,19 +668,21 @@ export default function ReturnsPage() {
           </Select>
 
           <Textarea
-            label="Motivo"
+            label={t('returns.motivo')}
             required
             value={form.reason}
             onChange={(event) => setForm({ ...form, reason: event.target.value })}
-            placeholder="Ej. Producto en mal estado al recibirlo"
-            hint="Mínimo 3 caracteres."
+            placeholder={t('returns.ej-producto-en-mal-estado-al-recibirlo')}
+            hint={t('returns.minimo-3-caracteres')}
           />
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-body-sm font-semibold text-gray-700">Productos devueltos</p>
+              <p className="text-body-sm font-semibold text-gray-700">
+                {t('returns.productos-devueltos')}
+              </p>
               <p className="text-body-sm text-gray-600">
-                Total estimado:{' '}
+                {t('returns.total-estimado')}{' '}
                 <strong className="text-primary">{formatCurrency(liveTotal)}</strong>
               </p>
             </div>
@@ -640,7 +690,7 @@ export default function ReturnsPage() {
             {formLoading ? (
               <p className="inline-flex items-center gap-2 text-body-sm text-gray-500">
                 <Spinner size={16} className="text-loading" />
-                Cargando artículos de la venta…
+                {t('returns.cargando-articulos-de-la-venta')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -648,11 +698,11 @@ export default function ReturnsPage() {
                   <div key={index} className="grid gap-3 sm:grid-cols-12">
                     <div className="sm:col-span-7">
                       <Select
-                        aria-label="Producto"
+                        aria-label={t('returns.producto')}
                         value={line.product_id}
                         onChange={(event) => updateLine(index, { product_id: event.target.value })}
                       >
-                        <option value="">Producto…</option>
+                        <option value="">{t('returns.producto-2')}</option>
                         {productOptions.map((product) => (
                           <option key={product.id} value={product.id}>
                             {product.name} ({product.sku})
@@ -662,7 +712,7 @@ export default function ReturnsPage() {
                     </div>
                     <div className="sm:col-span-3">
                       <Input
-                        aria-label="Cantidad"
+                        aria-label={t('returns.cantidad')}
                         type="number"
                         min="1"
                         step="1"
@@ -681,8 +731,8 @@ export default function ReturnsPage() {
                               : previous,
                           )
                         }
-                        aria-label="Quitar línea"
-                        title="Quitar línea"
+                        aria-label={t('returns.quitar-linea')}
+                        title={t('returns.quitar-linea')}
                         className="flex h-10 w-10 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-red-50 hover:text-error"
                       >
                         <X aria-hidden="true" className="h-4 w-4" />
@@ -696,7 +746,7 @@ export default function ReturnsPage() {
                   onClick={() => setLines((previous) => [...previous, EMPTY_LINE])}
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  Agregar línea
+                  {t('returns.agregar-linea')}
                 </Button>
               </div>
             )}
@@ -713,18 +763,20 @@ export default function ReturnsPage() {
       <Modal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        title={detail ? `Devolución ${detail.return_number}` : 'Detalle de la devolución'}
+        title={
+          detail ? `${t('returns.devolucion')} ${detail.return_number}` : t('returns.detalle-de-la-devolucion')
+        }
         size="lg"
         footer={
           <Button variant="outline" onClick={() => setDetailOpen(false)}>
-            Cerrar
+            {t('returns.cerrar')}
           </Button>
         }
       >
         {detailLoading ? (
           <p className="inline-flex items-center gap-2 text-body-sm text-gray-500">
             <Spinner size={16} className="text-loading" />
-            Cargando detalle…
+            {t('returns.cargando-detalle')}
           </p>
         ) : detailError ? (
           <p role="alert" className="rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
@@ -734,29 +786,29 @@ export default function ReturnsPage() {
           <div className="space-y-4">
             <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
               <div className="flex justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Venta</dt>
+                <dt className="text-gray-600">{t('returns.venta')}</dt>
                 <dd className="font-medium text-gray-900">{detail.sale_number}</dd>
               </div>
               <div className="flex justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Estado</dt>
+                <dt className="text-gray-600">{t('returns.estado')}</dt>
                 <dd>
                   <Badge variant={STATUS_BADGE[detail.status].variant}>
-                    {STATUS_BADGE[detail.status].label}
+                    {t(STATUS_BADGE[detail.status].label)}
                   </Badge>
                 </dd>
               </div>
               <div className="flex justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Total</dt>
+                <dt className="text-gray-600">{t('returns.total')}</dt>
                 <dd className="font-medium text-gray-900">{formatCurrency(detail.total)}</dd>
               </div>
               <div className="flex justify-between rounded-lg bg-gray-50 px-3 py-2">
-                <dt className="text-gray-600">Registrada</dt>
+                <dt className="text-gray-600">{t('returns.registrada')}</dt>
                 <dd className="font-medium text-gray-900">{formatDateTime(detail.created_at)}</dd>
               </div>
             </dl>
 
             <div>
-              <p className="mb-2 text-body-sm font-semibold text-gray-700">Motivo</p>
+              <p className="mb-2 text-body-sm font-semibold text-gray-700">{t('returns.motivo')}</p>
               <p className="rounded-lg bg-gray-50 px-3 py-2 text-body-sm text-gray-700">
                 {detail.reason}
               </p>
@@ -765,7 +817,7 @@ export default function ReturnsPage() {
             {detail.items && detail.items.length > 0 ? (
               renderDetailTable(detail.items)
             ) : (
-              <p className="text-body-sm text-gray-500">Esta devolución no tiene artículos.</p>
+              <p className="text-body-sm text-gray-500">{t('returns.esta-devolucion-no-tiene-articulos')}</p>
             )}
           </div>
         ) : null}
@@ -774,18 +826,18 @@ export default function ReturnsPage() {
       <Modal
         open={action !== null}
         onClose={() => !actionBusy && setAction(null)}
-        title={action ? CONFIRM_COPY[action.kind].title : ''}
+        title={action ? t(CONFIRM_COPY[action.kind].title) : ''}
         footer={
           <>
             <Button variant="outline" onClick={() => setAction(null)} disabled={actionBusy}>
-              Cancelar
+              {t('returns.cancelar')}
             </Button>
             <Button
               variant={action ? CONFIRM_COPY[action.kind].variant : 'primary'}
               loading={actionBusy}
               onClick={handleAction}
             >
-              {action ? CONFIRM_COPY[action.kind].action : ''}
+              {action ? t(CONFIRM_COPY[action.kind].action) : ''}
             </Button>
           </>
         }
@@ -793,20 +845,23 @@ export default function ReturnsPage() {
         <p className="text-body-sm text-gray-700">
           {action?.kind === 'approve' && (
             <>
-              ¿Aprobar la devolución <strong>{action.ret.return_number}</strong>? Se repondrá el
-              stock de sus productos y la solicitud quedará como aprobada.
+              {t('returns.aprobar-la-devolucion')}
+              <strong>{action.ret.return_number}</strong>
+              {t('returns.se-repondra-el-stock-de-sus-productos-y-la-solicitud-quedara-como-aprobada')}
             </>
           )}
           {action?.kind === 'reject' && (
             <>
-              ¿Rechazar la devolución <strong>{action.ret.return_number}</strong>? Quedará marcada
-              como rechazada y ya no se podrá modificar.
+              {t('returns.rechazar-la-devolucion')}
+              <strong>{action.ret.return_number}</strong>
+              {t('returns.quedara-marcada-como-rechazada-y-ya-no-se-podra-modificar')}
             </>
           )}
           {action?.kind === 'delete' && (
             <>
-              ¿Eliminar la devolución <strong>{action.ret.return_number}</strong>? Solo es posible
-              eliminar las solicitudes pendientes.
+              {t('returns.eliminar-la-devolucion')}
+              <strong>{action.ret.return_number}</strong>
+              {t('returns.solo-es-posible-eliminar-las-solicitudes-pendientes')}
             </>
           )}
         </p>

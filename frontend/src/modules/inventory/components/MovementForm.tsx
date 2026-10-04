@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/form'
 import { minNumber, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
-import { MOVEMENT_LABELS } from '../services/inventoryService'
+import { useLang } from '@/i18n/i18n'
 import type { MovementInput } from '../services/inventoryService'
 import type { StockRow } from '../services/inventoryService'
 
@@ -33,7 +33,16 @@ const TYPES: MovementType[] = ['IN', 'OUT', 'RETURN', 'SHRINKAGE', 'ADJUSTMENT']
 
 const EMPTY: FormValues = { product_id: '', type: 'IN', quantity: '1', reason: '' }
 
+const MOVEMENT_KEYS: Record<MovementType, string> = {
+  IN: 'inventory.entrada',
+  OUT: 'inventory.salida',
+  RETURN: 'inventory.devolucion',
+  SHRINKAGE: 'inventory.merma',
+  ADJUSTMENT: 'inventory.ajuste',
+}
+
 export default function MovementForm({ open, onClose, stock, onSubmit }: MovementFormProps) {
+  const { t } = useLang()
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [errors, setErrors] = useState<FormErrors<FormValues>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -58,10 +67,13 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
   const needsReason = values.type === 'SHRINKAGE' || values.type === 'ADJUSTMENT'
 
   const rules: FormRules<FormValues> = {
-    product_id: required('Selecciona un producto'),
-    quantity: (value) => required()(value) ?? minNumber(1, 'La cantidad debe ser mayor a cero')(value),
+    product_id: required(t('inventory.selecciona-un-producto')),
+    quantity: (value) =>
+      required()(value) ?? minNumber(1, t('inventory.la-cantidad-debe-ser-mayor-a-cero'))(value),
     reason: (value) =>
-      needsReason ? required('Ingresa el motivo (obligatorio en merma y ajuste)')(value) : null,
+      needsReason
+        ? required(t('inventory.ingresa-el-motivo-obligatorio-en-merma-y-ajuste'))(value)
+        : null,
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -87,27 +99,27 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
     <Modal
       open={open}
       onClose={onClose}
-      title="Registrar movimiento"
+      title={t('inventory.registrar-movimiento')}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancelar
+            {t('inventory.cancelar')}
           </Button>
           <Button type="submit" form="movement-form" loading={submitting}>
-            Registrar
+            {t('inventory.registrar')}
           </Button>
         </>
       }
     >
       <form id="movement-form" onSubmit={handleSubmit} className="space-y-4">
         <Select
-          label="Producto"
+          label={t('inventory.producto')}
           required
           value={values.product_id}
           onChange={setValue('product_id')}
           error={errors.product_id}
         >
-          <option value="">Selecciona un producto…</option>
+          <option value="">{t('inventory.selecciona-un-producto-2')}</option>
           {stock.map((row) => (
             <option key={row.product_id} value={row.product_id}>
               {row.name} ({row.sku}) — {row.current_stock} {row.unit}
@@ -116,15 +128,19 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
         </Select>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select label="Tipo de movimiento" value={values.type} onChange={setValue('type')}>
+          <Select
+            label={t('inventory.tipo-de-movimiento')}
+            value={values.type}
+            onChange={setValue('type')}
+          >
             {TYPES.map((type) => (
               <option key={type} value={type}>
-                {MOVEMENT_LABELS[type]}
+                {t(MOVEMENT_KEYS[type])}
               </option>
             ))}
           </Select>
           <Input
-            label="Cantidad"
+            label={t('inventory.cantidad')}
             required
             type="number"
             min="1"
@@ -137,12 +153,12 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
         </div>
 
         <Textarea
-          label="Motivo"
+          label={t('inventory.motivo')}
           required={needsReason}
           placeholder={
             needsReason
-              ? 'Obligatorio para merma y ajuste (RN-21)'
-              : 'Opcional:receipt, venta, devolución…'
+              ? t('inventory.obligatorio-para-merma-y-ajuste-rn-21')
+              : t('inventory.opcional-receipt-venta-devolucion')
           }
           value={values.reason}
           onChange={setValue('reason')}

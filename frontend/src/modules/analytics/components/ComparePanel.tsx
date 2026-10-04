@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatCurrency, formatPercent } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID, compareMeanMedian } from '../services/statisticsService'
 import { EmptyState } from '@/components/feedback/EmptyState'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Comparación media vs. mediana (Fase 09 · RF-13).
@@ -14,16 +15,20 @@ interface ComparePanelProps {
 }
 
 export default function ComparePanel({ values }: ComparePanelProps) {
+  const { t } = useLang()
+
   if (values.length === 0) {
     return (
       <div className="card">
-        <h3 className="text-h4 text-gray-800">Media vs. mediana</h3>
+        <h3 className="text-h4 text-gray-800">{t('analytics.media-vs-mediana')}</h3>
         <EmptyState
-          title="Sin ventas en el periodo"
-          description="La comparación se calcula con los tickets reales. Registra ventas para verla."
+          title={t('analytics.sin-ventas-en-el-periodo')}
+          description={t(
+            'analytics.la-comparacion-se-calcula-con-los-tickets-reales-registra-ventas-para-verla',
+          )}
           action={
             <Link to="/ventas" className="btn-primary">
-              Registrar venta
+              {t('analytics.registrar-venta')}
             </Link>
           }
         />
@@ -33,15 +38,16 @@ export default function ComparePanel({ values }: ComparePanelProps) {
 
   const result = compareMeanMedian(values)
   const data = [
-    { name: 'Media', valor: Math.round(result.mean * 100) / 100 },
-    { name: 'Mediana', valor: Math.round(result.median * 100) / 100 },
+    { name: t('analytics.media'), valor: Math.round(result.mean * 100) / 100 },
+    { name: t('analytics.mediana'), valor: Math.round(result.median * 100) / 100 },
   ]
 
   return (
     <div className="card">
-      <h3 className="text-h4 text-gray-800">Media vs. mediana</h3>
+      <h3 className="text-h4 text-gray-800">{t('analytics.media-vs-mediana')}</h3>
       <p className="mt-1 text-caption text-gray-500">
-        Diferencia: <span className="font-semibold text-gray-900">{formatCurrency(result.difference)}</span>{' '}
+        {t('analytics.diferencia')}{' '}
+        <span className="font-semibold text-gray-900">{formatCurrency(result.difference)}</span>{' '}
         ({formatPercent(result.differencePct / 100)})
       </p>
 
@@ -61,7 +67,7 @@ export default function ComparePanel({ values }: ComparePanelProps) {
       </div>
 
       <p className="mt-3 rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
-        {result.interpretation}
+        {t(result.interpretation)}
       </p>
     </div>
   )

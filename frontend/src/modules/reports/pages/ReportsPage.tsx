@@ -8,6 +8,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsService'
 import { useDataVersion } from '@/data/DataProvider'
@@ -30,6 +31,7 @@ import type { Report, ReportType } from '../services/reportService'
 
 export default function ReportsPage() {
   const toast = useToast()
+  const { t } = useLang()
   const [type, setType] = useState<ReportType>('ventas')
   const [report, setReport] = useState<Report | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,7 +45,7 @@ export default function ReportsPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    generateReport(type)
+    generateReport(type, t)
       .then((result) => {
         if (cancelled) return
         setReport(result)
@@ -52,7 +54,9 @@ export default function ReportsPage() {
       .catch((reason: unknown) => {
         if (cancelled) return
         setReport(null)
-        setError(reason instanceof Error ? reason.message : 'No se pudo generar el reporte')
+        setError(
+          reason instanceof Error ? reason.message : t('reports.no-se-pudo-generar-el-reporte'),
+        )
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -60,14 +64,16 @@ export default function ReportsPage() {
     return () => {
       cancelled = true
     }
-  }, [type, version])
+  }, [type, version, t])
 
   const handleGenerate = () => {
     setLoading(true)
-    generateReport(type)
+    generateReport(type, t)
       .then(setReport)
       .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : 'No se pudo generar el reporte'),
+        setError(
+          reason instanceof Error ? reason.message : t('reports.no-se-pudo-generar-el-reporte'),
+        ),
       )
       .finally(() => setLoading(false))
   }
@@ -75,15 +81,18 @@ export default function ReportsPage() {
   const handleExport = () => {
     if (!report) return
     downloadCsv(report)
-    toast.success('Reporte exportado', `${report.title} descargado en formato CSV.`)
+    toast.success(
+      t('reports.reporte-exportado'),
+      `${report.title} ${t('reports.descargado-en-formato-csv')}`,
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="no-print">
-        <h1>Reportes</h1>
+        <h1>{t('reports.reportes')}</h1>
         <p className="mt-1 text-body-sm text-gray-600">
-          Reportes de ventas, estadístico, productos, clientes y vendedores con exportación (Fase 12).
+          {t('reports.reportes-de-ventas-estadistico-productos-clientes-y-vendedores-con-exportacion-fase-12')}
         </p>
       </div>
 
@@ -102,8 +111,8 @@ export default function ReportsPage() {
               }`}
             >
               <FileText aria-hidden="true" className={`mb-2 h-5 w-5 ${type === entry.value ? 'text-primary' : 'text-gray-400'}`} />
-              <p className="text-body-sm font-semibold text-gray-900">{entry.label}</p>
-              <p className="mt-0.5 text-caption text-gray-500">{entry.description}</p>
+              <p className="text-body-sm font-semibold text-gray-900">{t(entry.label)}</p>
+              <p className="mt-0.5 text-caption text-gray-500">{t(entry.description)}</p>
             </button>
           ))}
         </div>
@@ -111,22 +120,22 @@ export default function ReportsPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={handleGenerate} loading={loading}>
             <RefreshCw aria-hidden="true" className="h-4 w-4" />
-            Actualizar ahora
+            {t('reports.actualizar-ahora')}
           </Button>
           {report && (
             <>
               <Button variant="secondary" onClick={handleExport}>
                 <Download aria-hidden="true" className="h-4 w-4" />
-                Exportar CSV
+                {t('reports.exportar-csv')}
               </Button>
               <Button variant="outline" onClick={() => window.print()}>
                 <Printer aria-hidden="true" className="h-4 w-4" />
-                Imprimir
+                {t('reports.imprimir')}
               </Button>
             </>
           )}
           <span className="text-caption text-gray-500">
-            El reporte se arma solo con los datos actuales del sistema.
+            {t('reports.el-reporte-se-arma-solo-con-los-datos-actuales-del-sistema')}
           </span>
         </div>
       </div>
@@ -134,22 +143,34 @@ export default function ReportsPage() {
       {/* Resultado */}
       {error ? (
         <div className="card no-print">
-          <ErrorState description={error} action={<Button variant="outline" onClick={handleGenerate}>Reintentar</Button>} />
+          <ErrorState
+            description={error}
+            action={
+              <Button variant="outline" onClick={handleGenerate}>
+                {t('reports.reintentar')}
+              </Button>
+            }
+          />
         </div>
       ) : loading ? (
         <div className="card no-print flex flex-col items-center gap-3 py-12">
           <Spinner className="text-loading" />
-          <p className="text-body-sm text-gray-500">Generando reporte…</p>
+          <p className="text-body-sm text-gray-500">{t('reports.generando-reporte')}</p>
         </div>
       ) : !report ? (
         <div className="card no-print">
           <EmptyState
-            title="Sin reporte generado"
-            description={selected?.description ?? 'Elige un tipo de reporte y genéralo para verlo aquí.'}
+            title={t('reports.sin-reporte-generado')}
+            description={
+              t(
+                selected?.description ??
+                  'reports.elige-un-tipo-de-reporte-y-genralo-para-verlo-aqui',
+              )
+            }
             action={
               <Button onClick={handleGenerate}>
                 <FileText aria-hidden="true" className="h-4 w-4" />
-                Generar reporte
+                {t('reports.generar-reporte')}
               </Button>
             }
           />
@@ -162,7 +183,9 @@ export default function ReportsPage() {
                 <h2 className="text-h3 text-gray-900">{report.title}</h2>
                 <p className="mt-1 text-body-sm text-gray-600">{report.description}</p>
               </div>
-              <Badge variant="neutral">Generado {formatDateTime(report.generated_at)}</Badge>
+              <Badge variant="neutral">
+                {t('reports.generado')} {formatDateTime(report.generated_at)}
+              </Badge>
             </div>
 
             <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,15 +201,15 @@ export default function ReportsPage() {
           {report.type === 'ventas' &&
             (getMonthlySummary().every((point) => point.ingresos === 0) ? (
               <div className="card no-print">
-                <h3 className="text-h4 text-gray-800">Evolución mensual (referencia)</h3>
+                <h3 className="text-h4 text-gray-800">{t('reports.evolucion-mensual-referencia')}</h3>
                 <EmptyState
-                  title="Sin ventas en el periodo"
-                  description="La evolución mensual se dibujará cuando haya ventas registradas."
+                  title={t('reports.sin-ventas-en-el-periodo')}
+                  description={t('reports.la-evolucion-mensual-se-dibujara-cuando-haya-ventas-registradas')}
                 />
               </div>
             ) : (
               <div className="card no-print">
-                <h3 className="text-h4 text-gray-800">Evolución mensual (referencia)</h3>
+                <h3 className="text-h4 text-gray-800">{t('reports.evolucion-mensual-referencia')}</h3>
                 <div className="mt-4 h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={getMonthlySummary()} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
@@ -204,12 +227,12 @@ export default function ReportsPage() {
           {report.rows.length === 0 ? (
             <div className="card no-print">
               <EmptyState
-                title="Sin registros"
-                description="Este reporte no tiene registros porque todavía no hay datos en el sistema."
+                title={t('reports.sin-registros')}
+                description={t('reports.este-reporte-no-tiene-registros-porque-todavia-no-hay-datos-en-el-sistema')}
                 action={
                   <Button onClick={handleGenerate}>
                     <RefreshCw aria-hidden="true" className="h-4 w-4" />
-                    Actualizar reporte
+                    {t('reports.actualizar-reporte')}
                   </Button>
                 }
               />
@@ -238,7 +261,7 @@ export default function ReportsPage() {
           )}
 
           <p className="text-caption text-gray-400">
-            {report.rows.length} registros · SalesIA Enterprise · {formatDateTime(report.generated_at)}
+            {t('reports.registros', { n: report.rows.length })} · SalesIA Enterprise · {formatDateTime(report.generated_at)}
           </p>
         </div>
       )}

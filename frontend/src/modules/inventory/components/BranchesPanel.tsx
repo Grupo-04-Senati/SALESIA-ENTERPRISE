@@ -9,6 +9,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { createBranch, deleteBranch, listBranches, updateBranch } from '../services/branchService'
 import type { Branch, BranchInput } from '../services/branchService'
 
@@ -17,6 +18,7 @@ import type { Branch, BranchInput } from '../services/branchService'
 const EMPTY_FORM: BranchInput = { code: '', name: '', address: '', phone: '' }
 
 export default function BranchesPanel() {
+  const { t } = useLang()
   const toast = useToast()
 
   const [branches, setBranches] = useState<Branch[]>([])
@@ -42,7 +44,9 @@ export default function BranchesPanel() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar las sucursales')
+          setError(
+            reason instanceof Error ? reason.message : t('inventory.no-se-pudieron-cargar-las-sucursales'),
+          )
         }
       })
       .finally(() => {
@@ -78,11 +82,11 @@ export default function BranchesPanel() {
     const code = form.code.trim()
     const name = form.name.trim()
     if (code.length < 1) {
-      setFormError('El código es obligatorio.')
+      setFormError(t('inventory.el-codigo-es-obligatorio'))
       return
     }
     if (name.length < 2) {
-      setFormError('El nombre debe tener al menos 2 caracteres.')
+      setFormError(t('inventory.el-nombre-debe-tener-al-menos-2-caracteres'))
       return
     }
     const input: BranchInput = {
@@ -95,15 +99,17 @@ export default function BranchesPanel() {
     try {
       if (editing) {
         await updateBranch(editing.id, input)
-        toast.success('Sucursal actualizada', `${name} se guardó correctamente.`)
+        toast.success(t('inventory.sucursal-actualizada'), `${name} ${t('inventory.guardado-correctamente')}`)
       } else {
         await createBranch(input)
-        toast.success('Sucursal creada', `${name} ya está registrada.`)
+        toast.success(t('inventory.sucursal-creada'), `${name} ${t('inventory.ya-esta-registrada')}`)
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la sucursal.')
+      setFormError(
+        reason instanceof Error ? reason.message : t('inventory.no-se-pudo-guardar-la-sucursal'),
+      )
     } finally {
       setSaving(false)
     }
@@ -114,11 +120,13 @@ export default function BranchesPanel() {
     setDeleteError(null)
     try {
       await deleteBranch(deleting.id)
-      toast.success('Sucursal eliminada', `${deleting.name} se quitó del listado.`)
+      toast.success(t('inventory.sucursal-eliminada'), `${deleting.name} ${t('inventory.se-quito-del-listado')}`)
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar la sucursal.')
+      setDeleteError(
+        reason instanceof Error ? reason.message : t('inventory.no-se-pudo-eliminar-la-sucursal'),
+      )
     }
   }
 
@@ -126,11 +134,11 @@ export default function BranchesPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Puntos de venta y oficinas de la empresa.
+          {t('inventory.puntos-de-venta-y-oficinas-de-la-empresa')}
         </p>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva sucursal
+          {t('inventory.nueva-sucursal')}
         </Button>
       </div>
 
@@ -140,18 +148,27 @@ export default function BranchesPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('inventory.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && branches.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Código', 'Nombre', 'Teléfono', 'Dirección', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('inventory.codigo'),
+              t('inventory.nombre'),
+              t('inventory.telefono'),
+              t('inventory.direccion'),
+              t('inventory.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando sucursales…
+                {t('inventory.cargando-sucursales')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -160,19 +177,30 @@ export default function BranchesPanel() {
         <div className="card">
           <EmptyState
             icon={Store}
-            title="Sin sucursales"
-            description="Registra la primera sucursal para identificar de dónde provienen tus operaciones."
+            title={t('inventory.sin-sucursales')}
+            description={t(
+              'inventory.registra-la-primera-sucursal-para-identificar-de-donde-provienen-tus-operaciones',
+            )}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva sucursal
+                {t('inventory.nueva-sucursal')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Código', 'Nombre', 'Teléfono', 'Dirección', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('inventory.codigo'),
+              t('inventory.nombre'),
+              t('inventory.telefono'),
+              t('inventory.direccion'),
+              t('inventory.estado'),
+              t('inventory.acciones'),
+            ]}
+          >
             {branches.map((branch) => (
               <TableRow key={branch.id}>
                 <TableCell className="font-mono font-medium text-gray-900">{branch.code}</TableCell>
@@ -181,7 +209,7 @@ export default function BranchesPanel() {
                 <TableCell className="text-gray-600">{branch.address ?? '—'}</TableCell>
                 <TableCell>
                   <Badge variant={branch.status === 'inactive' ? 'neutral' : 'success'}>
-                    {branch.status === 'inactive' ? 'Inactiva' : 'Activa'}
+                    {branch.status === 'inactive' ? t('inventory.inactiva') : t('inventory.activa')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -189,8 +217,8 @@ export default function BranchesPanel() {
                     <button
                       type="button"
                       onClick={() => openEdit(branch)}
-                      aria-label={`Editar ${branch.name}`}
-                      title="Editar"
+                      aria-label={`${t('inventory.editar')} ${branch.name}`}
+                      title={t('inventory.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -201,8 +229,8 @@ export default function BranchesPanel() {
                         setDeleteError(null)
                         setDeleting(branch)
                       }}
-                      aria-label={`Eliminar ${branch.name}`}
-                      title="Eliminar"
+                      aria-label={`${t('inventory.eliminar')} ${branch.name}`}
+                      title={t('inventory.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -218,14 +246,14 @@ export default function BranchesPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar sucursal' : 'Nueva sucursal'}
+        title={editing ? t('inventory.editar-sucursal') : t('inventory.nueva-sucursal')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('inventory.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear sucursal'}
+              {editing ? t('inventory.guardar-cambios') : t('inventory.crear-sucursal')}
             </Button>
           </>
         }
@@ -233,38 +261,38 @@ export default function BranchesPanel() {
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Código"
+              label={t('inventory.codigo')}
               required
               maxLength={20}
               value={form.code}
               onChange={(event) => setForm({ ...form, code: event.target.value })}
-              placeholder="Ej. SUC-01"
+              placeholder={t('inventory.ej-suc-01')}
               error={formError ?? undefined}
               autoFocus
             />
             <Input
-              label="Nombre"
+              label={t('inventory.nombre')}
               required
               minLength={2}
               maxLength={120}
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder="Ej. Sucursal Centro"
+              placeholder={t('inventory.ej-sucursal-centro')}
             />
           </div>
           <Input
-            label="Dirección"
+            label={t('inventory.direccion')}
             value={form.address ?? ''}
             onChange={(event) => setForm({ ...form, address: event.target.value })}
-            placeholder="Ej. Jr. Comercio 456"
-            hint="Opcional"
+            placeholder={t('inventory.ej-jr-comercio-456')}
+            hint={t('inventory.opcional')}
           />
           <Input
-            label="Teléfono"
+            label={t('inventory.telefono')}
             value={form.phone ?? ''}
             onChange={(event) => setForm({ ...form, phone: event.target.value })}
-            placeholder="Ej. 01 234 5678"
-            hint="Opcional"
+            placeholder={t('inventory.ej-01-234-5678')}
+            hint={t('inventory.opcional')}
           />
         </div>
       </Modal>
@@ -272,20 +300,20 @@ export default function BranchesPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar sucursal"
+        title={t('inventory.eliminar-sucursal')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('inventory.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('inventory.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la sucursal <strong>{deleting?.name}</strong>?
+          {t('inventory.eliminar-la-sucursal')} <strong>{deleting?.name}</strong>?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

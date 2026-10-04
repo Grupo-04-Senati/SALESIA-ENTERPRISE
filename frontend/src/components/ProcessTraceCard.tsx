@@ -1,6 +1,7 @@
 import { CheckCircle2 } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 import type { ProcessTrace } from '@/data/store'
 
 /**
@@ -24,12 +25,15 @@ interface ProcessTraceCardProps {
 }
 
 export default function ProcessTraceCard({ trace, className }: ProcessTraceCardProps) {
+  const { t } = useLang()
   return (
     <div className={cn('rounded-lg border border-success bg-success-bg p-4', className)}>
       <div className="flex items-center gap-2">
         <CheckCircle2 aria-hidden="true" className="h-5 w-5 text-success" />
         <div>
-          <p className="text-body-sm font-semibold text-success-fg">Proceso ejecutado: {trace.title}</p>
+          <p className="text-body-sm font-semibold text-success-fg">
+            {t('common.proceso-ejecutado')}: {trace.title}
+          </p>
           <p className="text-caption text-success-fg/80">{formatDateTime(trace.at)}</p>
         </div>
       </div>

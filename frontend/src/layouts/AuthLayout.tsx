@@ -41,7 +41,7 @@ export default function AuthLayout() {
         <div className="relative flex items-center gap-3">
           <img
             src="/logo.jpg"
-            alt="Logo de SalesIA Enterprise"
+            alt={t('auth.logo-alt')}
             className="h-11 w-11 rounded-full object-cover ring-2 ring-white/40"
           />
           <div>
@@ -78,7 +78,7 @@ export default function AuthLayout() {
           <div className="mb-7 flex flex-col items-center text-center md:hidden">
             <img
               src="/logo.jpg"
-              alt="Logo de SalesIA Enterprise"
+              alt={t('auth.logo-alt')}
               className="mb-3 h-14 w-14 rounded-full object-cover"
             />
             <h1 className="text-h3 text-gray-900">SalesIA Enterprise</h1>

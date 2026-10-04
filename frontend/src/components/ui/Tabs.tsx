@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Tabs (txt §5): pestañas en fila con borde inferior; la activa usa
@@ -20,8 +21,9 @@ interface TabsProps {
 }
 
 export default function Tabs({ items, value, onChange, id = 'tabs' }: TabsProps) {
+  const { t } = useLang()
   return (
-    <div role="tablist" aria-label="Secciones" className="flex flex-wrap gap-1 border-b border-gray-200">
+    <div role="tablist" aria-label={t('common.secciones')} className="flex flex-wrap gap-1 border-b border-gray-200">
       {items.map((item) => {
         const active = item.id === value
         return (
@@ -40,7 +42,7 @@ export default function Tabs({ items, value, onChange, id = 'tabs' }: TabsProps)
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
             )}
           >
-            {item.label}
+            {t(item.label)}
           </button>
         )
       })}

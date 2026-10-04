@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatPercent } from '@/utils/formatters'
 import { CHART_AXIS, CHART_GRID } from '@/data/analytics'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * BayesChart: columnas de las probabilidades del teorema de Bayes
@@ -15,6 +16,7 @@ interface BayesChartProps {
 }
 
 export default function BayesChart({ prior, likelihood, evidence, posterior }: BayesChartProps) {
+  const { t } = useLang()
   const data = [
     { name: 'P(A)', valor: prior },
     { name: 'P(B|A)', valor: likelihood },
@@ -33,7 +35,7 @@ export default function BayesChart({ prior, likelihood, evidence, posterior }: B
             formatter={(value) => formatPercent(Number(value))}
             contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
           />
-          <Bar dataKey="valor" fill="#10B981" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="valor" name={t('probability.valor')} fill="#10B981" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

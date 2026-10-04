@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency } from '@/utils/formatters'
 import { CHART_GRID } from '@/data/analytics'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * MediaChart del sistema de diseño (txt §6.2): línea de tickets con la
@@ -13,6 +14,7 @@ interface MediaChartProps {
 }
 
 export default function MediaChart({ values }: MediaChartProps) {
+  const { t } = useLang()
   const sorted = [...values].sort((a, b) => a - b)
   const value = sorted.length > 0 ? sorted.reduce((sum, item) => sum + item, 0) / sorted.length : 0
   const data = sorted.map((ticket, index) => ({ index: index + 1, ticket }))
@@ -28,7 +30,7 @@ export default function MediaChart({ values }: MediaChartProps) {
             formatter={(value) => formatCurrency(Number(value))}
             contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
           />
-          <Line type="monotone" dataKey="ticket" stroke="#1E3A8A" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="ticket" name={t('analytics.ticket')} stroke="#1E3A8A" strokeWidth={2} dot={false} />
           <ReferenceLine y={value} stroke="#1E3A8A" strokeDasharray="4 4" />
         </LineChart>
       </ResponsiveContainer>

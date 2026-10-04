@@ -1,4 +1,5 @@
 import { cn } from '@/utils/cn'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Loader de UI (txt §8): spinner y skeleton de carga.
@@ -16,10 +17,11 @@ interface SpinnerProps {
  * coincida con su texto); pasar `className="text-loading"` para el azul.
  */
 export function Spinner({ size = 24, className }: SpinnerProps) {
+  const { t } = useLang()
   return (
     <span
       role="status"
-      aria-label="Cargando"
+      aria-label={t('common.cargando')}
       style={{
         width: size,
         height: size,

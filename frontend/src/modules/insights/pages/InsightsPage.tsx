@@ -10,7 +10,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { formatDateTime } from '@/utils/formatters'
-import { SEVERITY_LABELS } from '@/types/insight'
+import { useLang } from '@/i18n/i18n'
 import type { InsightSeverity } from '@/types/insight'
 import { useInsights } from '@/hooks/useInsights'
 import { filterInsights, getActiveRules } from '../services/insightService'
@@ -25,8 +25,8 @@ import { filterInsights, getActiveRules } from '../services/insightService'
  */
 
 const TAB_ITEMS = [
-  { id: 'observaciones', label: 'Observaciones' },
-  { id: 'reglas', label: 'Reglas determinísticas' },
+  { id: 'observaciones', label: 'insights.observaciones' },
+  { id: 'reglas', label: 'insights.reglas-deterministicas' },
 ]
 
 const SEVERITY_BADGE: Record<InsightSeverity, 'info' | 'success' | 'warning' | 'error'> = {
@@ -36,34 +36,42 @@ const SEVERITY_BADGE: Record<InsightSeverity, 'info' | 'success' | 'warning' | '
   CRITICAL: 'error',
 }
 
+const SEVERITY_KEYS: Record<InsightSeverity, string> = {
+  INFO: 'insights.severidad-informativo',
+  SUCCESS: 'insights.severidad-positivo',
+  WARNING: 'insights.severidad-alerta',
+  CRITICAL: 'insights.severidad-critico',
+}
+
 const EVIDENCE_LABELS: Record<string, string> = {
-  ingresos: 'Ingresos (S/)',
-  ingresos_actual: 'Ingresos del mes (S/)',
-  ingresos_anterior: 'Ingresos del mes anterior (S/)',
-  mes_actual: 'Mes actual',
-  mes_anterior: 'Mes anterior',
-  variacion_pct: 'Variación (%)',
-  variacion_mensual_pct: 'Variación mensual (%)',
-  ticket_promedio: 'Ticket promedio (S/)',
-  transacciones: 'Transacciones',
-  vendedor: 'Vendedor',
-  categoría: 'Categoría',
-  participación_pct: 'Participación (%)',
-  umbral_pct: 'Umbral (%)',
-  media: 'Media',
-  mediana: 'Mediana',
-  diferencia: 'Diferencia (S/)',
-  diferencia_pct: 'Diferencia (%)',
-  ventas_pendientes: 'Ventas pendientes',
-  saldo_por_cobrar: 'Saldo por cobrar (S/)',
-  productos_en_alerta: 'Productos en alerta',
-  productos_sin_stock: 'Productos sin stock',
-  producto: 'Producto',
-  unidades: 'Unidades',
-  skus: 'SKUs en alerta',
+  ingresos: 'insights.ingresos',
+  ingresos_actual: 'insights.ingresos-del-mes',
+  ingresos_anterior: 'insights.ingresos-del-mes-anterior',
+  mes_actual: 'insights.mes-actual',
+  mes_anterior: 'insights.mes-anterior',
+  variacion_pct: 'insights.variacion-pct',
+  variacion_mensual_pct: 'insights.variacion-mensual-pct',
+  ticket_promedio: 'insights.ticket-promedio-s',
+  transacciones: 'insights.transacciones',
+  vendedor: 'insights.vendedor',
+  categoría: 'insights.categoria',
+  participación_pct: 'insights.participacion-pct',
+  umbral_pct: 'insights.umbral-pct',
+  media: 'insights.media',
+  mediana: 'insights.mediana',
+  diferencia: 'insights.diferencia-s',
+  diferencia_pct: 'insights.diferencia-pct',
+  ventas_pendientes: 'insights.ventas-pendientes',
+  saldo_por_cobrar: 'insights.saldo-por-cobrar-s',
+  productos_en_alerta: 'insights.productos-en-alerta',
+  productos_sin_stock: 'insights.productos-sin-stock',
+  producto: 'insights.producto',
+  unidades: 'insights.unidades',
+  skus: 'insights.skus-en-alerta',
 }
 
 export default function InsightsPage() {
+  const { t } = useLang()
   const [severity, setSeverity] = useState<InsightSeverity | ''>('')
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('observaciones')
@@ -85,15 +93,14 @@ export default function InsightsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1>Insights</h1>
+          <h1>{t('insights.insights')}</h1>
           <p className="mt-1 text-body-sm text-gray-600">
-            Observaciones explicables generadas por reglas determinísticas, con su evidencia numérica
-            (Fase 11).
+            {t('insights.observaciones-explicables-generadas-por-reglas-deterministicas-con-su-evidencia-numerica-fase-11')}
           </p>
         </div>
         <Button variant="outline" onClick={reload} loading={loading}>
           <RefreshCw aria-hidden="true" className="h-4 w-4" />
-          Regenerar
+          {t('insights.regenerar')}
         </Button>
       </div>
 
@@ -105,10 +112,10 @@ export default function InsightsPage() {
           {/* Resumen */}
           <div className="grid gap-4 sm:grid-cols-4">
             {[
-              { label: 'Insights generados', value: counts.total, tone: 'text-primary' },
-              { label: 'Alertas', value: counts.alertas, tone: 'text-warning' },
-              { label: 'Críticos', value: counts.criticos, tone: 'text-error' },
-              { label: 'Positivos', value: counts.positivos, tone: 'text-success' },
+              { label: t('insights.insights-generados'), value: counts.total, tone: 'text-primary' },
+              { label: t('insights.alertas'), value: counts.alertas, tone: 'text-warning' },
+              { label: t('insights.criticos'), value: counts.criticos, tone: 'text-error' },
+              { label: t('insights.positivos'), value: counts.positivos, tone: 'text-success' },
             ].map((item) => (
               <div key={item.label} className="card py-4">
                 <p className="text-caption text-gray-500">{item.label}</p>
@@ -121,22 +128,22 @@ export default function InsightsPage() {
           <div className="card flex flex-col gap-3 md:flex-row md:items-end">
             <Input
               type="search"
-              aria-label="Buscar insights"
-              placeholder="Buscar por título, mensaje o regla…"
+              aria-label={t('insights.buscar-insights')}
+              placeholder={t('insights.buscar-por-titulo-mensaje-o-regla')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="md:flex-1"
             />
             <Select
-              aria-label="Filtrar por severidad"
+              aria-label={t('insights.filtrar-por-severidad')}
               value={severity}
               onChange={(event) => setSeverity(event.target.value as InsightSeverity | '')}
               className="md:w-52"
             >
-              <option value="">Todas las severidades</option>
-              {(Object.keys(SEVERITY_LABELS) as InsightSeverity[]).map((value) => (
+              <option value="">{t('insights.todas-las-severidades')}</option>
+              {(Object.keys(SEVERITY_KEYS) as InsightSeverity[]).map((value) => (
                 <option key={value} value={value}>
-                  {SEVERITY_LABELS[value]}
+                  {t(SEVERITY_KEYS[value])}
                 </option>
               ))}
             </Select>
@@ -149,7 +156,7 @@ export default function InsightsPage() {
                 description={error}
                 action={
                   <Button variant="outline" onClick={reload}>
-                    Reintentar
+                    {t('insights.reintentar')}
                   </Button>
                 }
               />
@@ -157,11 +164,14 @@ export default function InsightsPage() {
           ) : loading && insights.length === 0 ? (
             <div className="card flex flex-col items-center gap-3 py-12">
               <Spinner className="text-loading" />
-              <p className="text-body-sm text-gray-500">Aplicando reglas determinísticas…</p>
+              <p className="text-body-sm text-gray-500">{t('insights.aplicando-reglas-deterministicas')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="card">
-              <EmptyState title="Sin insights" description="No hay observaciones que coincidan con el filtro." />
+              <EmptyState
+                title={t('insights.sin-insights')}
+                description={t('insights.no-hay-observaciones-que-coincidan-con-el-filtro')}
+              />
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -172,7 +182,7 @@ export default function InsightsPage() {
                       <Lightbulb aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                       <h2 className="text-body font-semibold text-gray-900">{insight.title}</h2>
                     </div>
-                    <Badge variant={SEVERITY_BADGE[insight.severity]}>{SEVERITY_LABELS[insight.severity]}</Badge>
+                    <Badge variant={SEVERITY_BADGE[insight.severity]}>{t(SEVERITY_KEYS[insight.severity])}</Badge>
                   </div>
 
                   <p className="text-body-sm text-gray-600">{insight.message}</p>
@@ -181,7 +191,7 @@ export default function InsightsPage() {
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-gray-50 p-3 text-caption">
                       {Object.entries(insight.evidence).map(([key, value]) => (
                         <div key={key} className="flex justify-between gap-2">
-                          <dt className="truncate text-gray-500">{EVIDENCE_LABELS[key] ?? key}</dt>
+                          <dt className="truncate text-gray-500">{t(EVIDENCE_LABELS[key] ?? key)}</dt>
                           <dd className="shrink-0 font-semibold text-gray-900">
                             {typeof value === 'number' ? value : value || '—'}
                           </dd>
@@ -206,31 +216,30 @@ export default function InsightsPage() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <ListTree aria-hidden="true" className="h-5 w-5 text-primary" />
-            <h2 className="text-h3 text-gray-800">Reglas determinísticas vigentes</h2>
+            <h2 className="text-h3 text-gray-800">{t('insights.reglas-deterministicas-vigentes')}</h2>
           </div>
           <p className="text-body-sm text-gray-600">
-            Cada insight proviene de una regla fija: con los mismos datos se obtiene siempre el mismo
-            resultado (RF-18). Las reglas de alerta se activan y ajustan desde{' '}
+            {t('insights.cada-insight-proviene-de-una-regla-fija-con-los-mismos-datos-se-obtiene-siempre-el-mismo-resultado-rf-18-las-reglas-de-alerta-se-activan-y-ajustan-desde')}{' '}
             <Link to="/automatizaciones" className="font-medium text-primary hover:underline">
-              Automatizaciones
+              {t('insights.automatizaciones')}
             </Link>
             .
           </p>
-          <DataTable headers={['Código', 'Descripción', 'Severidad base', 'Configurable']}>
+          <DataTable headers={[t('insights.codigo'), t('insights.descripcion'), t('insights.severidad-base'), t('insights.configurable')]}>
             {getActiveRules().map((rule) => (
               <TableRow key={rule.code}>
                 <TableCell className="font-mono text-caption">{rule.code}</TableCell>
-                <TableCell>{rule.description}</TableCell>
+                <TableCell>{t(rule.description)}</TableCell>
                 <TableCell>
-                  <Badge variant={SEVERITY_BADGE[rule.severity]}>{SEVERITY_LABELS[rule.severity]}</Badge>
+                  <Badge variant={SEVERITY_BADGE[rule.severity]}>{t(SEVERITY_KEYS[rule.severity])}</Badge>
                 </TableCell>
                 <TableCell>
                   {rule.automationCode ? (
                     <Badge variant={rule.enabled ? 'success' : 'neutral'}>
-                      {rule.enabled ? 'Activa' : 'Desactivada'}
+                      {rule.enabled ? t('insights.activa') : t('insights.desactivada')}
                     </Badge>
                   ) : (
-                    <span className="text-caption text-gray-400">siempre activa</span>
+                    <span className="text-caption text-gray-400">{t('insights.siempre-activa')}</span>
                   )}
                 </TableCell>
               </TableRow>

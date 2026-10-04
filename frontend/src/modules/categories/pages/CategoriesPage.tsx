@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
 import { createCategory, deleteCategory, listCategories, updateCategory } from '../services/categoryService'
 import type { Category, CategoryInput } from '@/types/product'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Página de Categorías (RF-04 · docs/05 §2.4).
@@ -23,6 +24,7 @@ const EMPTY_FORM = { name: '', description: '' }
 
 export default function CategoriesPage() {
   const toast = useToast()
+  const { t } = useLang()
   const version = useDataVersion()
 
   const [categories, setCategories] = useState<Category[]>([])
@@ -49,7 +51,9 @@ export default function CategoriesPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar las categorías')
+          setError(
+            reason instanceof Error ? reason.message : t('categories.no-se-pudieron-cargar-las-categorias'),
+          )
         }
       })
       .finally(() => {
@@ -84,7 +88,7 @@ export default function CategoriesPage() {
   const handleSubmit = async () => {
     const name = form.name.trim()
     if (name.length < 2) {
-      setFormError('El nombre debe tener al menos 2 caracteres.')
+      setFormError(t('categories.el-nombre-debe-tener-al-menos-2-caracteres', { n: 2 }))
       return
     }
     const input: CategoryInput = { name, description: form.description.trim() || null }
@@ -92,15 +96,15 @@ export default function CategoriesPage() {
     try {
       if (editing) {
         await updateCategory(editing.id, input)
-        toast.success('Categoría actualizada', `${name} se guardó correctamente.`)
+        toast.success(t('categories.categoria-actualizada'), `${name} ${t('categories.se-guardo-correctamente')}`)
       } else {
         await createCategory(input)
-        toast.success('Categoría creada', `${name} ya está disponible en Productos.`)
+        toast.success(t('categories.categoria-creada'), `${name} ${t('categories.ya-esta-disponible-en-productos')}`)
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la categoría.')
+      setFormError(reason instanceof Error ? reason.message : t('categories.no-se-pudo-guardar-la-categoria'))
     } finally {
       setSaving(false)
     }
@@ -111,11 +115,11 @@ export default function CategoriesPage() {
     setDeleteError(null)
     try {
       await deleteCategory(deleting.id)
-      toast.success('Categoría eliminada', `${deleting.name} se quitó del catálogo.`)
+      toast.success(t('categories.categoria-eliminada'), `${deleting.name} ${t('categories.se-quito-del-catalogo')}`)
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar la categoría.')
+      setDeleteError(reason instanceof Error ? reason.message : t('categories.no-se-pudo-eliminar-la-categoria'))
     }
   }
 
@@ -123,23 +127,20 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Categorías</h1>
-          <p className="mt-1 text-body-sm text-gray-600">
-            Catálogo de categorías de producto (RF-04). Crea aquí las categorías de tu proyecto
-            antes de registrar productos.
-          </p>
+          <h1>{t('categories.categorias')}</h1>
+          <p className="mt-1 text-body-sm text-gray-600">{t('categories.catalogo-de-categorias-de-producto')}</p>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva categoría
+          {t('categories.nueva-categoria')}
         </Button>
       </div>
 
       <div className="card">
         <Input
           type="search"
-          aria-label="Buscar categorías"
-          placeholder="Buscar categoría…"
+          aria-label={t('categories.buscar-categorias')}
+          placeholder={t('categories.buscar-categoria')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -151,18 +152,18 @@ export default function CategoriesPage() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('categories.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && categories.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Categoría', 'Descripción', 'Estado', '']}>
+          <DataTable headers={[t('categories.categoria'), t('categories.descripcion'), t('categories.estado'), '']}>
             <TableStateRow colSpan={4}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando categorías…
+                {t('categories.cargando-categorias')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -171,26 +172,33 @@ export default function CategoriesPage() {
         <div className="card">
           <EmptyState
             icon={Tags}
-            title="Sin categorías"
-            description="Aún no hay categorías registradas. Crea la primera para poder dar de alta productos."
+            title={t('categories.sin-categorias')}
+            description={t('categories.aun-no-hay-categorias-registradas')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva categoría
+                {t('categories.nueva-categoria')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Categoría', 'Descripción', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('categories.categoria'),
+              t('categories.descripcion'),
+              t('categories.estado'),
+              t('categories.acciones'),
+            ]}
+          >
             {visible.map((category) => (
               <TableRow key={category.id}>
                 <TableCell className="font-medium text-gray-900">{category.name}</TableCell>
                 <TableCell className="text-gray-600">{category.description ?? '—'}</TableCell>
                 <TableCell>
                   <Badge variant={category.status === 'inactive' ? 'neutral' : 'success'}>
-                    {category.status === 'inactive' ? 'Inactiva' : 'Activa'}
+                    {category.status === 'inactive' ? t('categories.inactiva') : t('categories.activa')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -198,8 +206,8 @@ export default function CategoriesPage() {
                     <button
                       type="button"
                       onClick={() => openEdit(category)}
-                      aria-label={`Editar ${category.name}`}
-                      title="Editar"
+                      aria-label={`${t('categories.editar')} ${category.name}`}
+                      title={t('categories.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -210,8 +218,8 @@ export default function CategoriesPage() {
                         setDeleteError(null)
                         setDeleting(category)
                       }}
-                      aria-label={`Eliminar ${category.name}`}
-                      title="Eliminar"
+                      aria-label={`${t('categories.eliminar')} ${category.name}`}
+                      title={t('categories.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -227,34 +235,34 @@ export default function CategoriesPage() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar categoría' : 'Nueva categoría'}
+        title={editing ? t('categories.editar-categoria') : t('categories.nueva-categoria')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('categories.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear categoría'}
+              {editing ? t('categories.guardar-cambios') : t('categories.crear-categoria')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Nombre"
+            label={t('categories.nombre')}
             required
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="Ej. Bebidas"
+            placeholder={t('categories.ej-bebidas')}
             error={formError ?? undefined}
             autoFocus
           />
           <Textarea
-            label="Descripción"
-            hint="Opcional. Describe qué agrupa esta categoría."
+            label={t('categories.descripcion')}
+            hint={t('categories.opcional-describe-que-agrupa-esta-categoria')}
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
-            placeholder="Ej. Bebidas frías y gaseosas"
+            placeholder={t('categories.ej-bebidas-frias-y-gaseosas')}
           />
         </div>
       </Modal>
@@ -262,21 +270,22 @@ export default function CategoriesPage() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar categoría"
+        title={t('categories.eliminar-categoria')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('categories.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('categories.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la categoría <strong>{deleting?.name}</strong>? Solo es posible si ningún producto
-          la está usando.
+          {t('categories.eliminar-la-categoria')}
+          <strong>{deleting?.name}</strong>
+          {t('categories.solo-es-posible-si-ningun-producto-la-esta-usando')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

@@ -14,6 +14,7 @@ import { getToken } from '@/services/api'
 import { hydrateStore } from '@/services/hydrate'
 import { fetchMe } from '@/modules/auth/services/authService'
 import { useAuth } from '@/hooks/useAuth'
+import { useLang } from '@/i18n/i18n'
 
 const CustomersPage = lazy(() => import('@/modules/customers/pages/CustomersPage'))
 const ProductsPage = lazy(() => import('@/modules/products/pages/ProductsPage'))
@@ -81,19 +82,20 @@ function GuestOnly({ children }: { children: ReactNode }) {
 function ModuleGuard({ path, children }: { path: string; children: ReactNode }) {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { t } = useLang()
 
   if (!canAccessModule(user?.role, path)) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <ShieldAlert aria-hidden="true" className="h-12 w-12 text-warning" />
         <div>
-          <h2 className="text-h3 text-gray-900">Módulo no disponible</h2>
+          <h2 className="text-h3 text-gray-900">{t('common.modulo-no-disponible')}</h2>
           <p className="mt-1 text-body-sm text-gray-500">
-            Tu rol ({user?.role ?? 'sin rol'}) no tiene asignado este módulo.
+            {t('common.rol-sin-modulo', { role: user?.role ?? t('common.sin-rol') })}
           </p>
         </div>
         <button type="button" className="btn-primary" onClick={() => navigate('/dashboard')}>
-          Volver al Dashboard
+          {t('common.volver-al-dashboard')}
         </button>
       </div>
     )

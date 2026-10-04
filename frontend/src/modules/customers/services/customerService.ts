@@ -13,6 +13,14 @@ import { hydrateStore } from '@/services/hydrate'
 /** Segmentos comerciales. */
 export const CUSTOMER_SEGMENTS = ['Nuevo', 'Ocasional', 'Recurrente', 'Frecuente'] as const
 
+/** Claves i18n de cada segmento (el valor del segmento sigue siendo dato). */
+export const SEGMENT_KEYS: Record<string, string> = {
+  'Nuevo': 'customers.segmento-nuevo',
+  'Ocasional': 'customers.segmento-ocasional',
+  'Recurrente': 'customers.segmento-recurrente',
+  'Frecuente': 'customers.segmento-frecuente',
+}
+
 export interface CustomerFilters {
   search?: string
   segment?: string

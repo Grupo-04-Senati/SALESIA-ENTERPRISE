@@ -10,9 +10,9 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
 import {
-  NOTIFICATION_LEVEL_LABELS,
   createNotification,
   deleteNotification,
   listNotifications,
@@ -34,8 +34,16 @@ const LEVEL_BADGES: Record<NotificationLevel, BadgeVariant> = {
 
 const EMPTY_FORM = { title: '', message: '', level: 'info' as NotificationLevel }
 
+const LEVEL_KEYS: Record<NotificationLevel, string> = {
+  info: 'settings.nivel-info',
+  warning: 'settings.nivel-advertencia',
+  success: 'settings.nivel-exito',
+  error: 'settings.nivel-error',
+}
+
 export default function NotificationsPanel() {
   const toast = useToast()
+  const { t } = useLang()
 
   const [items, setItems] = useState<AppNotification[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,7 +69,9 @@ export default function NotificationsPanel() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las notificaciones',
+            reason instanceof Error
+              ? reason.message
+              : t('settings.no-se-pudieron-cargar-las-notificaciones'),
           )
         }
       })
@@ -79,23 +89,28 @@ export default function NotificationsPanel() {
     const title = form.title.trim()
     const message = form.message.trim()
     if (title.length < 3) {
-      setFormError('El título debe tener al menos 3 caracteres.')
+      setFormError(t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))
       return
     }
     if (message.length < 3) {
-      setFormError('El mensaje debe tener al menos 3 caracteres.')
+      setFormError(t('settings.el-mensaje-debe-tener-al-menos-3-caracteres'))
       return
     }
     setSaving(true)
     try {
       await createNotification({ title, message, level: form.level })
-      toast.success('Notificación creada', `${title} se envió a la empresa.`)
+      toast.success(
+        t('settings.notificacion-creada'),
+        `${title} ${t('settings.se-envio-a-la-empresa')}`,
+      )
       setFormOpen(false)
       setForm(EMPTY_FORM)
       reload()
     } catch (reason: unknown) {
       setFormError(
-        reason instanceof Error ? reason.message : 'No se pudo crear la notificación.',
+        reason instanceof Error
+          ? reason.message
+          : t('settings.no-se-pudo-crear-la-notificacion'),
       )
     } finally {
       setSaving(false)
@@ -105,12 +120,12 @@ export default function NotificationsPanel() {
   const handleMarkRead = async (row: AppNotification) => {
     try {
       await markNotificationRead(row.id)
-      toast.success('Notificación leída', row.title)
+      toast.success(t('settings.notificacion-leida'), row.title)
       reload()
     } catch (reason: unknown) {
       toast.error(
-        'No se pudo marcar',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('settings.no-se-pudo-marcar'),
+        reason instanceof Error ? reason.message : t('settings.error-inesperado'),
       )
     }
   }
@@ -119,12 +134,15 @@ export default function NotificationsPanel() {
     setMarkingAll(true)
     try {
       const result = await markAllNotificationsRead()
-      toast.success('Notificaciones leídas', `${result.updated} marcadas como leídas.`)
+      toast.success(
+        t('settings.notificaciones-leidas'),
+        t('settings.marcadas-como-leidas', { n: result.updated }),
+      )
       reload()
     } catch (reason: unknown) {
       toast.error(
-        'No se pudieron marcar',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('settings.no-se-pudieron-marcar'),
+        reason instanceof Error ? reason.message : t('settings.error-inesperado'),
       )
     } finally {
       setMarkingAll(false)
@@ -136,12 +154,14 @@ export default function NotificationsPanel() {
     setDeleteError(null)
     try {
       await deleteNotification(deleting.id)
-      toast.success('Notificación eliminada', deleting.title)
+      toast.success(t('settings.notificacion-eliminada'), deleting.title)
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
       setDeleteError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la notificación.',
+        reason instanceof Error
+          ? reason.message
+          : t('settings.no-se-pudo-eliminar-la-notificacion'),
       )
     }
   }
@@ -152,12 +172,12 @@ export default function NotificationsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Avisos de la empresa. {unread} sin leer.
+          {t('settings.avisos-de-la-empresa-sin-leer', { n: unread })}
         </p>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={handleMarkAllRead} loading={markingAll}>
             <CheckCheck aria-hidden="true" className="h-4 w-4" />
-            Marcar todas como leídas
+            {t('settings.marcar-todas-como-leidas')}
           </Button>
           <Button
             onClick={() => {
@@ -167,7 +187,7 @@ export default function NotificationsPanel() {
             }}
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
-            Nueva notificación
+            {t('settings.nueva-notificacion')}
           </Button>
         </div>
       </div>
@@ -178,18 +198,27 @@ export default function NotificationsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('settings.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && items.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Fecha', 'Nivel', 'Título', 'Mensaje', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('settings.fecha'),
+              t('settings.nivel'),
+              t('settings.titulo'),
+              t('settings.mensaje'),
+              t('settings.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando notificaciones…
+                {t('settings.cargando-notificaciones')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -198,8 +227,8 @@ export default function NotificationsPanel() {
         <div className="card">
           <EmptyState
             icon={Bell}
-            title="Sin notificaciones"
-            description="Todavía no hay avisos registrados. Crea la primera para informar a tu equipo."
+            title={t('settings.sin-notificaciones')}
+            description={t('settings.todavia-no-hay-avisos-registrados')}
             action={
               <Button
                 onClick={() => {
@@ -209,27 +238,36 @@ export default function NotificationsPanel() {
                 }}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva notificación
+                {t('settings.nueva-notificacion')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Fecha', 'Nivel', 'Título', 'Mensaje', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('settings.fecha'),
+              t('settings.nivel'),
+              t('settings.titulo'),
+              t('settings.mensaje'),
+              t('settings.estado'),
+              t('settings.acciones'),
+            ]}
+          >
             {items.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="whitespace-nowrap">{formatDateTime(row.created_at)}</TableCell>
                 <TableCell>
                   <Badge variant={LEVEL_BADGES[row.level]}>
-                    {NOTIFICATION_LEVEL_LABELS[row.level]}
+                    {t(LEVEL_KEYS[row.level])}
                   </Badge>
                 </TableCell>
                 <TableCell className="font-medium text-gray-900">{row.title}</TableCell>
                 <TableCell className="max-w-64 truncate text-gray-600">{row.message}</TableCell>
                 <TableCell>
                   <Badge variant={row.read_at ? 'neutral' : 'warning'}>
-                    {row.read_at ? 'Leída' : 'Sin leer'}
+                    {row.read_at ? t('settings.leida') : t('settings.sin-leer')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -238,8 +276,8 @@ export default function NotificationsPanel() {
                       <button
                         type="button"
                         onClick={() => handleMarkRead(row)}
-                        aria-label={`Marcar ${row.title} como leída`}
-                        title="Marcar como leída"
+                        aria-label={`${t('settings.marcar')} ${row.title} ${t('settings.como-leida')}`}
+                        title={t('settings.marcar-como-leida')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <CheckCheck aria-hidden="true" className="h-4 w-4" />
@@ -251,8 +289,8 @@ export default function NotificationsPanel() {
                         setDeleteError(null)
                         setDeleting(row)
                       }}
-                      aria-label={`Eliminar ${row.title}`}
-                      title="Eliminar"
+                      aria-label={`${t('settings.eliminar')} ${row.title}`}
+                      title={t('settings.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -268,39 +306,39 @@ export default function NotificationsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title="Nueva notificación"
+        title={t('settings.nueva-notificacion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              Crear notificación
+              {t('settings.crear-notificacion')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Título"
+            label={t('settings.titulo')}
             required
             minLength={3}
             maxLength={150}
             value={form.title}
             onChange={(event) => setForm({ ...form, title: event.target.value })}
-            placeholder="Ej. Cierre de caja pendiente"
+            placeholder={t('settings.ej-cierre-de-caja-pendiente')}
             error={formError ?? undefined}
             autoFocus
           />
           <Textarea
-            label="Mensaje"
+            label={t('settings.mensaje')}
             required
             value={form.message}
             onChange={(event) => setForm({ ...form, message: event.target.value })}
-            placeholder="Ej. Recuerda registrar los ingresos del turno."
+            placeholder={t('settings.ej-recuerda-registrar-los-ingresos-del-turno')}
           />
           <Select
-            label="Nivel"
+            label={t('settings.nivel')}
             required
             value={form.level}
             onChange={(event) =>
@@ -309,7 +347,7 @@ export default function NotificationsPanel() {
           >
             {LEVELS.map((level) => (
               <option key={level} value={level}>
-                {NOTIFICATION_LEVEL_LABELS[level]}
+                {t(LEVEL_KEYS[level])}
               </option>
             ))}
           </Select>
@@ -319,20 +357,20 @@ export default function NotificationsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar notificación"
+        title={t('settings.eliminar-notificacion')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('settings.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('settings.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la notificación <strong>{deleting?.title}</strong>?
+          {t('settings.eliminar-la-notificacion')} <strong>{deleting?.title}</strong>?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

@@ -9,13 +9,9 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
-import {
-  KPI_LABELS,
-  createKpiSnapshot,
-  deleteKpiSnapshot,
-  listKpiSnapshots,
-} from '../services/kpiService'
+import { createKpiSnapshot, deleteKpiSnapshot, listKpiSnapshots } from '../services/kpiService'
 import type { KpiCode, KpiSnapshot } from '../services/kpiService'
 
 /** Pestaña «Instantáneas» de Analytics (ENDPOINTS.kpiSnapshots). */
@@ -23,6 +19,14 @@ import type { KpiCode, KpiSnapshot } from '../services/kpiService'
 const KPI_CODES: KpiCode[] = ['revenue', 'sales_count', 'avg_ticket', 'customers', 'low_stock']
 
 const CURRENCY_KPIS: KpiCode[] = ['revenue', 'avg_ticket']
+
+const KPI_LABEL_KEYS: Record<KpiCode, string> = {
+  revenue: 'analytics.ingresos',
+  sales_count: 'analytics.n-de-ventas',
+  avg_ticket: 'analytics.ticket-promedio',
+  customers: 'analytics.clientes',
+  low_stock: 'analytics.productos-con-stock-bajo',
+}
 
 const EMPTY_FORM = { kpi_code: 'revenue' as KpiCode, period_start: '', period_end: '' }
 
@@ -32,6 +36,9 @@ function formatValue(kpi: KpiCode, value: number): string {
 
 export default function SnapshotsPanel() {
   const toast = useToast()
+  const { t } = useLang()
+
+  const kpiLabel = (code: KpiCode) => t(KPI_LABEL_KEYS[code])
 
   const [items, setItems] = useState<KpiSnapshot[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,7 +63,9 @@ export default function SnapshotsPanel() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las instantáneas',
+            reason instanceof Error
+              ? reason.message
+              : t('analytics.no-se-pudieron-cargar-las-instantaneas'),
           )
         }
       })
@@ -72,26 +81,26 @@ export default function SnapshotsPanel() {
 
   const handleSubmit = async () => {
     if (!form.period_start || !form.period_end) {
-      setFormError('Indica la fecha de inicio y la fecha de fin del periodo.')
+      setFormError(t('analytics.indica-la-fecha-de-inicio-y-la-fecha-de-fin-del-periodo'))
       return
     }
     if (form.period_end < form.period_start) {
-      setFormError('La fecha de fin no puede ser anterior a la de inicio.')
+      setFormError(t('analytics.la-fecha-de-fin-no-puede-ser-anterior-a-la-de-inicio'))
       return
     }
     setSaving(true)
     try {
       const created = await createKpiSnapshot(form)
       toast.success(
-        'Instantánea guardada',
-        `${KPI_LABELS[created.kpi_code]}: ${formatValue(created.kpi_code, created.value)}.`,
+        t('analytics.instantanea-guardada'),
+        `${kpiLabel(created.kpi_code)}: ${formatValue(created.kpi_code, created.value)}.`,
       )
       setFormOpen(false)
       setForm(EMPTY_FORM)
       reload()
     } catch (reason: unknown) {
       setFormError(
-        reason instanceof Error ? reason.message : 'No se pudo guardar la instantánea.',
+        reason instanceof Error ? reason.message : t('analytics.no-se-pudo-guardar-la-instantanea'),
       )
     } finally {
       setSaving(false)
@@ -103,12 +112,14 @@ export default function SnapshotsPanel() {
     setDeleteError(null)
     try {
       await deleteKpiSnapshot(deleting.id)
-      toast.success('Instantánea eliminada', KPI_LABELS[deleting.kpi_code])
+      toast.success(t('analytics.instantanea-eliminada'), kpiLabel(deleting.kpi_code))
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
       setDeleteError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la instantánea.',
+        reason instanceof Error
+          ? reason.message
+          : t('analytics.no-se-pudo-eliminar-la-instantanea'),
       )
     }
   }
@@ -117,7 +128,7 @@ export default function SnapshotsPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-body-sm text-gray-600">
-          Fotografías de un KPI en un periodo: el backend calcula el valor al guardarla.
+          {t('analytics.fotografias-de-un-kpi-en-un-periodo-el-backend-calcula-el-valor-al-guardarla')}
         </p>
         <Button
           onClick={() => {
@@ -127,7 +138,7 @@ export default function SnapshotsPanel() {
           }}
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Guardar instantánea
+          {t('analytics.guardar-instantanea')}
         </Button>
       </div>
 
@@ -137,18 +148,26 @@ export default function SnapshotsPanel() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('analytics.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && items.length === 0 ? (
         <div className="card">
-          <DataTable headers={['KPI', 'Periodo', 'Valor', 'Fecha', '']}>
+          <DataTable
+            headers={[
+              t('analytics.kpi'),
+              t('analytics.periodo'),
+              t('analytics.valor'),
+              t('analytics.fecha'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={5}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando instantáneas…
+                {t('analytics.cargando-instantaneas')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -157,8 +176,10 @@ export default function SnapshotsPanel() {
         <div className="card">
           <EmptyState
             icon={Camera}
-            title="Sin instantáneas"
-            description="Guarda la primera instantánea de un KPI para compararla con la evolución de los siguientes periodos."
+            title={t('analytics.sin-instantaneas')}
+            description={t(
+              'analytics.guarda-la-primera-instantanea-de-un-kpi-para-compararla-con-la-evolucion-de-los-siguientes-periodos',
+            )}
             action={
               <Button
                 onClick={() => {
@@ -168,18 +189,26 @@ export default function SnapshotsPanel() {
                 }}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Guardar instantánea
+                {t('analytics.guardar-instantanea')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['KPI', 'Periodo', 'Valor', 'Fecha', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('analytics.kpi'),
+              t('analytics.periodo'),
+              t('analytics.valor'),
+              t('analytics.fecha'),
+              t('analytics.acciones'),
+            ]}
+          >
             {items.map((row) => (
               <TableRow key={row.id}>
                 <TableCell>
-                  <Badge variant="primary">{KPI_LABELS[row.kpi_code]}</Badge>
+                  <Badge variant="primary">{kpiLabel(row.kpi_code)}</Badge>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-gray-600">
                   {row.period_start} → {row.period_end}
@@ -198,8 +227,8 @@ export default function SnapshotsPanel() {
                         setDeleteError(null)
                         setDeleting(row)
                       }}
-                      aria-label="Eliminar instantánea"
-                      title="Eliminar"
+                      aria-label={t('analytics.eliminar-instantanea')}
+                      title={t('analytics.eliminar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -215,21 +244,21 @@ export default function SnapshotsPanel() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title="Guardar instantánea"
+        title={t('analytics.guardar-instantanea')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('analytics.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              Guardar instantánea
+              {t('analytics.guardar-instantanea')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="KPI"
+            label={t('analytics.kpi')}
             required
             value={form.kpi_code}
             onChange={(event) => setForm({ ...form, kpi_code: event.target.value as KpiCode })}
@@ -237,20 +266,20 @@ export default function SnapshotsPanel() {
           >
             {KPI_CODES.map((code) => (
               <option key={code} value={code}>
-                {KPI_LABELS[code]}
+                {kpiLabel(code)}
               </option>
             ))}
           </Select>
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Periodo desde"
+              label={t('analytics.periodo-desde')}
               type="date"
               required
               value={form.period_start}
               onChange={(event) => setForm({ ...form, period_start: event.target.value })}
             />
             <Input
-              label="Periodo hasta"
+              label={t('analytics.periodo-hasta')}
               type="date"
               required
               value={form.period_end}
@@ -258,7 +287,7 @@ export default function SnapshotsPanel() {
             />
           </div>
           <p className="text-caption text-gray-500">
-            El valor se calcula en el backend con los datos del periodo indicado.
+            {t('analytics.el-valor-se-calcula-en-el-backend-con-los-datos-del-periodo-indicado')}
           </p>
         </div>
       </Modal>
@@ -266,21 +295,21 @@ export default function SnapshotsPanel() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar instantánea"
+        title={t('analytics.eliminar-instantanea')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancelar
+              {t('analytics.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete}>
-              Eliminar
+              {t('analytics.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la instantánea de{' '}
-          <strong>{deleting ? KPI_LABELS[deleting.kpi_code] : ''}</strong>?
+          {t('analytics.eliminar-la-instantanea-de')}{' '}
+          <strong>{deleting ? kpiLabel(deleting.kpi_code) : ''}</strong>?
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

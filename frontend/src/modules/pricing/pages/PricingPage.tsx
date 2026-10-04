@@ -11,6 +11,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { useDataVersion } from '@/data/DataProvider'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDate, formatNumber } from '@/utils/formatters'
@@ -41,16 +42,6 @@ import type {
  * producto (PUT /price-lists/{id}/items). Pestaña «Promociones»: descuentos
  * por porcentaje o monto fijo con su ventana de vigencia y productos.
  */
-
-const TAB_ITEMS = [
-  { id: 'listas', label: 'Listas de precios' },
-  { id: 'promociones', label: 'Promociones' },
-]
-
-const KIND_LABELS: Record<PromotionKind, string> = {
-  percent: 'Porcentaje (%)',
-  fixed: 'Monto fijo (S/)',
-}
 
 const EMPTY_LIST_FORM = { name: '', currency: 'PEN' }
 
@@ -95,7 +86,18 @@ const money = (value: number, currency: string): string =>
 
 export default function PricingPage() {
   const toast = useToast()
+  const { t } = useLang()
   const version = useDataVersion()
+
+  const TAB_ITEMS = [
+    { id: 'listas', label: t('pricing.tab-listas') },
+    { id: 'promociones', label: t('pricing.tab-promociones') },
+  ]
+
+  const KIND_LABELS: Record<PromotionKind, string> = {
+    percent: t('pricing.kind-percent'),
+    fixed: t('pricing.kind-fixed'),
+  }
 
   const [tab, setTab] = useState('listas')
 
@@ -146,7 +148,7 @@ export default function PricingPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setListsError(reason instanceof Error ? reason.message : 'No se pudieron cargar las listas')
+          setListsError(reason instanceof Error ? reason.message : t('pricing.err-load-lists'))
         }
       })
       .finally(() => {
@@ -168,7 +170,7 @@ export default function PricingPage() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setPromosError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las promociones',
+            reason instanceof Error ? reason.message : t('pricing.err-load-promos'),
           )
         }
       })
@@ -213,7 +215,7 @@ export default function PricingPage() {
   const handleListSubmit = async () => {
     const name = listForm.name.trim()
     if (name.length < 2) {
-      setListError('El nombre debe tener al menos 2 caracteres.')
+      setListError(t('pricing.err-name-min'))
       return
     }
     setListError(null)
@@ -221,15 +223,18 @@ export default function PricingPage() {
     try {
       if (editingList) {
         await updatePriceList(editingList.id, { name, currency: listForm.currency })
-        toast.success('Lista actualizada', `${name} se guardó correctamente.`)
+        toast.success(t('pricing.toast-list-updated'), `${name} ${t('pricing.toast-saved-body')}`)
       } else {
         await createPriceList({ name, currency: listForm.currency })
-        toast.success('Lista creada', `${name} ya está disponible para asignar precios.`)
+        toast.success(
+          t('pricing.toast-list-created'),
+          `${name} ${t('pricing.toast-list-created-body')}`,
+        )
       }
       setListOpen(false)
       reload()
     } catch (reason: unknown) {
-      setListError(reason instanceof Error ? reason.message : 'No se pudo guardar la lista.')
+      setListError(reason instanceof Error ? reason.message : t('pricing.err-save-list'))
     } finally {
       setSavingList(false)
     }
@@ -240,11 +245,14 @@ export default function PricingPage() {
     setDeleteListError(null)
     try {
       await deletePriceList(deletingList.id)
-      toast.success('Lista eliminada', `${deletingList.name} se quitó del catálogo.`)
+      toast.success(
+        t('pricing.toast-list-deleted'),
+        `${deletingList.name} ${t('pricing.toast-list-deleted-body')}`,
+      )
       setDeletingList(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteListError(reason instanceof Error ? reason.message : 'No se pudo eliminar la lista.')
+      setDeleteListError(reason instanceof Error ? reason.message : t('pricing.err-delete-list'))
     }
   }
 
@@ -266,7 +274,7 @@ export default function PricingPage() {
       .catch((reason: unknown) => {
         setPriceDraft([EMPTY_PRICE])
         setPricesError(
-          reason instanceof Error ? reason.message : 'No se pudieron cargar los precios.',
+          reason instanceof Error ? reason.message : t('pricing.err-load-prices'),
         )
       })
       .finally(() => setPricesLoading(false))
@@ -293,30 +301,33 @@ export default function PricingPage() {
       if (!line.product_id) continue
       const price = Number(line.price)
       if (line.price.trim() === '' || Number.isNaN(price) || price < 0) {
-        setPricesError('Ingresa un precio válido (0 o más) para cada producto.')
+        setPricesError(t('pricing.err-price-invalid'))
         return
       }
       const productId = Number(line.product_id)
       if (seen.has(productId)) {
-        setPricesError('Cada producto solo puede aparecer una vez en la lista.')
+        setPricesError(t('pricing.err-duplicate-product'))
         return
       }
       seen.add(productId)
       items.push({ product_id: productId, price })
     }
     if (items.length === 0) {
-      setPricesError('Agrega al menos un producto con su precio.')
+      setPricesError(t('pricing.err-prices-empty'))
       return
     }
     setPricesError(null)
     setSavingPrices(true)
     try {
       await replacePriceListItems(pricesList.id, items)
-      toast.success('Precios actualizados', `${pricesList.name}: ${items.length} producto(s) guardados.`)
+      toast.success(
+        t('pricing.toast-prices-updated'),
+        `${pricesList.name}: ${t('pricing.toast-prices-body', { n: items.length })}`,
+      )
       setPricesOpen(false)
       reload()
     } catch (reason: unknown) {
-      setPricesError(reason instanceof Error ? reason.message : 'No se pudieron guardar los precios.')
+      setPricesError(reason instanceof Error ? reason.message : t('pricing.err-save-prices'))
     } finally {
       setSavingPrices(false)
     }
@@ -366,25 +377,25 @@ export default function PricingPage() {
     const name = promoForm.name.trim()
     const value = Number(promoForm.value)
     if (name.length < 2) {
-      setPromoError('El nombre debe tener al menos 2 caracteres.')
+      setPromoError(t('pricing.err-name-min'))
       return
     }
     if (promoForm.value.trim() === '' || Number.isNaN(value) || value <= 0) {
-      setPromoError('Ingresa un valor mayor a 0.')
+      setPromoError(t('pricing.err-value-positive'))
       return
     }
     if (promoForm.kind === 'percent' && value > 100) {
-      setPromoError('El valor de un porcentaje no puede superar 100.')
+      setPromoError(t('pricing.err-percent-max'))
       return
     }
     if (promoForm.starts_at && promoForm.ends_at) {
       if (new Date(promoForm.starts_at).getTime() >= new Date(promoForm.ends_at).getTime()) {
-        setPromoError('La fecha de inicio debe ser anterior a la fecha de fin.')
+        setPromoError(t('pricing.err-dates-order'))
         return
       }
     }
     if (promoProductIds.length === 0) {
-      setPromoError('Selecciona al menos un producto para la promoción.')
+      setPromoError(t('pricing.err-promo-products'))
       return
     }
     setPromoError(null)
@@ -400,16 +411,19 @@ export default function PricingPage() {
       }
       if (editingPromo) {
         await updatePromotion(editingPromo.id, input)
-        toast.success('Promoción actualizada', `${name} se guardó correctamente.`)
+        toast.success(t('pricing.toast-promo-updated'), `${name} ${t('pricing.toast-saved-body')}`)
       } else {
         await createPromotion(input)
-        toast.success('Promoción creada', `${name} ya está aplicando a los productos marcados.`)
+        toast.success(
+          t('pricing.toast-promo-created'),
+          `${name} ${t('pricing.toast-promo-created-body')}`,
+        )
       }
       setPromoOpen(false)
       reload()
     } catch (reason: unknown) {
       setPromoError(
-        reason instanceof Error ? reason.message : 'No se pudo guardar la promoción.',
+        reason instanceof Error ? reason.message : t('pricing.err-save-promo'),
       )
     } finally {
       setSavingPromo(false)
@@ -421,12 +435,15 @@ export default function PricingPage() {
     setDeletePromoError(null)
     try {
       await deletePromotion(deletingPromo.id)
-      toast.success('Promoción eliminada', `${deletingPromo.name} se quitó del listado.`)
+      toast.success(
+        t('pricing.toast-promo-deleted'),
+        `${deletingPromo.name} ${t('pricing.toast-promo-deleted-body')}`,
+      )
       setDeletingPromo(null)
       reload()
     } catch (reason: unknown) {
       setDeletePromoError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la promoción.',
+        reason instanceof Error ? reason.message : t('pricing.err-delete-promo'),
       )
     }
   }
@@ -434,11 +451,8 @@ export default function PricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1>Precios y promociones</h1>
-        <p className="mt-1 text-body-sm text-gray-600">
-          Listas de precios por producto y promociones vigentes (porcentaje o monto fijo) para
-          todo el catálogo.
-        </p>
+        <h1>{t('pricing.title')}</h1>
+        <p className="mt-1 text-body-sm text-gray-600">{t('pricing.lead')}</p>
       </div>
 
       <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="precios" />
@@ -449,20 +463,20 @@ export default function PricingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-body-sm text-gray-600">
               {lists.length === 0
-                ? 'Aún no hay listas de precios.'
-                : `${formatNumber(lists.length)} lista(s) registrada(s).`}
+                ? t('pricing.lists-empty')
+                : t('pricing.lists-count', { n: lists.length })}
             </p>
             <Button onClick={openListCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Nueva lista
+              {t('pricing.new-list')}
             </Button>
           </div>
 
           <div className="card">
             <Input
               type="search"
-              aria-label="Buscar listas"
-              placeholder="Buscar lista…"
+              aria-label={t('pricing.search-lists-label')}
+              placeholder={t('pricing.search-lists-placeholder')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -474,18 +488,26 @@ export default function PricingPage() {
                 description={listsError}
                 action={
                   <Button variant="outline" onClick={reload}>
-                    Reintentar
+                    {t('pricing.retry')}
                   </Button>
                 }
               />
             </div>
           ) : listsLoading && lists.length === 0 ? (
             <div className="card">
-              <DataTable headers={['Lista', 'Moneda', 'Ítems', 'Estado', '']}>
+              <DataTable
+                headers={[
+                  t('pricing.list'),
+                  t('pricing.currency'),
+                  t('pricing.items'),
+                  t('pricing.status'),
+                  '',
+                ]}
+              >
                 <TableStateRow colSpan={5}>
                   <span className="inline-flex items-center gap-2">
                     <Spinner size={16} className="text-loading" />
-                    Cargando listas…
+                    {t('pricing.loading-lists')}
                   </span>
                 </TableStateRow>
               </DataTable>
@@ -494,19 +516,27 @@ export default function PricingPage() {
             <div className="card">
               <EmptyState
                 icon={Tags}
-                title="Sin listas de precios"
-                description="Crea una lista para asignar precios específicos a tus productos."
+                title={t('pricing.no-lists-title')}
+                description={t('pricing.no-lists-desc')}
                 action={
                   <Button onClick={openListCreate}>
                     <Plus aria-hidden="true" className="h-4 w-4" />
-                    Nueva lista
+                    {t('pricing.new-list')}
                   </Button>
                 }
               />
             </div>
           ) : (
             <div className="card">
-              <DataTable headers={['Lista', 'Moneda', 'Ítems', 'Estado', 'Acciones']}>
+              <DataTable
+                headers={[
+                  t('pricing.list'),
+                  t('pricing.currency'),
+                  t('pricing.items'),
+                  t('pricing.status'),
+                  t('pricing.actions'),
+                ]}
+              >
                 {visibleLists.map((list) => (
                   <TableRow key={list.id}>
                     <TableCell className="font-medium text-gray-900">{list.name}</TableCell>
@@ -514,7 +544,9 @@ export default function PricingPage() {
                     <TableCell>{formatNumber(list.item_count)}</TableCell>
                     <TableCell>
                       <Badge variant={list.status === 'inactive' ? 'neutral' : 'success'}>
-                        {list.status === 'inactive' ? 'Inactiva' : 'Activa'}
+                        {list.status === 'inactive'
+                          ? t('pricing.status-inactive')
+                          : t('pricing.status-active')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -522,8 +554,8 @@ export default function PricingPage() {
                         <button
                           type="button"
                           onClick={() => openListEdit(list)}
-                          aria-label={`Editar ${list.name}`}
-                          title="Editar"
+                          aria-label={`${t('pricing.edit')} ${list.name}`}
+                          title={t('pricing.edit')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                         >
                           <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -531,8 +563,8 @@ export default function PricingPage() {
                         <button
                           type="button"
                           onClick={() => openPrices(list)}
-                          aria-label={`Editar precios de ${list.name}`}
-                          title="Editar precios"
+                          aria-label={`${t('pricing.edit-prices-of')} ${list.name}`}
+                          title={t('pricing.edit-prices')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                         >
                           <BadgePercent aria-hidden="true" className="h-4 w-4" />
@@ -543,8 +575,8 @@ export default function PricingPage() {
                             setDeleteListError(null)
                             setDeletingList(list)
                           }}
-                          aria-label={`Eliminar ${list.name}`}
-                          title="Eliminar"
+                          aria-label={`${t('pricing.delete')} ${list.name}`}
+                          title={t('pricing.delete')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                         >
                           <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -565,20 +597,20 @@ export default function PricingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-body-sm text-gray-600">
               {promotions.length === 0
-                ? 'Aún no hay promociones.'
-                : `${formatNumber(promotions.length)} promoción(es) registrada(s).`}
+                ? t('pricing.promos-empty')
+                : t('pricing.promos-count', { n: promotions.length })}
             </p>
             <Button onClick={openPromoCreate}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Nueva promoción
+              {t('pricing.new-promo')}
             </Button>
           </div>
 
           <div className="card">
             <Input
               type="search"
-              aria-label="Buscar promociones"
-              placeholder="Buscar promoción…"
+              aria-label={t('pricing.search-promos-label')}
+              placeholder={t('pricing.search-promos-placeholder')}
               value={promoSearch}
               onChange={(event) => setPromoSearch(event.target.value)}
             />
@@ -590,18 +622,27 @@ export default function PricingPage() {
                 description={promosError}
                 action={
                   <Button variant="outline" onClick={reload}>
-                    Reintentar
+                    {t('pricing.retry')}
                   </Button>
                 }
               />
             </div>
           ) : promosLoading && promotions.length === 0 ? (
             <div className="card">
-              <DataTable headers={['Promoción', 'Tipo', 'Valor', 'Vigencia', 'Estado', '']}>
+              <DataTable
+                headers={[
+                  t('pricing.promotion'),
+                  t('pricing.type'),
+                  t('pricing.value'),
+                  t('pricing.validity'),
+                  t('pricing.status'),
+                  '',
+                ]}
+              >
                 <TableStateRow colSpan={6}>
                   <span className="inline-flex items-center gap-2">
                     <Spinner size={16} className="text-loading" />
-                    Cargando promociones…
+                    {t('pricing.loading-promos')}
                   </span>
                 </TableStateRow>
               </DataTable>
@@ -610,25 +651,34 @@ export default function PricingPage() {
             <div className="card">
               <EmptyState
                 icon={Percent}
-                title="Sin promociones"
-                description="Crea una promoción de porcentaje o monto fijo y elige a qué productos aplica."
+                title={t('pricing.no-promos-title')}
+                description={t('pricing.no-promos-desc')}
                 action={
                   <Button onClick={openPromoCreate}>
                     <Plus aria-hidden="true" className="h-4 w-4" />
-                    Nueva promoción
+                    {t('pricing.new-promo')}
                   </Button>
                 }
               />
             </div>
           ) : (
             <div className="card">
-              <DataTable headers={['Promoción', 'Tipo', 'Valor', 'Vigencia', 'Estado', 'Acciones']}>
+              <DataTable
+                headers={[
+                  t('pricing.promotion'),
+                  t('pricing.type'),
+                  t('pricing.value'),
+                  t('pricing.validity'),
+                  t('pricing.status'),
+                  t('pricing.actions'),
+                ]}
+              >
                 {visiblePromos.map((promotion) => (
                   <TableRow key={promotion.id}>
                     <TableCell>
                       <p className="font-medium text-gray-900">{promotion.name}</p>
                       <p className="text-caption text-gray-500">
-                        {formatNumber(promotion.product_count)} producto(s)
+                        {t('pricing.products-count', { n: promotion.product_count })}
                       </p>
                     </TableCell>
                     <TableCell className="text-gray-600">{KIND_LABELS[promotion.kind]}</TableCell>
@@ -638,12 +688,14 @@ export default function PricingPage() {
                         : money(promotion.value, 'PEN')}
                     </TableCell>
                     <TableCell className="text-gray-600">
-                      {promotion.starts_at ? formatDate(promotion.starts_at) : 'Sin inicio'} →{' '}
-                      {promotion.ends_at ? formatDate(promotion.ends_at) : 'Sin fin'}
+                      {promotion.starts_at ? formatDate(promotion.starts_at) : t('pricing.no-start')} →{' '}
+                      {promotion.ends_at ? formatDate(promotion.ends_at) : t('pricing.no-end')}
                     </TableCell>
                     <TableCell>
                       <Badge variant={isPromotionActive(promotion) ? 'success' : 'neutral'}>
-                        {isPromotionActive(promotion) ? 'Activa' : 'Inactiva'}
+                        {isPromotionActive(promotion)
+                          ? t('pricing.status-active')
+                          : t('pricing.status-inactive')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -651,8 +703,8 @@ export default function PricingPage() {
                         <button
                           type="button"
                           onClick={() => openPromoEdit(promotion)}
-                          aria-label={`Editar ${promotion.name}`}
-                          title="Editar"
+                          aria-label={`${t('pricing.edit')} ${promotion.name}`}
+                          title={t('pricing.edit')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                         >
                           <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -663,8 +715,8 @@ export default function PricingPage() {
                             setDeletePromoError(null)
                             setDeletingPromo(promotion)
                           }}
-                          aria-label={`Eliminar ${promotion.name}`}
-                          title="Eliminar"
+                          aria-label={`${t('pricing.delete')} ${promotion.name}`}
+                          title={t('pricing.delete')}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-red-50 hover:text-error"
                         >
                           <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -683,36 +735,36 @@ export default function PricingPage() {
       <Modal
         open={listOpen}
         onClose={() => !savingList && setListOpen(false)}
-        title={editingList ? 'Editar lista de precios' : 'Nueva lista de precios'}
+        title={editingList ? t('pricing.edit-list-title') : t('pricing.new-list-title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setListOpen(false)} disabled={savingList}>
-              Cancelar
+              {t('pricing.cancel')}
             </Button>
             <Button onClick={handleListSubmit} loading={savingList}>
-              {editingList ? 'Guardar cambios' : 'Crear lista'}
+              {editingList ? t('pricing.save-changes') : t('pricing.create-list')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Nombre"
+            label={t('pricing.name')}
             required
             value={listForm.name}
             onChange={(event) => setListForm({ ...listForm, name: event.target.value })}
-            placeholder="Ej. Lista mayorista"
+            placeholder={t('pricing.list-name-placeholder')}
             error={listError ?? undefined}
             autoFocus
           />
           <Select
-            label="Moneda"
+            label={t('pricing.currency')}
             value={listForm.currency}
             onChange={(event) => setListForm({ ...listForm, currency: event.target.value })}
-            hint="Se usa para mostrar los precios de esta lista."
+            hint={t('pricing.currency-hint')}
           >
-            <option value="PEN">Soles (S/)</option>
-            <option value="USD">Dólares (US$)</option>
+            <option value="PEN">{t('pricing.currency-pen')}</option>
+            <option value="USD">{t('pricing.currency-usd')}</option>
           </Select>
         </div>
       </Modal>
@@ -721,29 +773,29 @@ export default function PricingPage() {
       <Modal
         open={pricesOpen}
         onClose={() => !savingPrices && setPricesOpen(false)}
-        title={`Editar precios${pricesList ? ` · ${pricesList.name}` : ''}`}
+        title={`${t('pricing.edit-prices')}${pricesList ? ` · ${pricesList.name}` : ''}`}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setPricesOpen(false)} disabled={savingPrices}>
-              Cancelar
+              {t('pricing.cancel')}
             </Button>
             <Button onClick={handlePricesSubmit} loading={savingPrices} disabled={pricesLoading}>
-              Guardar precios
+              {t('pricing.save-prices')}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <p className="text-body-sm text-gray-600">
-            Moneda de la lista: <strong>{pricesList?.currency ?? '—'}</strong>. Al guardar se
-            reemplazan todas las líneas de la lista.
+            {t('pricing.list-currency-label')} <strong>{pricesList?.currency ?? '—'}</strong>.{' '}
+            {t('pricing.list-currency-note')}
           </p>
 
           {pricesLoading ? (
             <p className="inline-flex items-center gap-2 text-body-sm text-gray-500">
               <Spinner size={16} className="text-loading" />
-              Cargando precios…
+              {t('pricing.loading-prices')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -751,11 +803,11 @@ export default function PricingPage() {
                 <div key={index} className="grid gap-3 sm:grid-cols-12">
                   <div className="sm:col-span-8">
                     <Select
-                      aria-label="Producto"
+                      aria-label={t('pricing.product')}
                       value={line.product_id}
                       onChange={(event) => updatePriceDraft(index, { product_id: event.target.value })}
                     >
-                      <option value="">Producto…</option>
+                      <option value="">{t('pricing.product-2')}</option>
                       {products.map((product) => (
                         <option key={product.id} value={product.id}>
                           {product.name} ({product.sku})
@@ -765,7 +817,7 @@ export default function PricingPage() {
                   </div>
                   <div className="sm:col-span-3">
                     <Input
-                      aria-label="Precio"
+                      aria-label={t('pricing.price')}
                       type="number"
                       min="0"
                       step="0.01"
@@ -785,8 +837,8 @@ export default function PricingPage() {
                             : previous,
                         )
                       }
-                      aria-label="Quitar línea"
-                      title="Quitar línea"
+                      aria-label={t('pricing.remove-line')}
+                      title={t('pricing.remove-line')}
                       className="flex h-10 w-10 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-red-50 hover:text-error"
                     >
                       <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -800,7 +852,7 @@ export default function PricingPage() {
                 onClick={() => setPriceDraft((previous) => [...previous, EMPTY_PRICE])}
               >
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Agregar producto
+                {t('pricing.add-product')}
               </Button>
             </div>
           )}
@@ -817,42 +869,44 @@ export default function PricingPage() {
       <Modal
         open={promoOpen}
         onClose={() => !savingPromo && setPromoOpen(false)}
-        title={editingPromo ? 'Editar promoción' : 'Nueva promoción'}
+        title={editingPromo ? t('pricing.edit-promo-title') : t('pricing.new-promo')}
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={() => setPromoOpen(false)} disabled={savingPromo}>
-              Cancelar
+              {t('pricing.cancel')}
             </Button>
             <Button type="submit" form="promo-form" loading={savingPromo}>
-              {editingPromo ? 'Guardar cambios' : 'Crear promoción'}
+              {editingPromo ? t('pricing.save-changes') : t('pricing.create-promo')}
             </Button>
           </>
         }
       >
         <form id="promo-form" onSubmit={handlePromoSubmit} className="space-y-4">
           <Input
-            label="Nombre"
+            label={t('pricing.name')}
             required
             value={promoForm.name}
             onChange={(event) => setPromoForm({ ...promoForm, name: event.target.value })}
-            placeholder="Ej. Semana del cliente"
+            placeholder={t('pricing.promo-name-placeholder')}
             autoFocus
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
-              label="Tipo"
+              label={t('pricing.type')}
               value={promoForm.kind}
               onChange={(event) =>
                 setPromoForm({ ...promoForm, kind: event.target.value as PromotionKind })
               }
             >
-              <option value="percent">Porcentaje (%)</option>
-              <option value="fixed">Monto fijo (S/)</option>
+              <option value="percent">{t('pricing.kind-percent')}</option>
+              <option value="fixed">{t('pricing.kind-fixed')}</option>
             </Select>
             <Input
-              label={promoForm.kind === 'percent' ? 'Valor (%)' : 'Valor (S/)'}
+              label={
+                promoForm.kind === 'percent' ? t('pricing.value-percent') : t('pricing.value-fixed')
+              }
               required
               type="number"
               min="0.01"
@@ -860,33 +914,37 @@ export default function PricingPage() {
               inputMode="decimal"
               value={promoForm.value}
               onChange={(event) => setPromoForm({ ...promoForm, value: event.target.value })}
-              hint={promoForm.kind === 'percent' ? 'Máximo 100.' : 'Descuento en soles.'}
+              hint={
+                promoForm.kind === 'percent'
+                  ? t('pricing.value-percent-hint')
+                  : t('pricing.value-fixed-hint')
+              }
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Vigente desde"
+              label={t('pricing.active-from')}
               type="datetime-local"
               value={promoForm.starts_at}
               onChange={(event) => setPromoForm({ ...promoForm, starts_at: event.target.value })}
             />
             <Input
-              label="Vigente hasta"
+              label={t('pricing.active-to')}
               type="datetime-local"
               value={promoForm.ends_at}
               onChange={(event) => setPromoForm({ ...promoForm, ends_at: event.target.value })}
-              hint="Vacío = sin fecha límite."
+              hint={t('pricing.no-deadline-hint')}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <p className="text-body-sm font-medium text-gray-700">
-              Productos aplicables<span className="text-error"> *</span>
+              {t('pricing.applicable-products')}<span className="text-error"> *</span>
             </p>
             {products.length === 0 ? (
               <p className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-body-sm text-gray-400">
-                No hay productos registrados. Crea productos para poder promocionarlos.
+                {t('pricing.no-products')}
               </p>
             ) : (
               <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -907,8 +965,8 @@ export default function PricingPage() {
             )}
             <p className="text-caption text-gray-500">
               {promoProductIds.length === 0
-                ? 'Ningún producto seleccionado.'
-                : `${promoProductIds.length} producto(s) seleccionado(s).`}
+                ? t('pricing.no-products-selected')
+                : t('pricing.selected-count', { n: promoProductIds.length })}
             </p>
           </div>
 
@@ -924,20 +982,21 @@ export default function PricingPage() {
       <Modal
         open={deletingList !== null}
         onClose={() => setDeletingList(null)}
-        title="Eliminar lista de precios"
+        title={t('pricing.delete-list-title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeletingList(null)}>
-              Cancelar
+              {t('pricing.cancel')}
             </Button>
             <Button variant="danger" onClick={handleListDelete}>
-              Eliminar
+              {t('pricing.delete')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la lista <strong>{deletingList?.name}</strong>? Se quitarán también sus precios.
+          {t('pricing.delete-list-prefix')} <strong>{deletingList?.name}</strong>?{' '}
+          {t('pricing.delete-list-suffix')}
         </p>
         {deleteListError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
@@ -950,21 +1009,21 @@ export default function PricingPage() {
       <Modal
         open={deletingPromo !== null}
         onClose={() => setDeletingPromo(null)}
-        title="Eliminar promoción"
+        title={t('pricing.delete-promo-title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeletingPromo(null)}>
-              Cancelar
+              {t('pricing.cancel')}
             </Button>
             <Button variant="danger" onClick={handlePromoDelete}>
-              Eliminar
+              {t('pricing.delete')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la promoción <strong>{deletingPromo?.name}</strong>? Dejará de aplicar a sus
-          productos.
+          {t('pricing.delete-promo-prefix')} <strong>{deletingPromo?.name}</strong>?{' '}
+          {t('pricing.delete-promo-suffix')}
         </p>
         {deletePromoError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">

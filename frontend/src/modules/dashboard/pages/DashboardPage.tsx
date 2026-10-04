@@ -9,6 +9,7 @@ import { useStatistics } from '@/hooks/useStatistics'
 import { listCustomers } from '@/modules/customers/services/customerService'
 import { listStock } from '@/modules/inventory/services/inventoryService'
 import { useEffect, useState } from 'react'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Dashboard ejecutivo (Fase 10 · RF-09).
@@ -28,13 +29,14 @@ const TOOLTIP_STYLE = {
 }
 
 const QUICK_LINKS = [
-  { to: '/clientes', label: 'Clientes', icon: Users },
-  { to: '/ventas', label: 'Registrar venta', icon: ShoppingCart },
-  { to: '/inventario', label: 'Inventario', icon: Warehouse },
-  { to: '/insights', label: 'Insights', icon: Lightbulb },
+  { to: '/clientes', label: 'dash.clientes', icon: Users },
+  { to: '/ventas', label: 'dash.registrar-venta', icon: ShoppingCart },
+  { to: '/inventario', label: 'dash.inventario', icon: Warehouse },
+  { to: '/insights', label: 'dash.insights', icon: Lightbulb },
 ]
 
 export default function DashboardPage() {
+  const { t } = useLang()
   const { kpis, monthly, byProduct, compare } = useStatistics({ months: 12, seller: '', category: '' })
   const [totalClientes, setTotalClientes] = useState<number | null>(null)
   const [alertasStock, setAlertasStock] = useState<number | null>(null)
@@ -63,34 +65,43 @@ export default function DashboardPage() {
       <div>
         <h1>Dashboard</h1>
         <p className="mt-1 text-body-sm text-gray-600">
-          Resumen ejecutivo de ventas, ingresos y actividad comercial.
+          {t('dash.resumen-ejecutivo-de-ventas-ingresos-y-actividad-comercial')}
         </p>
       </div>
 
       {/* KPIs */}
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Ventas del mes"
+          label={t('dash.ventas-del-mes')}
           value={formatNumber(monthly[monthly.length - 1]?.transacciones ?? 0)}
           icon={ShoppingCart}
-          hint={`${monthly[monthly.length - 1]?.mes ?? ''} · ${kpis.variacionMensual >= 0 ? '+' : ''}${kpis.variacionMensual}% vs. mes anterior`}
+          hint={`${monthly[monthly.length - 1]?.mes ?? ''} · ${kpis.variacionMensual >= 0 ? '+' : ''}${kpis.variacionMensual}% ${t('dash.vs-mes-anterior')}`}
         />
-        <KpiCard label="Ingresos" value={formatCurrency(kpis.ingresos)} icon={DollarSign} hint="últimos 12 meses" />
         <KpiCard
-          label="Ticket promedio"
+          label={t('dash.ingresos')}
+          value={formatCurrency(kpis.ingresos)}
+          icon={DollarSign}
+          hint={t('dash.ultimos-12-meses')}
+        />
+        <KpiCard
+          label={t('dash.ticket-promedio')}
           value={formatCurrency(kpis.ticketPromedio)}
           icon={Receipt}
           hint={
             sinVentas
-              ? 'sin ventas registradas todavía'
-              : `media S/ ${compare.mean.toFixed(2)} · mediana S/ ${compare.median.toFixed(2)}`
+              ? t('dash.sin-ventas-registradas-todavia')
+              : `${t('dash.media')} S/ ${compare.mean.toFixed(2)} · ${t('dash.mediana')} S/ ${compare.median.toFixed(2)}`
           }
         />
         <KpiCard
-          label="Clientes"
+          label={t('dash.clientes')}
           value={totalClientes === null ? '—' : formatNumber(totalClientes)}
           icon={Users}
-          hint={alertasStock === null ? 'cargando…' : `${alertasStock} producto(s) con stock bajo`}
+          hint={
+            alertasStock === null
+              ? t('dash.cargando')
+              : t('dash.productos-con-stock-bajo', { n: alertasStock })
+          }
         />
       </div>
 
@@ -98,11 +109,11 @@ export default function DashboardPage() {
       {sinVentas ? (
         <div className="card">
           <EmptyState
-            title="Sin ventas registradas"
-            description="El resumen de evolución y el ranking de productos aparecerán en cuanto registres la primera venta."
+            title={t('dash.sin-ventas-registradas')}
+            description={t('dash.el-resumen-de-evolucion-y-el-ranking-de-productos-apareceran-en-cuanto-registres-la-primera-venta')}
             action={
               <Link to="/ventas" className="btn-primary">
-                Registrar venta
+                {t('dash.registrar-venta')}
               </Link>
             }
           />
@@ -111,9 +122,9 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           <section className="card lg:col-span-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-h4 text-gray-800">Evolución de ventas</h2>
+              <h2 className="text-h4 text-gray-800">{t('dash.evolucion-de-ventas')}</h2>
               <Link to="/analytics" className="inline-flex items-center gap-1 text-caption text-primary hover:underline">
-                Ver analytics <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                {t('dash.ver-analytics')} <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
               </Link>
             </div>
             <div className="mt-4 h-64">
@@ -123,14 +134,14 @@ export default function DashboardPage() {
                   <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
                   <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatCurrency(Number(value))} />
-                  <Line type="monotone" dataKey="ingresos" name="Ingresos" stroke="#06B6D4" strokeWidth={2} dot={{ fill: '#1E3A8A', r: 3 }} />
+                  <Line type="monotone" dataKey="ingresos" name={t('dash.ingresos')} stroke="#06B6D4" strokeWidth={2} dot={{ fill: '#1E3A8A', r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </section>
 
           <section className="card">
-            <h2 className="text-h4 text-gray-800">Top productos</h2>
+            <h2 className="text-h4 text-gray-800">{t('dash.top-productos')}</h2>
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byProduct.slice(0, 5)} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 4 }}>
@@ -148,7 +159,7 @@ export default function DashboardPage() {
 
       {/* Accesos rápidos */}
       <section className="space-y-4">
-        <h2 className="text-h3 text-gray-800">Accesos rápidos</h2>
+        <h2 className="text-h3 text-gray-800">{t('dash.accesos-rapidos')}</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {QUICK_LINKS.map((link) => {
             const Icon = link.icon
@@ -161,7 +172,7 @@ export default function DashboardPage() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
                   <Icon aria-hidden="true" className="h-5 w-5 text-primary" />
                 </span>
-                <span className="text-body-sm font-semibold text-gray-900">{link.label}</span>
+                <span className="text-body-sm font-semibold text-gray-900">{t(link.label)}</span>
               </Link>
             )
           })}
@@ -173,16 +184,15 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <TrendingUp aria-hidden="true" className="h-5 w-5 text-primary" />
           <div>
-            <p className="text-body-sm font-semibold text-gray-900">Conectado a la API real</p>
+            <p className="text-body-sm font-semibold text-gray-900">{t('dash.conectado-a-la-api-real')}</p>
             <p className="text-caption text-gray-500">
-              Los indicadores se calculan con tus ventas registradas en el backend (FastAPI +
-              Supabase).
+              {t('dash.los-indicadores-se-calculan-con-tus-ventas-registradas-en-el-backend-fastapi-supabase')}
             </p>
           </div>
         </div>
         <Link to="/reportes" className="btn-outline">
           <Percent aria-hidden="true" className="mr-2 h-4 w-4" />
-          Ver reportes
+          {t('dash.ver-reportes')}
         </Link>
       </section>
     </div>

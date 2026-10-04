@@ -11,18 +11,12 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import { getCustomerHistory } from '../services/customerService'
 import type { CustomerPurchase } from '../services/customerService'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Historial de compras del cliente (Fase 07 — RF-03).
  * TODO(Fase 05): GET /api/v1/customers/{id}/history.
  */
-
-const STATUS_LABELS: Record<SaleStatus, { variant: 'success' | 'warning' | 'info' | 'error'; label: string }> = {
-  paid: { variant: 'success', label: 'Pagado' },
-  pending: { variant: 'warning', label: 'Pendiente' },
-  partial: { variant: 'info', label: 'Parcial' },
-  cancelled: { variant: 'error', label: 'Cancelado' },
-}
 
 interface CustomerHistoryModalProps {
   /** Cliente seleccionado (null = cerrado). */
@@ -31,9 +25,17 @@ interface CustomerHistoryModalProps {
 }
 
 export default function CustomerHistoryModal({ customer, onClose }: CustomerHistoryModalProps) {
+  const { t } = useLang()
   const [purchases, setPurchases] = useState<CustomerPurchase[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+
+  const STATUS_LABELS: Record<SaleStatus, { variant: 'success' | 'warning' | 'info' | 'error'; label: string }> = {
+    paid: { variant: 'success', label: t('customers.pagado') },
+    pending: { variant: 'warning', label: t('customers.pendiente') },
+    partial: { variant: 'info', label: t('customers.parcial') },
+    cancelled: { variant: 'error', label: t('customers.cancelado') },
+  }
 
   useEffect(() => {
     if (!customer) {
@@ -49,7 +51,10 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
         if (!cancelled) setPurchases(result)
       })
       .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : 'No se pudo cargar el historial')
+        if (!cancelled)
+          setError(
+            reason instanceof Error ? reason.message : t('customers.no-se-pudo-cargar-el-historial'),
+          )
       })
     return () => {
       cancelled = true
@@ -60,7 +65,7 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
     <Modal
       open={customer !== null}
       onClose={onClose}
-      title={customer ? `Historial — ${customer.name}` : 'Historial'}
+      title={customer ? `${t('customers.historial')} — ${customer.name}` : t('customers.historial')}
       size="lg"
     >
       {error ? (
@@ -68,20 +73,23 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
           description={error}
           action={
             <Button variant="outline" onClick={() => setAttempt((value) => value + 1)}>
-              Reintentar
+              {t('customers.reintentar')}
             </Button>
           }
         />
       ) : purchases === null ? (
         <div className="flex flex-col items-center gap-3 py-10">
           <Spinner className="text-loading" />
-          <p className="text-body-sm text-gray-500">Cargando historial…</p>
+          <p className="text-body-sm text-gray-500">{t('customers.cargando-historial')}</p>
         </div>
       ) : purchases.length === 0 ? (
-        <EmptyState title="Sin compras" description="Este cliente aún no tiene compras registradas." />
+        <EmptyState
+          title={t('customers.sin-compras')}
+          description={t('customers.este-cliente-aun-no-tiene-compras-registradas')}
+        />
       ) : (
         <div className="space-y-4">
-          <DataTable headers={['Fecha', 'Venta', 'Total', 'Estado']}>
+          <DataTable headers={[t('customers.fecha'), t('customers.venta'), t('customers.total'), t('customers.estado')]}>
             {purchases.map((purchase) => {
               const status = STATUS_LABELS[purchase.status]
               return (
@@ -99,7 +107,8 @@ export default function CustomerHistoryModal({ customer, onClose }: CustomerHist
 
           {customer && (
             <p className="text-right text-body-sm text-gray-600">
-              <span className="font-semibold">{customer.purchase_count}</span> compras · total{' '}
+              <span className="font-semibold">{customer.purchase_count}</span>{' '}
+              {t('customers.compras-total')}{' '}
               <span className="font-semibold">{formatCurrency(customer.total_purchased)}</span>
             </p>
           )}

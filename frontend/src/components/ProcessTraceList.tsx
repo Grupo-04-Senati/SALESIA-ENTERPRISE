@@ -3,6 +3,7 @@ import { History } from 'lucide-react'
 import ProcessTraceCard from '@/components/ProcessTraceCard'
 import { getTraces } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Historial de procesos ejecutados (trazabilidad de la sesión).
@@ -16,7 +17,8 @@ interface ProcessTraceListProps {
   title?: string
 }
 
-export default function ProcessTraceList({ limit = 3, title = 'Procesos recientes' }: ProcessTraceListProps) {
+export default function ProcessTraceList({ limit = 3, title }: ProcessTraceListProps) {
+  const { t } = useLang()
   const version = useDataVersion()
   const [traces, setTraces] = useState(() => getTraces().slice(0, limit))
 
@@ -30,7 +32,7 @@ export default function ProcessTraceList({ limit = 3, title = 'Procesos reciente
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <History aria-hidden="true" className="h-5 w-5 text-primary" />
-        <h2 className="text-h3 text-gray-800">{title}</h2>
+        <h2 className="text-h3 text-gray-800">{t(title ?? 'common.procesos-recientes')}</h2>
       </div>
       <div className="space-y-3">
         {traces.map((trace) => (

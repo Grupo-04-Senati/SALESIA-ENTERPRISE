@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
 import {
@@ -47,16 +48,16 @@ import type {
  */
 
 const TAB_ITEMS = [
-  { id: 'proveedores', label: 'Proveedores' },
-  { id: 'ordenes', label: 'Órdenes de compra' },
-  { id: 'envios', label: 'Envíos' },
+  { id: 'proveedores', label: 'purchasing.proveedores' },
+  { id: 'ordenes', label: 'purchasing.ordenes-de-compra' },
+  { id: 'envios', label: 'purchasing.envios' },
 ]
 
 const PO_STATUS: Record<PurchaseOrderStatus, { label: string; variant: BadgeVariant }> = {
-  pending: { label: 'Pendiente', variant: 'warning' },
-  approved: { label: 'Aprobada', variant: 'info' },
-  received: { label: 'Recibida', variant: 'success' },
-  cancelled: { label: 'Cancelada', variant: 'error' },
+  pending: { label: 'purchasing.pendiente', variant: 'warning' },
+  approved: { label: 'purchasing.aprobada', variant: 'info' },
+  received: { label: 'purchasing.recibida', variant: 'success' },
+  cancelled: { label: 'purchasing.cancelada', variant: 'error' },
 }
 
 const PO_TRANSITIONS: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
@@ -67,17 +68,17 @@ const PO_TRANSITIONS: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
 }
 
 const PO_TRANSITION_LABELS: Record<PurchaseOrderStatus, string> = {
-  pending: 'Pendiente',
-  approved: 'Aprobar',
-  received: 'Marcar recibida',
-  cancelled: 'Cancelar',
+  pending: 'purchasing.pendiente',
+  approved: 'purchasing.aprobar',
+  received: 'purchasing.marcar-recibida',
+  cancelled: 'purchasing.cancelar',
 }
 
 const SHIPMENT_STATUS: Record<ShipmentStatus, { label: string; variant: BadgeVariant }> = {
-  pending: { label: 'Pendiente', variant: 'warning' },
-  shipped: { label: 'Enviado', variant: 'info' },
-  delivered: { label: 'Entregado', variant: 'success' },
-  cancelled: { label: 'Cancelado', variant: 'error' },
+  pending: { label: 'purchasing.pendiente', variant: 'warning' },
+  shipped: { label: 'purchasing.enviado', variant: 'info' },
+  delivered: { label: 'purchasing.entregado', variant: 'success' },
+  cancelled: { label: 'purchasing.cancelado', variant: 'error' },
 }
 
 const EMPTY_SUPPLIER_FORM = { ruc: '', name: '', email: '', phone: '', address: '' }
@@ -112,17 +113,21 @@ function RowButton({
 
 export default function PurchasingPage() {
   const [tab, setTab] = useState('proveedores')
+  const { t } = useLang()
 
   return (
     <div className="space-y-6">
       <div>
-        <h1>Compras</h1>
-        <p className="mt-1 text-body-sm text-gray-600">
-          Proveedores, órdenes de compra y envíos del flujo de adquisiciones.
-        </p>
+        <h1>{t('purchasing.compras')}</h1>
+        <p className="mt-1 text-body-sm text-gray-600">{t('purchasing.pagina-lead')}</p>
       </div>
 
-      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} id="compras" />
+      <Tabs
+        items={TAB_ITEMS.map((item) => ({ ...item, label: t(item.label) }))}
+        value={tab}
+        onChange={setTab}
+        id="compras"
+      />
 
       <TabPanel tabId="proveedores" active={tab === 'proveedores'}>
         <ProveedoresTab />
@@ -144,6 +149,7 @@ export default function PurchasingPage() {
 function ProveedoresTab() {
   const toast = useToast()
   const version = useDataVersion()
+  const { t } = useLang()
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
@@ -170,7 +176,11 @@ function ProveedoresTab() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los proveedores')
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : 'purchasing.no-se-pudieron-cargar-proveedores',
+          )
         }
       })
       .finally(() => {
@@ -218,11 +228,11 @@ function ProveedoresTab() {
     const ruc = form.ruc.trim()
     const name = form.name.trim()
     if (!/^\d{8,15}$/.test(ruc)) {
-      setFormError('El RUC debe tener entre 8 y 15 dígitos.')
+      setFormError('purchasing.ruc-digitos')
       return
     }
     if (name.length < 2) {
-      setFormError('El nombre debe tener al menos 2 caracteres.')
+      setFormError('purchasing.nombre-minimo')
       return
     }
     const input = {
@@ -236,15 +246,23 @@ function ProveedoresTab() {
     try {
       if (editing) {
         await updateSupplier(editing.id, input)
-        toast.success('Proveedor actualizado', `${name} se guardó correctamente.`)
+        toast.success(
+          t('purchasing.proveedor-actualizado'),
+          `${name} ${t('purchasing.se-guardo-correctamente')}`,
+        )
       } else {
         await createSupplier(input)
-        toast.success('Proveedor creado', `${name} ya está disponible en Órdenes de compra.`)
+        toast.success(
+          t('purchasing.proveedor-creado'),
+          `${name} ${t('purchasing.ya-esta-disponible-en-ordenes')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar el proveedor.')
+      setFormError(
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-guardar-proveedor',
+      )
     } finally {
       setSaving(false)
     }
@@ -256,11 +274,16 @@ function ProveedoresTab() {
     setDeleteError(null)
     try {
       await deleteSupplier(deleting.id)
-      toast.success('Proveedor eliminado', `${deleting.name} se quitó del directorio.`)
+      toast.success(
+        t('purchasing.proveedor-eliminado'),
+        `${deleting.name} ${t('purchasing.se-quito-del-directorio')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar el proveedor.')
+      setDeleteError(
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-eliminar-proveedor',
+      )
     } finally {
       setDeletingBusy(false)
     }
@@ -271,19 +294,19 @@ function ProveedoresTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Users aria-hidden="true" className="h-5 w-5 text-primary" />
-          <h2 className="text-h3 text-gray-800">Proveedores</h2>
+          <h2 className="text-h3 text-gray-800">{t('purchasing.proveedores')}</h2>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo proveedor
+          {t('purchasing.nuevo-proveedor')}
         </Button>
       </div>
 
       <div className="card">
         <Input
           type="search"
-          aria-label="Buscar proveedores"
-          placeholder="Buscar por nombre o RUC…"
+          aria-label={t('purchasing.buscar-proveedores')}
+          placeholder={t('purchasing.buscar-nombre-o-ruc')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -292,21 +315,21 @@ function ProveedoresTab() {
       {error ? (
         <div className="card">
           <ErrorState
-            description={error}
+            description={t(error)}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('purchasing.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && suppliers.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Proveedor', 'RUC', 'Contacto', 'Estado', '']}>
+          <DataTable headers={[t('purchasing.proveedor'), 'RUC', t('purchasing.contacto'), t('purchasing.estado'), '']}>
             <TableStateRow colSpan={5}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando proveedores…
+                {t('purchasing.cargando-proveedores')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -315,19 +338,27 @@ function ProveedoresTab() {
         <div className="card">
           <EmptyState
             icon={Users}
-            title="Sin proveedores"
-            description="Aún no hay proveedores registrados. Crea el primero para poder levantar órdenes de compra."
+            title={t('purchasing.sin-proveedores')}
+            description={t('purchasing.sin-proveedores-desc')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo proveedor
+                {t('purchasing.nuevo-proveedor')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Proveedor', 'RUC', 'Contacto', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('purchasing.proveedor'),
+              'RUC',
+              t('purchasing.contacto'),
+              t('purchasing.estado'),
+              t('purchasing.acciones'),
+            ]}
+          >
             {visible.map((supplier) => (
               <TableRow key={supplier.id}>
                 <TableCell>
@@ -341,16 +372,19 @@ function ProveedoresTab() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={supplier.status === 'inactive' ? 'neutral' : 'success'}>
-                    {supplier.status === 'inactive' ? 'Inactivo' : 'Activo'}
+                    {supplier.status === 'inactive' ? t('purchasing.inactivo') : t('purchasing.activo')}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    <RowButton label={`Editar ${supplier.name}`} onClick={() => openEdit(supplier)}>
+                    <RowButton
+                      label={`${t('purchasing.editar')} ${supplier.name}`}
+                      onClick={() => openEdit(supplier)}
+                    >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
                     </RowButton>
                     <RowButton
-                      label={`Eliminar ${supplier.name}`}
+                      label={`${t('purchasing.eliminar')} ${supplier.name}`}
                       tone="danger"
                       onClick={() => {
                         setDeleteError(null)
@@ -370,14 +404,16 @@ function ProveedoresTab() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar proveedor' : 'Nuevo proveedor'}
+        title={
+          editing ? t('purchasing.editar-proveedor') : t('purchasing.nuevo-proveedor')
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button type="submit" form="supplier-form" loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear proveedor'}
+              {editing ? t('purchasing.guardar-cambios') : t('purchasing.crear-proveedor')}
             </Button>
           </>
         }
@@ -392,42 +428,42 @@ function ProveedoresTab() {
               maxLength={15}
               value={form.ruc}
               onChange={(event) => setForm({ ...form, ruc: event.target.value })}
-              placeholder="Ej. 20123456789"
+              placeholder={t('purchasing.ej-ruc')}
               autoFocus
             />
             <Input
-              label="Nombre"
+              label={t('purchasing.nombre')}
               required
               minLength={2}
               maxLength={150}
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder="Ej. Distribuidora Andina"
+              placeholder={t('purchasing.ej-nombre')}
             />
             <Input
-              label="Correo"
+              label={t('purchasing.correo')}
               type="email"
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
-              placeholder="ventas@proveedor.com"
+              placeholder={t('purchasing.ej-correo')}
             />
             <Input
-              label="Teléfono"
+              label={t('purchasing.telefono')}
               value={form.phone}
               onChange={(event) => setForm({ ...form, phone: event.target.value })}
-              placeholder="Ej. 999 888 777"
+              placeholder={t('purchasing.ej-telefono')}
             />
           </div>
           <Textarea
-            label="Dirección"
-            hint="Opcional."
+            label={t('purchasing.direccion')}
+            hint={t('purchasing.opcional')}
             value={form.address}
             onChange={(event) => setForm({ ...form, address: event.target.value })}
-            placeholder="Ej. Av. Industrial 123, Lima"
+            placeholder={t('purchasing.ej-direccion')}
           />
           {formError && (
             <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
-              {formError}
+              {t(formError)}
             </p>
           )}
         </form>
@@ -436,25 +472,25 @@ function ProveedoresTab() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar proveedor"
+        title={t('purchasing.eliminar-proveedor')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)} disabled={deletingBusy}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete} loading={deletingBusy}>
-              Eliminar
+              {t('purchasing.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar el proveedor <strong>{deleting?.name}</strong> (RUC {deleting?.ruc})? Se dará de
-          baja y ya no podrá usarse en nuevas órdenes de compra.
+          {t('purchasing.eliminar-proveedor-prefijo')} <strong>{deleting?.name}</strong> (
+          {t('purchasing.ruc')} {deleting?.ruc})? {t('purchasing.eliminar-proveedor-sufijo')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
-            {deleteError}
+            {t(deleteError)}
           </p>
         )}
       </Modal>
@@ -469,6 +505,7 @@ function ProveedoresTab() {
 function OrdenesTab() {
   const toast = useToast()
   const version = useDataVersion()
+  const { t } = useLang()
   const allProducts = useMemo(() => getState().products, [version])
   const products = useMemo(
     () => allProducts.filter((product) => product.status === 'active'),
@@ -516,7 +553,9 @@ function OrdenesTab() {
       .catch((reason: unknown) => {
         if (!cancelled) {
           setError(
-            reason instanceof Error ? reason.message : 'No se pudieron cargar las órdenes de compra',
+            reason instanceof Error
+              ? reason.message
+              : 'purchasing.no-se-pudieron-cargar-ordenes',
           )
         }
       })
@@ -558,7 +597,8 @@ function OrdenesTab() {
   const reload = () => setAttempt((value) => value + 1)
 
   const productName = (productId: number): string =>
-    allProducts.find((product) => product.id === productId)?.name ?? `Producto #${productId}`
+    allProducts.find((product) => product.id === productId)?.name ??
+    `${t('purchasing.producto-num')}${productId}`
 
   const closeForm = () => {
     if (saving) return
@@ -597,8 +637,8 @@ function OrdenesTab() {
       setFormOpen(true)
     } catch (reason: unknown) {
       toast.error(
-        'No se pudo cargar la orden',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('purchasing.no-se-pudo-cargar-orden'),
+        reason instanceof Error ? reason.message : t('purchasing.error-inesperado'),
       )
     }
   }
@@ -606,17 +646,17 @@ function OrdenesTab() {
   const addLine = () => {
     const product = products.find((entry) => entry.id === Number(lineProductId))
     if (!product) {
-      setFormError('Selecciona un producto para agregar el ítem.')
+      setFormError('purchasing.selecciona-producto-para-item')
       return
     }
     if (lines.some((line) => line.product_id === product.id)) {
-      setFormError('Ese producto ya está en la orden.')
+      setFormError('purchasing.producto-ya-en-orden')
       return
     }
     const quantity = Math.max(Number(lineQuantity) || 0, 1)
     const unitCost = Number(lineCost)
     if (Number.isNaN(unitCost) || unitCost < 0) {
-      setFormError('Ingresa un costo unitario válido.')
+      setFormError('purchasing.costo-unitario-invalido')
       return
     }
     setLines((previous) => [...previous, { product_id: product.id, quantity, unit_cost: unitCost }])
@@ -633,11 +673,11 @@ function OrdenesTab() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!supplierId) {
-      setFormError('Selecciona un proveedor.')
+      setFormError('purchasing.selecciona-proveedor')
       return
     }
     if (lines.length === 0) {
-      setFormError('Agrega al menos un ítem a la orden.')
+      setFormError('purchasing.agrega-al-menos-un-item')
       return
     }
     setFormError(null)
@@ -650,18 +690,23 @@ function OrdenesTab() {
     try {
       if (editing) {
         await updatePurchaseOrder(editing.id, input)
-        toast.success('Orden actualizada', `${editing.order_number} se guardó correctamente.`)
+        toast.success(
+          t('purchasing.orden-actualizada'),
+          `${editing.order_number} ${t('purchasing.se-guardo-correctamente')}`,
+        )
       } else {
         const created = await createPurchaseOrder(input)
         toast.success(
-          'Orden creada',
-          `${created.order_number} registrada por ${formatCurrency(created.total)}.`,
+          t('purchasing.orden-creada'),
+          `${created.order_number} ${t('purchasing.registrada-por')} ${formatCurrency(created.total)}.`,
         )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar la orden.')
+      setFormError(
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-guardar-orden',
+      )
     } finally {
       setSaving(false)
     }
@@ -676,7 +721,7 @@ function OrdenesTab() {
       .then((full) => setDetail(full))
       .catch((reason: unknown) =>
         setDetailError(
-          reason instanceof Error ? reason.message : 'No se pudo cargar el detalle de la orden.',
+          reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-cargar-detalle-orden',
         ),
       )
       .finally(() => setDetailLoading(false))
@@ -694,17 +739,17 @@ function OrdenesTab() {
     try {
       await setPurchaseOrderStatus(statusOrder.id, status)
       toast.success(
-        status === 'received' ? 'Orden recibida' : 'Estado actualizado',
+        status === 'received' ? t('purchasing.orden-recibida') : t('purchasing.estado-actualizado'),
         status === 'received'
-          ? 'El stock de los productos fue actualizado en el inventario.'
-          : `${statusOrder.order_number} pasó a «${PO_STATUS[status].label}».`,
+          ? t('purchasing.stock-actualizado')
+          : `${statusOrder.order_number} ${t('purchasing.paso-a')} «${t(PO_STATUS[status].label)}».`,
       )
       setStatusOrder(null)
       reload()
     } catch (reason: unknown) {
       toast.error(
-        'No se pudo cambiar el estado',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('purchasing.no-se-pudo-cambiar-estado'),
+        reason instanceof Error ? reason.message : t('purchasing.error-inesperado'),
       )
     } finally {
       setStatusBusy(false)
@@ -717,12 +762,15 @@ function OrdenesTab() {
     setDeleteError(null)
     try {
       await deletePurchaseOrder(deleting.id)
-      toast.success('Orden eliminada', `${deleting.order_number} se eliminó del listado.`)
+      toast.success(
+        t('purchasing.orden-eliminada'),
+        `${deleting.order_number} ${t('purchasing.se-elimino-del-listado')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
       setDeleteError(
-        reason instanceof Error ? reason.message : 'No se pudo eliminar la orden.',
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-eliminar-orden',
       )
     } finally {
       setDeletingBusy(false)
@@ -734,19 +782,19 @@ function OrdenesTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Package aria-hidden="true" className="h-5 w-5 text-primary" />
-          <h2 className="text-h3 text-gray-800">Órdenes de compra</h2>
+          <h2 className="text-h3 text-gray-800">{t('purchasing.ordenes-de-compra')}</h2>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nueva orden
+          {t('purchasing.nueva-orden')}
         </Button>
       </div>
 
       <div className="card">
         <Input
           type="search"
-          aria-label="Buscar órdenes de compra"
-          placeholder="Buscar por número de orden o proveedor…"
+          aria-label={t('purchasing.buscar-ordenes')}
+          placeholder={t('purchasing.buscar-numero-o-proveedor')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -755,21 +803,30 @@ function OrdenesTab() {
       {error ? (
         <div className="card">
           <ErrorState
-            description={error}
+            description={t(error)}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('purchasing.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && orders.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Orden', 'Proveedor', 'Ítems', 'Total', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('purchasing.orden'),
+              t('purchasing.proveedor'),
+              t('purchasing.items'),
+              t('purchasing.total'),
+              t('purchasing.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando órdenes de compra…
+                {t('purchasing.cargando-ordenes')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -778,19 +835,28 @@ function OrdenesTab() {
         <div className="card">
           <EmptyState
             icon={Package}
-            title="Sin órdenes de compra"
-            description="Aún no hay órdenes registradas. Crea la primera para solicitar productos a un proveedor."
+            title={t('purchasing.sin-ordenes')}
+            description={t('purchasing.sin-ordenes-desc')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nueva orden
+                {t('purchasing.nueva-orden')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Orden', 'Proveedor', 'Ítems', 'Total', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('purchasing.orden'),
+              t('purchasing.proveedor'),
+              t('purchasing.items'),
+              t('purchasing.total'),
+              t('purchasing.estado'),
+              t('purchasing.acciones'),
+            ]}
+          >
             {visible.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-mono text-caption">{order.order_number}</TableCell>
@@ -799,16 +865,19 @@ function OrdenesTab() {
                 <TableCell className="font-medium">{formatCurrency(order.total)}</TableCell>
                 <TableCell>
                   <Badge variant={PO_STATUS[order.status].variant}>
-                    {PO_STATUS[order.status].label}
+                    {t(PO_STATUS[order.status].label)}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    <RowButton label={`Ver detalle de ${order.order_number}`} onClick={() => openDetail(order)}>
+                    <RowButton
+                      label={`${t('purchasing.ver-detalle-de')} ${order.order_number}`}
+                      onClick={() => openDetail(order)}
+                    >
                       <Eye aria-hidden="true" className="h-4 w-4" />
                     </RowButton>
                     <RowButton
-                      label={`Cambiar estado de ${order.order_number}`}
+                      label={`${t('purchasing.cambiar-estado-de')} ${order.order_number}`}
                       onClick={() => setStatusOrder(order)}
                     >
                       <RefreshCw aria-hidden="true" className="h-4 w-4" />
@@ -816,13 +885,13 @@ function OrdenesTab() {
                     {order.status === 'pending' && (
                       <>
                         <RowButton
-                          label={`Editar ${order.order_number}`}
+                          label={`${t('purchasing.editar')} ${order.order_number}`}
                           onClick={() => openEdit(order)}
                         >
                           <Pencil aria-hidden="true" className="h-4 w-4" />
                         </RowButton>
                         <RowButton
-                          label={`Eliminar ${order.order_number}`}
+                          label={`${t('purchasing.eliminar')} ${order.order_number}`}
                           tone="danger"
                           onClick={() => {
                             setDeleteError(null)
@@ -844,15 +913,19 @@ function OrdenesTab() {
       <Modal
         open={formOpen}
         onClose={closeForm}
-        title={editing ? `Editar ${editing.order_number}` : 'Nueva orden de compra'}
+        title={
+          editing
+            ? `${t('purchasing.editar')} ${editing.order_number}`
+            : t('purchasing.nueva-orden-de-compra')
+        }
         size="lg"
         footer={
           <>
             <Button variant="outline" onClick={closeForm} disabled={saving}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button type="submit" form="order-form" loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear orden'}
+              {editing ? t('purchasing.guardar-cambios') : t('purchasing.crear-orden')}
             </Button>
           </>
         }
@@ -860,34 +933,38 @@ function OrdenesTab() {
         <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
-              label="Proveedor"
+              label={t('purchasing.proveedor')}
               required
               value={supplierId}
               onChange={(event) => setSupplierId(event.target.value)}
-              hint={suppliers.length === 0 ? 'Crea proveedores en la pestaña «Proveedores».' : undefined}
+              hint={
+                suppliers.length === 0 ? t('purchasing.hint-crea-proveedores') : undefined
+              }
             >
-              <option value="">Selecciona un proveedor…</option>
+              <option value="">{t('purchasing.selecciona-proveedor-opcion')}</option>
               {suppliers.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>
-                  {supplier.name} · RUC {supplier.ruc}
+                  {supplier.name} · {t('purchasing.ruc')} {supplier.ruc}
                 </option>
               ))}
             </Select>
             <Textarea
-              label="Notas"
-              hint="Opcional. Indicaciones para el proveedor."
+              label={t('purchasing.notas')}
+              hint={t('purchasing.hint-notas')}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ej. Entrega en almacén central"
+              placeholder={t('purchasing.ej-notas')}
             />
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="mb-3 text-body-sm font-semibold text-gray-700">Agregar ítem</p>
+            <p className="mb-3 text-body-sm font-semibold text-gray-700">
+              {t('purchasing.agregar-item')}
+            </p>
             <div className="grid gap-3 sm:grid-cols-12">
               <div className="sm:col-span-6">
                 <Select
-                  aria-label="Producto"
+                  aria-label={t('purchasing.producto')}
                   value={lineProductId}
                   onChange={(event) => {
                     const value = event.target.value
@@ -895,9 +972,9 @@ function OrdenesTab() {
                     const product = allProducts.find((entry) => entry.id === Number(value))
                     if (product) setLineCost(String(product.cost_price))
                   }}
-                  hint={products.length === 0 ? 'Crea productos en el menú Productos.' : undefined}
+                  hint={products.length === 0 ? t('purchasing.hint-crea-productos') : undefined}
                 >
-                  <option value="">Producto…</option>
+                  <option value="">{t('purchasing.producto-opcion')}</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} ({product.sku})
@@ -907,7 +984,7 @@ function OrdenesTab() {
               </div>
               <div className="sm:col-span-3">
                 <Input
-                  aria-label="Cantidad"
+                  aria-label={t('purchasing.cantidad')}
                   type="number"
                   min="1"
                   step="1"
@@ -918,7 +995,7 @@ function OrdenesTab() {
               </div>
               <div className="sm:col-span-3">
                 <Input
-                  aria-label="Costo unitario"
+                  aria-label={t('purchasing.costo-unitario')}
                   type="number"
                   min="0"
                   step="0.01"
@@ -930,14 +1007,14 @@ function OrdenesTab() {
             </div>
             <div className="mt-3">
               <Button variant="secondary" size="sm" onClick={addLine}>
-                Agregar ítem
+                {t('purchasing.agregar-item')}
               </Button>
             </div>
           </div>
 
           {lines.length === 0 ? (
             <p className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-body-sm text-gray-400">
-              Aún no agregaste ítems a la orden.
+              {t('purchasing.sin-items-orden')}
             </p>
           ) : (
             <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
@@ -958,10 +1035,10 @@ function OrdenesTab() {
                     <button
                       type="button"
                       onClick={() => removeLine(line.product_id)}
-                      aria-label={`Quitar ${productName(line.product_id)}`}
+                      aria-label={`${t('purchasing.quitar')} ${productName(line.product_id)}`}
                       className="text-caption text-gray-400 transition-colors hover:text-error"
                     >
-                      Quitar
+                      {t('purchasing.quitar')}
                     </button>
                   </div>
                 </li>
@@ -971,18 +1048,18 @@ function OrdenesTab() {
 
           <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
             <div className="flex justify-between py-1">
-              <span className="text-gray-600">Ítems</span>
+              <span className="text-gray-600">{t('purchasing.items')}</span>
               <span className="font-medium">{lines.length}</span>
             </div>
             <div className="mt-2 flex justify-between border-t border-gray-200 pt-2">
-              <span className="font-semibold text-gray-900">Total</span>
+              <span className="font-semibold text-gray-900">{t('purchasing.total')}</span>
               <span className="text-h4 font-bold text-primary">{formatCurrency(lineTotal)}</span>
             </div>
           </div>
 
           {formError && (
             <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
-              {formError}
+              {t(formError)}
             </p>
           )}
         </form>
@@ -991,40 +1068,49 @@ function OrdenesTab() {
       <Modal
         open={detailId !== null}
         onClose={closeDetail}
-        title={detail ? `Orden ${detail.order_number}` : 'Detalle de la orden'}
+        title={
+          detail ? `${t('purchasing.orden')} ${detail.order_number}` : t('purchasing.detalle-orden')
+        }
         size="lg"
       >
         {detailLoading ? (
           <p className="inline-flex items-center gap-2 py-6 text-body-sm text-gray-500">
             <Spinner size={16} className="text-loading" />
-            Cargando detalle…
+            {t('purchasing.cargando-detalle')}
           </p>
         ) : detailError ? (
-          <ErrorState description={detailError} />
+          <ErrorState description={t(detailError)} />
         ) : detail ? (
           <div className="space-y-5">
             <div className="grid gap-3 text-body-sm sm:grid-cols-2">
               <div>
-                <p className="text-caption text-gray-500">Proveedor</p>
+                <p className="text-caption text-gray-500">{t('purchasing.proveedor')}</p>
                 <p className="font-medium text-gray-900">{detail.supplier_name}</p>
               </div>
               <div>
-                <p className="text-caption text-gray-500">Estado</p>
+                <p className="text-caption text-gray-500">{t('purchasing.estado')}</p>
                 <Badge variant={PO_STATUS[detail.status].variant}>
-                  {PO_STATUS[detail.status].label}
+                  {t(PO_STATUS[detail.status].label)}
                 </Badge>
               </div>
               <div>
-                <p className="text-caption text-gray-500">Creada</p>
+                <p className="text-caption text-gray-500">{t('purchasing.creada')}</p>
                 <p className="font-medium text-gray-900">{formatDateTime(detail.created_at)}</p>
               </div>
               <div>
-                <p className="text-caption text-gray-500">Notas</p>
+                <p className="text-caption text-gray-500">{t('purchasing.notas')}</p>
                 <p className="font-medium text-gray-900">{detail.notes || '—'}</p>
               </div>
             </div>
 
-            <DataTable headers={['Producto', 'Cantidad', 'Costo', 'Subtotal']}>
+            <DataTable
+              headers={[
+                t('purchasing.producto'),
+                t('purchasing.cantidad'),
+                t('purchasing.costo'),
+                t('purchasing.subtotal'),
+              ]}
+            >
               {(detail.items ?? []).map((item) => (
                 <TableRow key={item.id ?? item.product_id}>
                   <TableCell className="font-medium text-gray-900">
@@ -1041,7 +1127,7 @@ function OrdenesTab() {
 
             <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
               <div className="flex justify-between border-t border-gray-200 pt-2">
-                <span className="font-semibold text-gray-900">Total</span>
+                <span className="font-semibold text-gray-900">{t('purchasing.total')}</span>
                 <span className="text-h4 font-bold text-primary">
                   {formatCurrency(detail.total)}
                 </span>
@@ -1054,10 +1140,14 @@ function OrdenesTab() {
       <Modal
         open={statusOrder !== null}
         onClose={() => setStatusOrder(null)}
-        title={statusOrder ? `Estado de ${statusOrder.order_number}` : 'Cambiar estado'}
+        title={
+          statusOrder
+            ? `${t('purchasing.estado-de')} ${statusOrder.order_number}`
+            : t('purchasing.cambiar-estado')
+        }
         footer={
           <Button variant="outline" onClick={() => setStatusOrder(null)} disabled={statusBusy}>
-            Cerrar
+            {t('purchasing.cerrar')}
           </Button>
         }
       >
@@ -1065,16 +1155,14 @@ function OrdenesTab() {
           <div className="space-y-4">
             <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Estado actual</span>
+                <span className="text-gray-600">{t('purchasing.estado-actual')}</span>
                 <Badge variant={PO_STATUS[statusOrder.status].variant}>
-                  {PO_STATUS[statusOrder.status].label}
+                  {t(PO_STATUS[statusOrder.status].label)}
                 </Badge>
               </div>
             </div>
             {PO_TRANSITIONS[statusOrder.status].length === 0 ? (
-              <p className="text-body-sm text-gray-600">
-                Esta orden ya no tiene transiciones disponibles.
-              </p>
+              <p className="text-body-sm text-gray-600">{t('purchasing.sin-transiciones')}</p>
             ) : (
               <div className="flex flex-wrap gap-3">
                 {PO_TRANSITIONS[statusOrder.status].map((next) => (
@@ -1085,15 +1173,13 @@ function OrdenesTab() {
                     loading={statusBusy}
                     onClick={() => handleStatus(next)}
                   >
-                    {PO_TRANSITION_LABELS[next]}
+                    {t(PO_TRANSITION_LABELS[next])}
                   </Button>
                 ))}
               </div>
             )}
             {statusOrder.status === 'pending' && (
-              <p className="text-caption text-gray-500">
-                Al recibir la orden se actualiza el stock de cada producto.
-              </p>
+              <p className="text-caption text-gray-500">{t('purchasing.recibir-aviso-stock')}</p>
             )}
           </div>
         )}
@@ -1102,25 +1188,25 @@ function OrdenesTab() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar orden de compra"
+        title={t('purchasing.eliminar-orden')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)} disabled={deletingBusy}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete} loading={deletingBusy}>
-              Eliminar
+              {t('purchasing.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar la orden <strong>{deleting?.order_number}</strong>? Solo se pueden eliminar las
-          órdenes pendientes.
+          {t('purchasing.eliminar-orden-prefijo')} <strong>{deleting?.order_number}</strong>?{' '}
+          {t('purchasing.eliminar-orden-sufijo')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
-            {deleteError}
+            {t(deleteError)}
           </p>
         )}
       </Modal>
@@ -1135,6 +1221,7 @@ function OrdenesTab() {
 function EnviosTab() {
   const toast = useToast()
   const version = useDataVersion()
+  const { t } = useLang()
   const sales = useMemo(() => getState().sales, [version])
 
   const [shipments, setShipments] = useState<Shipment[]>([])
@@ -1168,7 +1255,9 @@ function EnviosTab() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los envíos')
+          setError(
+            reason instanceof Error ? reason.message : 'purchasing.no-se-pudieron-cargar-envios',
+          )
         }
       })
       .finally(() => {
@@ -1213,7 +1302,7 @@ function EnviosTab() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!saleId) {
-      setFormError('Selecciona una venta.')
+      setFormError('purchasing.selecciona-venta')
       return
     }
     const input = {
@@ -1226,15 +1315,23 @@ function EnviosTab() {
     try {
       if (editing) {
         await updateShipment(editing.id, input)
-        toast.success('Envío actualizado', `El envío de ${editing.sale_number} se guardó.`)
+        toast.success(
+          t('purchasing.envio-actualizado'),
+          `${t('purchasing.el-envio-de')} ${editing.sale_number} ${t('purchasing.se-guardo')}`,
+        )
       } else {
         const created = await createShipment(input)
-        toast.success('Envío creado', `Se registró el envío de la venta ${created.sale_number}.`)
+        toast.success(
+          t('purchasing.envio-creado'),
+          `${t('purchasing.envio-creado-desc')} ${created.sale_number}.`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar el envío.')
+      setFormError(
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-guardar-envio',
+      )
     } finally {
       setSaving(false)
     }
@@ -1246,15 +1343,15 @@ function EnviosTab() {
     try {
       await setShipmentStatus(statusShipment.id, status)
       toast.success(
-        'Estado actualizado',
-        `El envío de ${statusShipment.sale_number} pasó a «${SHIPMENT_STATUS[status].label}».`,
+        t('purchasing.estado-actualizado'),
+        `${t('purchasing.el-envio-de')} ${statusShipment.sale_number} ${t('purchasing.paso-a')} «${t(SHIPMENT_STATUS[status].label)}».`,
       )
       setStatusShipment(null)
       reload()
     } catch (reason: unknown) {
       toast.error(
-        'No se pudo cambiar el estado',
-        reason instanceof Error ? reason.message : 'Error inesperado',
+        t('purchasing.no-se-pudo-cambiar-estado'),
+        reason instanceof Error ? reason.message : t('purchasing.error-inesperado'),
       )
     } finally {
       setStatusBusy(false)
@@ -1267,11 +1364,16 @@ function EnviosTab() {
     setDeleteError(null)
     try {
       await deleteShipment(deleting.id)
-      toast.success('Envío eliminado', `El envío de ${deleting.sale_number} se eliminó.`)
+      toast.success(
+        t('purchasing.envio-eliminado'),
+        `${t('purchasing.el-envio-de')} ${deleting.sale_number} ${t('purchasing.se-elimino')}`,
+      )
       setDeleting(null)
       reload()
     } catch (reason: unknown) {
-      setDeleteError(reason instanceof Error ? reason.message : 'No se pudo eliminar el envío.')
+      setDeleteError(
+        reason instanceof Error ? reason.message : 'purchasing.no-se-pudo-eliminar-envio',
+      )
     } finally {
       setDeletingBusy(false)
     }
@@ -1282,19 +1384,19 @@ function EnviosTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Truck aria-hidden="true" className="h-5 w-5 text-primary" />
-          <h2 className="text-h3 text-gray-800">Envíos</h2>
+          <h2 className="text-h3 text-gray-800">{t('purchasing.envios')}</h2>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo envío
+          {t('purchasing.nuevo-envio')}
         </Button>
       </div>
 
       <div className="card">
         <Input
           type="search"
-          aria-label="Buscar envíos"
-          placeholder="Buscar por venta, transportista o tracking…"
+          aria-label={t('purchasing.buscar-envios')}
+          placeholder={t('purchasing.buscar-envios-placeholder')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -1303,21 +1405,30 @@ function EnviosTab() {
       {error ? (
         <div className="card">
           <ErrorState
-            description={error}
+            description={t(error)}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('purchasing.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && shipments.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Código', 'Venta', 'Transportista', 'Tracking', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('purchasing.codigo'),
+              t('purchasing.venta'),
+              t('purchasing.transportista'),
+              t('purchasing.tracking'),
+              t('purchasing.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando envíos…
+                {t('purchasing.cargando-envios')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -1326,19 +1437,28 @@ function EnviosTab() {
         <div className="card">
           <EmptyState
             icon={Truck}
-            title="Sin envíos"
-            description="Aún no hay envíos registrados. Crea el primero para despachar una venta."
+            title={t('purchasing.sin-envios')}
+            description={t('purchasing.sin-envios-desc')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo envío
+                {t('purchasing.nuevo-envio')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Código', 'Venta', 'Transportista', 'Tracking', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('purchasing.codigo'),
+              t('purchasing.venta'),
+              t('purchasing.transportista'),
+              t('purchasing.tracking'),
+              t('purchasing.estado'),
+              t('purchasing.acciones'),
+            ]}
+          >
             {visible.map((shipment) => (
               <TableRow key={shipment.id}>
                 <TableCell className="font-mono text-caption">ENV-{shipment.id}</TableCell>
@@ -1349,25 +1469,25 @@ function EnviosTab() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={SHIPMENT_STATUS[shipment.status].variant}>
-                    {SHIPMENT_STATUS[shipment.status].label}
+                    {t(SHIPMENT_STATUS[shipment.status].label)}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
                     <RowButton
-                      label={`Cambiar estado del envío ${shipment.sale_number}`}
+                      label={`${t('purchasing.cambiar-estado-del-envio')} ${shipment.sale_number}`}
                       onClick={() => setStatusShipment(shipment)}
                     >
                       <RefreshCw aria-hidden="true" className="h-4 w-4" />
                     </RowButton>
                     <RowButton
-                      label={`Editar envío de ${shipment.sale_number}`}
+                      label={`${t('purchasing.editar-envio-de')} ${shipment.sale_number}`}
                       onClick={() => openEdit(shipment)}
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
                     </RowButton>
                     <RowButton
-                      label={`Eliminar envío de ${shipment.sale_number}`}
+                      label={`${t('purchasing.eliminar-envio-de')} ${shipment.sale_number}`}
                       tone="danger"
                       onClick={() => {
                         setDeleteError(null)
@@ -1389,27 +1509,29 @@ function EnviosTab() {
         onClose={() => {
           if (!saving) setFormOpen(false)
         }}
-        title={editing ? 'Editar envío' : 'Nuevo envío'}
+        title={
+          editing ? t('purchasing.editar-envio') : t('purchasing.nuevo-envio')
+        }
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button type="submit" form="shipment-form" loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear envío'}
+              {editing ? t('purchasing.guardar-cambios') : t('purchasing.crear-envio')}
             </Button>
           </>
         }
       >
         <form id="shipment-form" onSubmit={handleSubmit} className="space-y-4">
           <Select
-            label="Venta"
+            label={t('purchasing.venta')}
             required
             value={saleId}
             onChange={(event) => setSaleId(event.target.value)}
-            hint={sales.length === 0 ? 'Registra ventas en el menú Ventas.' : undefined}
+            hint={sales.length === 0 ? t('purchasing.hint-registra-ventas') : undefined}
           >
-            <option value="">Selecciona una venta…</option>
+            <option value="">{t('purchasing.selecciona-venta-opcion')}</option>
             {sales.map((sale) => (
               <option key={sale.id} value={sale.id}>
                 {sale.sale_number} · {sale.customer.name}
@@ -1418,23 +1540,23 @@ function EnviosTab() {
           </Select>
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Transportista"
+              label={t('purchasing.transportista')}
               value={carrier}
               onChange={(event) => setCarrier(event.target.value)}
-              placeholder="Ej. Shalom"
-              hint="Opcional."
+              placeholder={t('purchasing.ej-transportista')}
+              hint={t('purchasing.opcional')}
             />
             <Input
-              label="Código de seguimiento"
+              label={t('purchasing.codigo-seguimiento')}
               value={tracking}
               onChange={(event) => setTracking(event.target.value)}
-              placeholder="Ej. TRK-998877"
-              hint="Opcional. Debe ser único."
+              placeholder={t('purchasing.ej-tracking')}
+              hint={t('purchasing.hint-tracking')}
             />
           </div>
           {formError && (
             <p role="alert" className="rounded-md border border-error bg-error-bg px-3 py-2 text-caption text-error-fg">
-              {formError}
+              {t(formError)}
             </p>
           )}
         </form>
@@ -1443,10 +1565,10 @@ function EnviosTab() {
       <Modal
         open={statusShipment !== null}
         onClose={() => setStatusShipment(null)}
-        title="Cambiar estado del envío"
+        title={t('purchasing.cambiar-estado-del-envio')}
         footer={
           <Button variant="outline" onClick={() => setStatusShipment(null)} disabled={statusBusy}>
-            Cerrar
+            {t('purchasing.cerrar')}
           </Button>
         }
       >
@@ -1454,9 +1576,11 @@ function EnviosTab() {
           <div className="space-y-4">
             <div className="rounded-lg bg-gray-50 p-4 text-body-sm">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Envío de {statusShipment.sale_number}</span>
+                <span className="text-gray-600">
+                  {t('purchasing.envio-de')} {statusShipment.sale_number}
+                </span>
                 <Badge variant={SHIPMENT_STATUS[statusShipment.status].variant}>
-                  {SHIPMENT_STATUS[statusShipment.status].label}
+                  {t(SHIPMENT_STATUS[statusShipment.status].label)}
                 </Badge>
               </div>
             </div>
@@ -1471,7 +1595,7 @@ function EnviosTab() {
                     loading={statusBusy}
                     onClick={() => handleStatus(status)}
                   >
-                    {SHIPMENT_STATUS[status].label}
+                    {t(SHIPMENT_STATUS[status].label)}
                   </Button>
                 ))}
             </div>
@@ -1482,25 +1606,25 @@ function EnviosTab() {
       <Modal
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title="Eliminar envío"
+        title={t('purchasing.eliminar-envio')}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(null)} disabled={deletingBusy}>
-              Cancelar
+              {t('purchasing.cancelar')}
             </Button>
             <Button variant="danger" onClick={handleDelete} loading={deletingBusy}>
-              Eliminar
+              {t('purchasing.eliminar')}
             </Button>
           </>
         }
       >
         <p className="text-body-sm text-gray-700">
-          ¿Eliminar el envío de la venta <strong>{deleting?.sale_number}</strong>? Esta acción no se
-          puede deshacer.
+          {t('purchasing.eliminar-envio-prefijo')} <strong>{deleting?.sale_number}</strong>?{' '}
+          {t('purchasing.eliminar-envio-sufijo')}
         </p>
         {deleteError && (
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
-            {deleteError}
+            {t(deleteError)}
           </p>
         )}
       </Modal>

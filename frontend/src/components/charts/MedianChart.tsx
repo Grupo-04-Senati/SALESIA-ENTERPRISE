@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency } from '@/utils/formatters'
 import { CHART_GRID } from '@/data/analytics'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * MedianChart del sistema de diseño (txt §6.2): línea de tickets con la
@@ -13,6 +14,7 @@ interface MedianChartProps {
 }
 
 export default function MedianChart({ values }: MedianChartProps) {
+  const { t } = useLang()
   const sorted = [...values].sort((a, b) => a - b)
   const middle = Math.floor(sorted.length / 2)
   const value =
@@ -30,7 +32,7 @@ export default function MedianChart({ values }: MedianChartProps) {
             formatter={(value) => formatCurrency(Number(value))}
             contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
           />
-          <Line type="monotone" dataKey="ticket" stroke="#06B6D4" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="ticket" name={t('analytics.ticket')} stroke="#06B6D4" strokeWidth={2} dot={false} />
           <ReferenceLine y={value} stroke="#06B6D4" strokeDasharray="4 4" />
         </LineChart>
       </ResponsiveContainer>

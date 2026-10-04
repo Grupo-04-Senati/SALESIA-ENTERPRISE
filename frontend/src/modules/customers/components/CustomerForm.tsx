@@ -6,7 +6,8 @@ import Button from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/form'
 import { digits, email, minLength, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules, Validator } from '@/utils/validators'
-import { CUSTOMER_SEGMENTS } from '../services/customerService'
+import { CUSTOMER_SEGMENTS, SEGMENT_KEYS } from '../services/customerService'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Formulario de cliente crear/editar en modal (RF-03).
@@ -45,6 +46,7 @@ const EMPTY: FormValues = {
 }
 
 export default function CustomerForm({ open, onClose, customer, onSubmit }: CustomerFormProps) {
+  const { t } = useLang()
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [errors, setErrors] = useState<FormErrors<FormValues>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -79,20 +81,25 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
   }
 
   const phoneRule: Validator = (value) =>
-    !value.trim() || /^\+?\d{7,15}$/.test(value.trim()) ? null : 'Teléfono inválido'
+    !value.trim() || /^\+?\d{7,15}$/.test(value.trim()) ? null : t('customers.telefono-invalido')
 
   const documentNumberRule: Validator = (value) => {
-    if (values.document_type === 'DNI') return digits(8, 'El DNI debe tener 8 dígitos')(value)
-    if (values.document_type === 'RUC') return digits(11, 'El RUC debe tener 11 dígitos')(value)
-    return minLength(6, 'Ingresa un documento válido')(value)
+    if (values.document_type === 'DNI')
+      return digits(8, t('customers.el-dni-debe-tener-8-digitos'))(value)
+    if (values.document_type === 'RUC')
+      return digits(11, t('customers.el-ruc-debe-tener-11-digitos'))(value)
+    return minLength(6, t('customers.ingresa-un-documento-valido'))(value)
   }
 
   const rules: FormRules<FormValues> = {
-    document_number: (value) => required('El documento es obligatorio')(value) ?? documentNumberRule(value),
-    name: (value) => required()(value) ?? minLength(3, 'Ingresa el nombre completo')(value),
-    email: email(),
+    document_number: (value) =>
+      required(t('customers.el-documento-es-obligatorio'))(value) ?? documentNumberRule(value),
+    name: (value) =>
+      required(t('customers.campo-obligatorio'))(value) ??
+      minLength(3, t('customers.ingresa-el-nombre-completo'))(value),
+    email: email(t('customers.ingresa-un-correo-valido')),
     phone: phoneRule,
-    segment: required(),
+    segment: required(t('customers.campo-obligatorio')),
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -121,21 +128,21 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
     <Modal
       open={open}
       onClose={onClose}
-      title={customer ? 'Editar cliente' : 'Nuevo cliente'}
+      title={customer ? t('customers.editar-cliente') : t('customers.nuevo-cliente')}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancelar
+            {t('customers.cancelar')}
           </Button>
           <Button type="submit" form="customer-form" loading={submitting}>
-            {customer ? 'Guardar cambios' : 'Crear cliente'}
+            {customer ? t('customers.guardar-cambios') : t('customers.crear-cliente')}
           </Button>
         </>
       }
     >
       <form id="customer-form" onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
         <Select
-          label="Tipo de documento"
+          label={t('customers.tipo-de-documento')}
           required
           value={values.document_type}
           onChange={setValue('document_type')}
@@ -148,7 +155,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         </Select>
 
         <Input
-          label="Número de documento"
+          label={t('customers.numero-de-documento')}
           required
           inputMode="numeric"
           placeholder="74125896"
@@ -159,7 +166,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
 
         <div className="sm:col-span-2">
           <Input
-            label="Nombre o razón social"
+            label={t('customers.nombre-o-razon-social')}
             required
             placeholder="María Quispe"
             value={values.name}
@@ -169,7 +176,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         </div>
 
         <Input
-          label="Correo electrónico"
+          label={t('customers.correo-electronico')}
           type="email"
           placeholder="maria@correo.com"
           value={values.email}
@@ -178,7 +185,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         />
 
         <Input
-          label="Teléfono"
+          label={t('customers.telefono')}
           placeholder="+51987654321"
           value={values.phone}
           onChange={setValue('phone')}
@@ -187,7 +194,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
 
         <div className="sm:col-span-2">
           <Select
-            label="Segmento"
+            label={t('customers.segmento')}
             required
             value={values.segment}
             onChange={setValue('segment')}
@@ -195,7 +202,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
           >
             {CUSTOMER_SEGMENTS.map((segment) => (
               <option key={segment} value={segment}>
-                {segment}
+                {t(SEGMENT_KEYS[segment] ?? segment)}
               </option>
             ))}
           </Select>
@@ -203,7 +210,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
 
         <div className="sm:col-span-2">
           <Textarea
-            label="Dirección"
+            label={t('customers.direccion')}
             placeholder="Av. Los Olivos 123, Lima"
             value={values.address}
             onChange={setValue('address')}

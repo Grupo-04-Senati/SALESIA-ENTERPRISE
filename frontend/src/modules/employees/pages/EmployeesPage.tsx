@@ -8,6 +8,7 @@ import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
+import { useLang } from '@/i18n/i18n'
 import { useDataVersion } from '@/data/DataProvider'
 import { formatCurrency } from '@/utils/formatters'
 import {
@@ -35,6 +36,7 @@ const EMPTY_FORM = {
 
 export default function EmployeesPage() {
   const toast = useToast()
+  const { t } = useLang()
   const version = useDataVersion()
 
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -59,7 +61,11 @@ export default function EmployeesPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los vendedores')
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : t('employees.no-se-pudieron-cargar-los-vendedores'),
+          )
         }
       })
       .finally(() => {
@@ -106,7 +112,7 @@ export default function EmployeesPage() {
 
   const handleSubmit = async () => {
     if (form.full_name.trim().length < 2) {
-      setFormError('El nombre debe tener al menos 2 caracteres.')
+      setFormError(t('employees.el-nombre-debe-tener-al-menos-2-caracteres'))
       return
     }
     const input = toEmployeeInput(form)
@@ -114,15 +120,23 @@ export default function EmployeesPage() {
     try {
       if (editing) {
         await updateEmployee(editing.id, input)
-        toast.success('Vendedor actualizado', `${input.full_name} se guardó correctamente.`)
+        toast.success(
+          t('employees.vendedor-actualizado'),
+          `${input.full_name} ${t('employees.se-guardo-correctamente')}`,
+        )
       } else {
         await createEmployee(input)
-        toast.success('Vendedor creado', `${input.full_name} ya puede registrar ventas.`)
+        toast.success(
+          t('employees.vendedor-creado'),
+          `${input.full_name} ${t('employees.ya-puede-registrar-ventas')}`,
+        )
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      setFormError(reason instanceof Error ? reason.message : 'No se pudo guardar el vendedor.')
+      setFormError(
+        reason instanceof Error ? reason.message : t('employees.no-se-pudo-guardar-el-vendedor'),
+      )
     } finally {
       setSaving(false)
     }
@@ -132,22 +146,22 @@ export default function EmployeesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Vendedores</h1>
+          <h1>{t('employees.vendedores')}</h1>
           <p className="mt-1 text-body-sm text-gray-600">
-            Equipo comercial (RF-05). Crea aquí a quienes registrarán las ventas de tu proyecto.
+            {t('employees.equipo-comercial-rf-05-crea-aqui-a-quienes-registraran-las-ventas-de-tu-proyecto')}
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo vendedor
+          {t('employees.nuevo-vendedor')}
         </Button>
       </div>
 
       <div className="card">
         <Input
           type="search"
-          aria-label="Buscar vendedores"
-          placeholder="Buscar por nombre, documento o correo…"
+          aria-label={t('employees.buscar-vendedores')}
+          placeholder={t('employees.buscar-por-nombre-documento-o-correo')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -159,18 +173,27 @@ export default function EmployeesPage() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('employees.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && employees.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Vendedor', 'Documento', 'Cargo', 'Contacto', 'Ventas', '']}>
+          <DataTable
+            headers={[
+              t('employees.vendedor'),
+              t('employees.documento'),
+              t('employees.cargo'),
+              t('employees.contacto'),
+              t('employees.ventas'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando vendedores…
+                {t('employees.cargando-vendedores')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -179,19 +202,30 @@ export default function EmployeesPage() {
         <div className="card">
           <EmptyState
             icon={UserPlus}
-            title="Sin vendedores"
-            description="Todavía no hay vendedores registrados. Crea el primero para poder registrar ventas."
+            title={t('employees.sin-vendedores')}
+            description={t(
+              'employees.todavia-no-hay-vendedores-registrados-crea-el-primero-para-poder-registrar-ventas',
+            )}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo vendedor
+                {t('employees.nuevo-vendedor')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="card">
-          <DataTable headers={['Vendedor', 'Documento', 'Cargo', 'Contacto', 'Ventas', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('employees.vendedor'),
+              t('employees.documento'),
+              t('employees.cargo'),
+              t('employees.contacto'),
+              t('employees.ventas'),
+              t('employees.acciones'),
+            ]}
+          >
             {visible.map((employee) => (
               <TableRow key={employee.id}>
                 <TableCell>
@@ -205,7 +239,9 @@ export default function EmployeesPage() {
                   <div className="text-caption text-gray-500">{employee.phone || '—'}</div>
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium">{employee.metrics?.sales ?? 0} ventas</div>
+                  <div className="font-medium">
+                    {t('employees.n-ventas', { n: employee.metrics?.sales ?? 0 })}
+                  </div>
                   <div className="text-caption text-gray-500">
                     {formatCurrency(employee.metrics?.revenue ?? 0)}
                   </div>
@@ -215,8 +251,8 @@ export default function EmployeesPage() {
                     <button
                       type="button"
                       onClick={() => openEdit(employee)}
-                      aria-label={`Editar ${employee.full_name}`}
-                      title="Editar"
+                      aria-label={`${t('employees.editar')} ${employee.full_name}`}
+                      title={t('employees.editar')}
                       className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -232,56 +268,56 @@ export default function EmployeesPage() {
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Editar vendedor' : 'Nuevo vendedor'}
+        title={editing ? t('employees.editar-vendedor') : t('employees.nuevo-vendedor')}
         footer={
           <>
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-              Cancelar
+              {t('employees.cancelar')}
             </Button>
             <Button onClick={handleSubmit} loading={saving}>
-              {editing ? 'Guardar cambios' : 'Crear vendedor'}
+              {editing ? t('employees.guardar-cambios') : t('employees.crear-vendedor')}
             </Button>
           </>
         }
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="Nombre completo"
+            label={t('employees.nombre-completo')}
             required
             className="sm:col-span-2"
             value={form.full_name}
             onChange={(event) => setForm({ ...form, full_name: event.target.value })}
-            placeholder="Ej. Juan Pérez"
+            placeholder={t('employees.ej-juan-perez')}
             error={formError ?? undefined}
             autoFocus
           />
           <Input
-            label="Documento"
+            label={t('employees.documento')}
             value={form.document}
             onChange={(event) => setForm({ ...form, document: event.target.value })}
-            placeholder="DNI"
+            placeholder={t('employees.dni')}
           />
           <Input
-            label="Cargo"
+            label={t('employees.cargo')}
             value={form.position}
             onChange={(event) => setForm({ ...form, position: event.target.value })}
-            placeholder="Vendedor"
+            placeholder={t('employees.vendedor')}
           />
           <Input
-            label="Correo"
+            label={t('employees.correo')}
             type="email"
             value={form.email}
             onChange={(event) => setForm({ ...form, email: event.target.value })}
-            placeholder="correo@empresa.com"
+            placeholder={t('employees.correo-empresa-com')}
           />
           <Input
-            label="Teléfono"
+            label={t('employees.telefono')}
             value={form.phone}
             onChange={(event) => setForm({ ...form, phone: event.target.value })}
-            placeholder="+51 999 888 777"
+            placeholder={t('employees.telefono-ejemplo')}
           />
           <Input
-            label="Fecha de ingreso"
+            label={t('employees.fecha-de-ingreso')}
             type="date"
             className="sm:col-span-2"
             value={form.hire_date}

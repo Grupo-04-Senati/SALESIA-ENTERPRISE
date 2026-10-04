@@ -21,6 +21,7 @@ import type { Product, ProductInput } from '@/types/product'
 import ProductForm from '../components/ProductForm'
 import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
+import { useLang } from '@/i18n/i18n'
 
 /**
  * Página de Productos (Fase 07 · RF-04): catálogo con búsqueda, filtros
@@ -32,13 +33,14 @@ const PAGE_SIZE = 10
 
 /** Estado del stock según el umbral de alerta configurado (Automatizaciones). */
 function stockBadge(product: Product): { variant: 'error' | 'warning' | 'success'; label: string } | null {
-  if (product.current_stock === 0) return { variant: 'error', label: 'Sin stock' }
-  if (isLowStock(product)) return { variant: 'warning', label: 'Stock bajo' }
+  if (product.current_stock === 0) return { variant: 'error', label: 'products.sin-stock' }
+  if (isLowStock(product)) return { variant: 'warning', label: 'products.stock-bajo' }
   return null
 }
 
 export default function ProductsPage() {
   const toast = useToast()
+  const { t } = useLang()
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +77,9 @@ export default function ProductsPage() {
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
-          setError(reason instanceof Error ? reason.message : 'No se pudieron cargar los productos')
+          setError(
+            reason instanceof Error ? reason.message : t('products.no-se-pudieron-cargar-los-productos'),
+          )
         }
       })
       .finally(() => {
@@ -109,15 +113,21 @@ export default function ProductsPage() {
     try {
       if (editing) {
         await updateProduct(editing.id, input)
-        toast.success('Producto actualizado', `${input.name} se guardó correctamente.`)
+        toast.success(
+          t('products.producto-actualizado'),
+          `${input.name} ${t('products.se-guardo-correctamente')}`,
+        )
       } else {
         await createProduct(input)
-        toast.success('Producto creado', `${input.name} se agregó al catálogo.`)
+        toast.success(t('products.producto-creado'), `${input.name} ${t('products.se-agrego-al-catalogo')}`)
       }
       setFormOpen(false)
       reload()
     } catch (reason: unknown) {
-      toast.error('No se pudo guardar', reason instanceof Error ? reason.message : 'Error inesperado')
+      toast.error(
+        t('products.no-se-pudo-guardar'),
+        reason instanceof Error ? reason.message : t('products.error-inesperado'),
+      )
     }
   }
 
@@ -125,12 +135,17 @@ export default function ProductsPage() {
     try {
       const updated = await toggleProductStatus(product.id)
       toast.success(
-        updated.status === 'active' ? 'Producto activado' : 'Producto desactivado',
-        `${product.name} ahora está ${updated.status === 'active' ? 'activo' : 'inactivo'}.`,
+        updated.status === 'active' ? t('products.producto-activado') : t('products.producto-desactivado'),
+        `${product.name} ${
+          updated.status === 'active' ? t('products.ahora-esta-activo') : t('products.ahora-esta-inactivo')
+        }`,
       )
       reload()
     } catch (reason: unknown) {
-      toast.error('No se pudo cambiar el estado', reason instanceof Error ? reason.message : 'Error inesperado')
+      toast.error(
+        t('products.no-se-pudo-cambiar-el-estado'),
+        reason instanceof Error ? reason.message : t('products.error-inesperado'),
+      )
     }
   }
 
@@ -138,14 +153,12 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1>Productos</h1>
-          <p className="mt-1 text-body-sm text-gray-600">
-            Catálogo de productos: precios, stock, categorías y estados (RF-04).
-          </p>
+          <h1>{t('products.productos')}</h1>
+          <p className="mt-1 text-body-sm text-gray-600">{t('products.catalogo-de-productos')}</p>
         </div>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          Nuevo producto
+          {t('products.nuevo-producto')}
         </Button>
       </div>
 
@@ -153,19 +166,19 @@ export default function ProductsPage() {
       <div className="card flex flex-col gap-3 lg:flex-row lg:items-end">
         <Input
           type="search"
-          aria-label="Buscar productos"
-          placeholder="Buscar por nombre o SKU…"
+          aria-label={t('products.buscar-productos')}
+          placeholder={t('products.buscar-por-nombre-o-sku')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="lg:flex-1"
         />
         <Select
-          aria-label="Filtrar por categoría"
+          aria-label={t('products.filtrar-por-categoria')}
           value={categoryId}
           onChange={(event) => setCategoryId(event.target.value ? Number(event.target.value) : '')}
           className="lg:w-48"
         >
-          <option value="">Todas las categorías</option>
+          <option value="">{t('products.todas-las-categorias')}</option>
           {getProductCategories().map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -173,17 +186,17 @@ export default function ProductsPage() {
           ))}
         </Select>
         <Select
-          aria-label="Filtrar por estado"
+          aria-label={t('products.filtrar-por-estado')}
           value={status}
           onChange={(event) => setStatus(event.target.value as 'active' | 'inactive' | '')}
           className="lg:w-40"
         >
-          <option value="">Todos</option>
-          <option value="active">Activos</option>
-          <option value="inactive">Inactivos</option>
+          <option value="">{t('products.todos')}</option>
+          <option value="active">{t('products.activos')}</option>
+          <option value="inactive">{t('products.inactivos')}</option>
         </Select>
         <Checkbox
-          label="Solo stock bajo"
+          label={t('products.solo-stock-bajo')}
           checked={lowStock}
           onChange={(event) => setLowStock(event.target.checked)}
         />
@@ -196,18 +209,27 @@ export default function ProductsPage() {
             description={error}
             action={
               <Button variant="outline" onClick={reload}>
-                Reintentar
+                {t('products.reintentar')}
               </Button>
             }
           />
         </div>
       ) : loading && products.length === 0 ? (
         <div className="card">
-          <DataTable headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', '']}>
+          <DataTable
+            headers={[
+              t('products.producto'),
+              t('products.categoria'),
+              t('products.precio'),
+              t('products.stock'),
+              t('products.estado'),
+              '',
+            ]}
+          >
             <TableStateRow colSpan={6}>
               <span className="inline-flex items-center gap-2">
                 <Spinner size={16} className="text-loading" />
-                Cargando productos…
+                {t('products.cargando-productos')}
               </span>
             </TableStateRow>
           </DataTable>
@@ -215,19 +237,28 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <div className="card">
           <EmptyState
-            title="Sin productos"
-            description="No hay registros que coincidan con la búsqueda."
+            title={t('products.sin-productos')}
+            description={t('products.no-hay-registros-que-coincidan-con-la-busqueda')}
             action={
               <Button onClick={openCreate}>
                 <Plus aria-hidden="true" className="h-4 w-4" />
-                Nuevo producto
+                {t('products.nuevo-producto')}
               </Button>
             }
           />
         </div>
       ) : (
         <div className="space-y-4">
-          <DataTable headers={['Producto', 'Categoría', 'Precio', 'Stock', 'Estado', 'Acciones']}>
+          <DataTable
+            headers={[
+              t('products.producto'),
+              t('products.categoria'),
+              t('products.precio'),
+              t('products.stock'),
+              t('products.estado'),
+              t('products.acciones'),
+            ]}
+          >
             {visible.map((product) => {
               const stock = stockBadge(product)
               return (
@@ -242,23 +273,25 @@ export default function ProductsPage() {
                   <TableCell>
                     <div className="font-medium">{formatCurrency(product.sale_price)}</div>
                     <div className="text-caption text-gray-500">
-                      costo {formatCurrency(product.cost_price)}
+                      {t('products.costo')} {formatCurrency(product.cost_price)}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">
                       {product.current_stock} {product.unit}
                     </div>
-                    <div className="text-caption text-gray-500">mín. {product.min_stock}</div>
+                    <div className="text-caption text-gray-500">
+                      {t('products.min')} {product.min_stock}
+                    </div>
                     {stock && (
                       <div className="mt-1">
-                        <Badge variant={stock.variant}>{stock.label}</Badge>
+                        <Badge variant={stock.variant}>{t(stock.label)}</Badge>
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.status === 'active' ? 'success' : 'neutral'}>
-                      {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                      {product.status === 'active' ? t('products.activo') : t('products.inactivo')}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -266,8 +299,8 @@ export default function ProductsPage() {
                       <button
                         type="button"
                         onClick={() => openEdit(product)}
-                        aria-label={`Editar ${product.name}`}
-                        title="Editar"
+                        aria-label={`${t('products.editar')} ${product.name}`}
+                        title={t('products.editar')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <Pencil aria-hidden="true" className="h-4 w-4" />
@@ -277,10 +310,10 @@ export default function ProductsPage() {
                         onClick={() => handleToggle(product)}
                         aria-label={
                           product.status === 'active'
-                            ? `Desactivar ${product.name}`
-                            : `Activar ${product.name}`
+                            ? `${t('products.desactivar')} ${product.name}`
+                            : `${t('products.activar')} ${product.name}`
                         }
-                        title={product.status === 'active' ? 'Desactivar' : 'Activar'}
+                        title={product.status === 'active' ? t('products.desactivar') : t('products.activar')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
                       >
                         <Power aria-hidden="true" className="h-4 w-4" />
