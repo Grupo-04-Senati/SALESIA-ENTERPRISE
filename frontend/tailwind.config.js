@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 // ============================================================
-// SalesIA Enterprise — Sistema de diseño (Fase 03)
-// Fuente: "SISTEMA DE DISEÑO - SALESIA ENTERPRISE" (txt)
-// Paleta definida en el PDF: azul corporativo, cyan, blanco y grises
+// SalesIA Enterprise — Sistema de diseño "Diseno E" (webadmin)
+// Paleta restringida: azul / blanco / negro.
+// Montserrat (headlines) + IBM Plex Sans (body), radios 12px / píldora.
 // ============================================================
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -10,41 +10,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        // --- Colores principales (definidos en el PDF) ---
+        // --- Azules del Diseño E ---
         primary: {
-          DEFAULT: '#1E3A8A', // azul corporativo
-          hover: '#1E40AF',
-          light: '#3B82F6', // azul claro
-          'light-hover': '#2563EB',
+          DEFAULT: '#0939E6', // azul E principal
+          hover: '#0054BC', // azul profundo (hover)
+          light: '#8FB0FF', // azul claro (indicadores)
+          'light-hover': '#6B91F5',
         },
         accent: {
-          DEFAULT: '#06B6D4', // cyan
-          hover: '#0891B2',
+          DEFAULT: '#0054BC', // azul secundario (antes cyan)
+          hover: '#00439A',
         },
         // --- Grises (neutros) ---
         gray: {
-          50: '#F9FAFB',
-          100: '#F3F4F6',
-          200: '#E5E7EB',
+          50: '#F8F9FB',
+          100: '#F3F5F9',
+          200: '#EFF0F2',
           300: '#D1D5DB',
           400: '#9CA3AF',
-          500: '#6B7280',
+          500: '#7B8190',
           600: '#4B5563',
           700: '#374151',
           800: '#1F2937',
           900: '#111827',
         },
-        // --- Colores de estado ---
+        // --- Colores de estado (badges de datos) ---
         success: { DEFAULT: '#10B981', bg: '#D1FAE5', fg: '#065F46' },
         error: { DEFAULT: '#EF4444', bg: '#FEE2E2', fg: '#991B1B' },
         warning: { DEFAULT: '#F59E0B', bg: '#FEF3C7', fg: '#92400E' },
-        info: { DEFAULT: '#06B6D4', bg: '#CFFAFE', fg: '#155E75' },
-        loading: '#3B82F6',
+        info: { DEFAULT: '#0939E6', bg: '#E8EEFF', fg: '#0054BC' },
+        loading: '#0939E6',
         empty: '#9CA3AF',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        head: ['Montserrat', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Fira Code', 'monospace'],
       },
       // --- Escala tipográfica ---
       fontSize: {
@@ -67,12 +68,13 @@ export default {
         '2xl': '16px',
         full: '9999px',
       },
-      // --- Sombras ---
+      // --- Sombras (Diseño E: única sombra sutil) ---
       boxShadow: {
-        subtle: '0 1px 2px rgba(0,0,0,0.05)',
-        medium: '0 4px 6px rgba(0,0,0,0.07)',
-        large: '0 10px 15px rgba(0,0,0,0.1)',
-        modal: '0 20px 25px rgba(0,0,0,0.15)',
+        subtle: 'rgba(52, 58, 64, 0.06) 0px -2px 5px 0px',
+        medium: '0 4px 12px rgba(52,58,64,0.08)',
+        large: '0 14px 30px rgba(52,58,64,0.14)',
+        modal: '0 24px 60px rgba(52,58,64,0.22)',
+        blue: '0 6px 16px rgba(9,57,230,0.30)',
       },
       // --- Breakpoints (txt §9): tablet 640-1024, desktop 1024-1440, wide >1440 ---
       screens: {

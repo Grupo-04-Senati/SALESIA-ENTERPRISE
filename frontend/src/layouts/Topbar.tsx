@@ -1,17 +1,21 @@
 import { useState } from 'react'
 import { useLocation, useNavigation } from 'react-router-dom'
-import { Bell, Moon, Search, Sun } from 'lucide-react'
+import { Bell, Menu, Moon, Search, Sun } from 'lucide-react'
 import { PATH_TITLES } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
 import { useAuth } from '@/hooks/useAuth'
 
 /**
- * Topbar: 64px de alto, fondo blanco, borde inferior gris 200.
- * Contenido: título/breadcrumbs, búsqueda, notificaciones y avatar (txt §7.1).
- * Lleva la barra de progreso de cargas debajo (txt §5.5).
+ * Topbar (Diseño E): 56px, fondo claro, borde inferior fino.
+ * Izquierda: marca. Centro-derecha: búsqueda, tema, campana y usuario.
  */
-export default function Topbar() {
+interface TopbarProps {
+  /** Abre el sidebar en móvil (hamburguesa). */
+  onMenu?: () => void
+}
+
+export default function Topbar({ onMenu }: TopbarProps) {
   const { pathname } = useLocation()
   const navigation = useNavigation()
   const { user } = useAuth()
@@ -25,66 +29,95 @@ export default function Topbar() {
       .join('') || 'US'
 
   return (
-    <header className="relative flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 print:hidden lg:px-8">
-      {/* Título de la página */}
-      <div className="flex items-center gap-2 text-body-sm text-gray-500">
+    <header className="relative flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 print:hidden lg:px-5">
+      {/* Hamburguesa (móvil) */}
+      <button
+        type="button"
+        aria-label="Abrir menú"
+        onClick={onMenu}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white lg:hidden"
+      >
+        <Menu aria-hidden="true" className="h-[18px] w-[18px]" />
+      </button>
+
+      {/* Marca */}
+      <div className="flex items-center gap-2.5">
+        <img
+          src="/logo.jpg"
+          alt="Logo de SalesIA Enterprise"
+          className="h-8 w-8 rounded-full object-cover"
+        />
+        <span className="hidden font-head text-[15px] font-semibold text-gray-900 sm:block">
+          SalesIA Enterprise
+        </span>
+      </div>
+
+      {/* Breadcrumb píldora */}
+      <div className="ml-2 hidden items-center gap-2 text-body-sm text-gray-500 md:flex">
         <span>SalesIA</span>
         <span aria-hidden="true">/</span>
-        <span className="font-semibold text-gray-900">{title}</span>
+        <span className="rounded-full bg-[#E8EEFF] px-3 py-1 text-[13px] font-semibold text-primary">
+          {title}
+        </span>
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Búsqueda */}
+      <div className="relative hidden md:block">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+        />
+        <input
+          type="search"
+          placeholder="Buscar en el sistema…"
+          aria-label="Buscar en el sistema"
+          className="input h-9 w-56 py-1.5 pl-9 text-body-sm"
+        />
       </div>
 
       {/* Acciones */}
-      <div className="flex items-center gap-3">
-        <div className="relative hidden md:block">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="search"
-            placeholder="Buscar…"
-            aria-label="Buscar en el sistema"
-            className="input h-9 w-56 py-1.5 pl-9 text-body-sm"
-          />
+      <button
+        type="button"
+        aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        onClick={() => setTheme(toggleTheme())}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white"
+      >
+        {theme === 'dark' ? (
+          <Sun aria-hidden="true" className="h-[18px] w-[18px]" />
+        ) : (
+          <Moon aria-hidden="true" className="h-[18px] w-[18px]" />
+        )}
+      </button>
+
+      <button
+        type="button"
+        aria-label="Notificaciones"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-primary hover:text-white"
+      >
+        <Bell aria-hidden="true" className="h-[18px] w-[18px]" />
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+          4
+        </span>
+      </button>
+
+      {/* Usuario */}
+      <div className="flex items-center gap-2 rounded-full bg-gray-100 py-1 pl-1 pr-3">
+        <div
+          aria-hidden="true"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
+        >
+          {initials}
         </div>
-
-        <button
-          type="button"
-          aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-          onClick={() => setTheme(toggleTheme())}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100"
-        >
-          {theme === 'dark' ? (
-            <Sun aria-hidden="true" className="h-5 w-5" />
-          ) : (
-            <Moon aria-hidden="true" className="h-5 w-5" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          aria-label="Notificaciones"
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100"
-        >
-          <Bell aria-hidden="true" className="h-5 w-5" />
-        </button>
-
-        <div className="flex items-center gap-2">
-          <div
-            aria-hidden="true"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-body-sm font-semibold text-white"
-          >
-            {initials}
-          </div>
-          <div className="hidden lg:block">
-            <p className="text-body-sm font-medium text-gray-700">{user?.name ?? 'Usuario'}</p>
-            <p className="text-caption text-gray-400">{user?.role ?? 'Invitado'}</p>
-          </div>
+        <div className="hidden leading-tight lg:block">
+          <p className="text-[13px] font-semibold text-gray-800">{user?.name ?? 'Usuario'}</p>
+          <p className="text-[11px] text-gray-400">{user?.role ?? 'Invitado'}</p>
         </div>
       </div>
 
-      {/* Barra de progreso de cargas de ruta (txt §5.5) */}
+      {/* Barra de progreso de cargas de ruta */}
       <ProgressBar active={navigation.state === 'loading'} />
     </header>
   )

@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 /* ============================================================
-   SalesIA Enterprise — estilos base (sistema de diseño Fase 03)
+   SalesIA Enterprise — sistema de diseño "Diseno E" (webadmin)
+   Montserrat (headlines) + IBM Plex Sans (body)
+   Azul / blanco / negro · radios 12px · píldoras 800px
    ============================================================ */
 
 @layer base {
@@ -13,6 +15,16 @@
 
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: theme('fontFamily.head');
+    font-weight: 600;
   }
 
   h1 {
@@ -31,9 +43,9 @@
     @apply text-h4 text-gray-700;
   }
 
-  /* Focus visible (txt §10 — accesibilidad) */
+  /* Focus visible (accesibilidad) */
   :focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #0939e6;
     outline-offset: 2px;
   }
 
@@ -58,13 +70,14 @@
 }
 
 @layer components {
-  /* Botones del sistema de diseño (txt §5.1) */
+  /* Botones (Diseño E: radio 8px, sin uppercase, transición .15s) */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-body-sm font-semibold transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400;
   }
 
   .btn-primary {
     @apply btn bg-primary text-white hover:bg-primary-hover;
+    box-shadow: 0 6px 16px rgba(9, 57, 230, 0.3);
   }
 
   .btn-secondary {
@@ -72,33 +85,38 @@
   }
 
   .btn-outline {
-    @apply btn border border-primary bg-transparent text-primary hover:bg-gray-100;
+    @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-100;
   }
 
   .btn-danger {
     @apply btn bg-error text-white hover:bg-[#DC2626];
   }
 
-  /* Inputs (txt §5.2) */
+  /* Inputs (Diseño E: fondo suave radio 12px, sin borde, focus ring azul) */
   .input {
-    @apply w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-body text-gray-900 placeholder:text-gray-400 focus:border-primary-light focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100;
+    @apply w-full rounded-xl border border-transparent bg-gray-100 px-3.5 py-2.5 text-body text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+    transition: box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  .input:focus {
+    box-shadow: 0 0 0 2px #0939e6;
+    background-color: #fff;
   }
 
   .input-error {
     @apply border-error;
   }
 
-  /* Card estándar (txt §5.3) */
+  /* Card estándar (Diseño E: radio 12, borde línea, sombra sutil) */
   .card {
-    @apply rounded-lg border border-gray-200 bg-white p-6 shadow-subtle;
+    @apply rounded-xl border border-gray-200 bg-white p-6 shadow-subtle;
   }
 }
 
 /* ============================================================
-   Animaciones del sistema de diseño
+   Animaciones
    ============================================================ */
 
-/* Entrada sutil para modales y toasts */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -114,7 +132,7 @@
   animation: fade-in 0.15s ease-out;
 }
 
-/* Barra de progreso indeterminada (txt §5.5) */
+/* Barra de progreso indeterminada */
 @keyframes progress {
   0% {
     transform: translateX(-100%);
@@ -128,15 +146,14 @@
   animation: progress 1s ease-in-out infinite;
 }
 
-
 /* ============================================================
-   Modo oscuro - se activa con la clase .dark en <html>.
-   Reglas sin capa a proposito: ganan a las utilidades de Tailwind.
+   Modo oscuro (tokens Diseño E). Se activa con la clase .dark
+   en <html>. Reglas sin capa a proposito: ganan a utilidades.
    ============================================================ */
 
 html.dark body {
-  background-color: #111827;
-  color: #f3f4f6;
+  background-color: #101217;
+  color: #edeeF2;
 }
 
 html.dark h1,
@@ -145,65 +162,78 @@ html.dark h2 {
 }
 
 html.dark h3 {
-  color: #f3f4f6;
+  color: #edeeF2;
 }
 
 html.dark h4 {
-  color: #d1d5db;
+  color: #d7d9e0;
 }
 
 /* --- Superficies --- */
 html.dark .bg-white {
-  background-color: #1f2937;
+  background-color: #1a1d25;
 }
 
 html.dark .bg-gray-50 {
-  background-color: #111827;
+  background-color: #101217;
 }
 
 html.dark .bg-gray-100 {
-  background-color: #374151;
+  background-color: #23262e;
 }
 
 html.dark .border-gray-100,
 html.dark .border-gray-200 {
-  border-color: #374151;
+  border-color: #2a2e38;
 }
 
 html.dark .border-gray-300 {
-  border-color: #4b5563;
+  border-color: #3a3f4b;
 }
 
 html.dark .divide-gray-100 > * + *,
 html.dark .divide-gray-200 > * + * {
-  border-color: #374151;
+  border-color: #2a2e38;
 }
 
 /* --- Textos --- */
 html.dark .text-gray-900,
 html.dark .text-gray-800 {
-  color: #f3f4f6;
+  color: #edeeF2;
 }
 
 html.dark .text-gray-700,
 html.dark .text-gray-600 {
-  color: #d1d5db;
+  color: #c9ccd4;
 }
 
 html.dark .text-gray-500,
 html.dark .text-gray-400 {
-  color: #9ca3af;
+  color: #9aa1af;
 }
 
 html.dark .text-gray-300 {
   color: #6b7280;
 }
 
+html.dark .text-primary {
+  color: #8fb0ff;
+}
+
+html.dark .bg-primary\/5,
+html.dark .bg-primary\/10 {
+  background-color: rgba(9, 57, 230, 0.28);
+}
+
 /* --- Componentes del sistema --- */
 html.dark .input {
-  background-color: #1f2937;
-  border-color: #4b5563;
-  color: #f3f4f6;
+  background-color: #23262e;
+  border-color: transparent;
+  color: #edeeF2;
+}
+
+html.dark .input:focus {
+  background-color: #23262e;
 }
 
 html.dark .input::placeholder {
@@ -211,7 +241,7 @@ html.dark .input::placeholder {
 }
 
 html.dark .input:disabled {
-  background-color: #374151;
+  background-color: #2a2e38;
 }
 
 html.dark .input-error {
@@ -219,31 +249,41 @@ html.dark .input-error {
 }
 
 html.dark .card {
-  background-color: #1f2937;
-  border-color: #374151;
+  background-color: #1a1d25;
+  border-color: #2a2e38;
 }
 
 html.dark .btn-outline {
-  color: #60a5fa;
-  border-color: #3b82f6;
+  color: #c9ccd4;
+  border-color: #3a3f4b;
+  background-color: #1a1d25;
 }
 
 html.dark .btn-outline:hover {
-  background-color: #1f2937;
+  background-color: #23262e;
 }
 
 html.dark .btn:disabled {
-  background-color: #374151;
+  background-color: #2a2e38;
   color: #6b7280;
+  box-shadow: none;
+}
+
+html.dark .btn-primary {
+  box-shadow: 0 6px 16px rgba(9, 57, 230, 0.4);
 }
 
 /* --- Hovers de utilidades sobre superficies claras --- */
 html.dark .hover\:bg-gray-50:hover {
-  background-color: #1f2937;
+  background-color: #1a1d25;
 }
 
 html.dark .hover\:bg-gray-100:hover {
-  background-color: #374151;
+  background-color: #23262e;
+}
+
+html.dark .hover\:border-gray-300:hover {
+  border-color: #3a3f4b;
 }
 
 /* --- Badges / estados con fondo claro --- */
@@ -260,7 +300,7 @@ html.dark .bg-warning-bg {
 }
 
 html.dark .bg-info-bg {
-  background-color: #164e63;
+  background-color: #1b2135;
 }
 
 html.dark .text-success-fg {
@@ -276,18 +316,18 @@ html.dark .text-warning-fg {
 }
 
 html.dark .text-info-fg {
-  color: #67e8f9;
+  color: #8fb0ff;
 }
 
 /* --- Scrollbar acorde al tema --- */
 html.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: #1a1d25;
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: #3a3f4b;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #4b5563;
 }
