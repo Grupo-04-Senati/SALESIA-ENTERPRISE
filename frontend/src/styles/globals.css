@@ -261,24 +261,24 @@
 }
 
 .animate-fade-up {
-  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.22s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: scale-in 0.22s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .animate-drop-in {
-  animation: drop-in 0.18s ease-out both;
+  animation: drop-in 0.18s ease-out backwards;
 }
 
 .animate-float-in-right {
-  animation: float-in-right 0.35s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: float-in-right 0.35s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 /* Transición de página: entra el contenido al cambiar de ruta */
 .page-enter {
-  animation: fade-up 0.4s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: fade-up 0.4s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 /* ============================================================
@@ -290,7 +290,7 @@
   align-items: center;
   gap: 10px;
   margin: 34px 0 12px;
-  animation: slide-in-left 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: slide-in-left 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .sec-head h2 {
@@ -336,7 +336,7 @@ html.dark .sec-head .rule {
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease,
     background 0.15s ease;
-  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: fade-up 0.5s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .mcard::before {
@@ -522,7 +522,7 @@ html.dark .mcard.mcard-tile .mcard-img {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   background: #eef1f6;
-  animation: fade-up 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: fade-up 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .mod-hero img {
@@ -532,7 +532,7 @@ html.dark .mcard.mcard-tile .mcard-img {
   object-fit: cover;
   object-position: center 35%;
   transform-origin: center 35%;
-  animation: hero-zoom 0.75s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  animation: hero-zoom 0.75s cubic-bezier(0.22, 0.7, 0.3, 1) backwards;
 }
 
 .mod-hero::after {
@@ -554,7 +554,7 @@ html.dark .mcard.mcard-tile .mcard-img {
   z-index: 1;
   display: flex;
   width: 44px;
-  animation: pop-in 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: pop-in 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   height: 44px;
   align-items: center;
   justify-content: center;

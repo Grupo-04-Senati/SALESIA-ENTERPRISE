@@ -1,4 +1,5 @@
 import { useEffect, useId } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -46,7 +47,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
       role="presentation"
       onMouseDown={(event) => {
@@ -76,6 +77,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
         {children}
         {footer && <div className="mt-6 flex flex-wrap justify-end gap-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
