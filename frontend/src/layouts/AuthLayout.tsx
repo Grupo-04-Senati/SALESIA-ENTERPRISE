@@ -15,7 +15,7 @@ export default function AuthLayout() {
     { icon: Zap, text: t('auth.hl3') },
   ] as const
   return (
-    <div className="relative flex min-h-screen bg-gray-50">
+    <div className="relative flex min-h-screen">
       {/* Selector de idioma (login no tiene topbar) */}
       <button
         type="button"

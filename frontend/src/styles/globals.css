@@ -14,7 +14,9 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply text-gray-900 antialiased;
+    /* Canvas del modo claro (Diseño E, tono visible frente a cards blancas) */
+    background-color: #f5f6f8;
   }
 
   h1,

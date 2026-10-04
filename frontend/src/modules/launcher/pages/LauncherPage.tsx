@@ -77,7 +77,7 @@ export default function LauncherPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Topbar home search={{ value: query, onChange: setQuery }} />
 
       <div className="mx-auto w-full max-w-[1700px] px-5 pb-24 pt-4">

@@ -12,7 +12,7 @@ export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen">
       {/* Sidebar desktop */}
       <div className="hidden shrink-0 lg:block">
         <Sidebar />
