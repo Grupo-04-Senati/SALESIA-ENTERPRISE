@@ -39,7 +39,7 @@ export default function LauncherPage() {
     }
   }, [])
 
-  const firstName = (user?.name ?? 'Usuario').split(' ')[0]
+  const firstName = (user?.name ?? t('common.usuario')).split(' ')[0]
   const fecha = useMemo(() => {
     try {
       return new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
@@ -141,8 +141,22 @@ export default function LauncherPage() {
                         className="mcard"
                         onClick={() => navigate(item.path)}
                       >
-                        <span className="mcard-ico">
-                          <Icon aria-hidden="true" className="h-[22px] w-[22px]" />
+                        <span className="relative flex-none">
+                          <span className="mcard-ico overflow-hidden p-0">
+                            <img
+                              src={item.img}
+                              alt=""
+                              aria-hidden="true"
+                              loading="lazy"
+                              className="h-full w-full object-cover"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          </span>
+                          <span className="absolute bottom-0 right-0 flex h-[21px] w-[21px] items-center justify-center rounded-tl-[9px] rounded-br-[12px] bg-primary text-white shadow-[0_2px_6px_rgba(9,57,230,0.35)]">
+                            <Icon aria-hidden="true" className="h-3 w-3" />
+                          </span>
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[15px] font-semibold leading-5 text-gray-900">
