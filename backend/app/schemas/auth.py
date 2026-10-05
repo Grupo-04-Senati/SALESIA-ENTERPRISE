@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import EmailStr, Field
 
@@ -54,6 +54,7 @@ class UserManagedOut(UserOut):
 
 
 class UserCreate(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'full_name'})
     full_name: str = Field(min_length=2, max_length=150)
     email: EmailStr = Field(max_length=160)
     password: str = Field(min_length=6, max_length=72)
@@ -62,6 +63,7 @@ class UserCreate(NormalizedModel):
 
 
 class UserUpdate(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'full_name'})
     full_name: Optional[str] = Field(default=None, min_length=2, max_length=150)
     role: Optional[RoleValue] = None
     password: Optional[str] = Field(default=None, min_length=6, max_length=72)
@@ -69,6 +71,7 @@ class UserUpdate(NormalizedModel):
 
 
 class ProfileUpdate(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'full_name'})
     """Actualización del propio perfil (cualquier rol): nombre y/o foto."""
 
     full_name: Optional[str] = Field(default=None, min_length=2, max_length=150)

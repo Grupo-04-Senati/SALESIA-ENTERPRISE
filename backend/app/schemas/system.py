@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import Field, field_validator
 
@@ -29,6 +29,7 @@ def _check_serialized_size(value: Optional[dict]) -> Optional[dict]:
 
 
 class NotificationData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'title'})
     title: str = Field(min_length=3, max_length=150)
     message: str = Field(min_length=3, max_length=2000)
     level: NotificationLevel = 'info'
@@ -49,6 +50,7 @@ class DataExportCreate(DataExportData):
 
 
 class ScheduledReportData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'title'})
     report_type: ReportType
     title: str = Field(min_length=3, max_length=150)
     parameters: Optional[dict] = None
@@ -73,6 +75,7 @@ class ScheduledReportUpdate(ScheduledReportData):
 
 
 class AutomationRuleData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     code: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=3, max_length=150)
     description: Optional[str] = Field(default=None, max_length=2000)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import ClassVar, List, Literal, Optional
 
 from pydantic import Field
 
@@ -28,6 +28,7 @@ class UnitUpdate(UnitData):
 
 
 class BranchData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     code: str = Field(min_length=1, max_length=20)
     name: str = Field(min_length=2, max_length=120)
     address: Optional[str] = Field(default=None, max_length=255)
@@ -44,6 +45,7 @@ class BranchUpdate(BranchData):
 
 
 class WarehouseData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     code: str = Field(min_length=1, max_length=20)
     name: str = Field(min_length=2, max_length=120)
     address: Optional[str] = Field(default=None, max_length=255)

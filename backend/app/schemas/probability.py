@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import ClassVar, List, Literal, Optional
 
 from pydantic import Field, model_validator
 
@@ -70,6 +70,7 @@ class BasicProbabilityResponse(NormalizedModel):
 
 
 class EventCreate(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     """Evento definido sobre un dataset (docs/05 §2.9)."""
 
     name: str = Field(min_length=2, max_length=150)

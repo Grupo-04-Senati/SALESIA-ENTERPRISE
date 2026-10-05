@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
+from typing import ClassVar, Optional
 
 from pydantic import EmailStr, Field
 
@@ -14,6 +14,7 @@ PHONE_PATTERN = r'^(\+?\d{7,15})?$'
 
 
 class EmployeeData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'full_name'})
     full_name: str = Field(min_length=2, max_length=150)
     document: Optional[str] = Field(default=None, max_length=20, pattern=DOCUMENT_PATTERN)
     position: Optional[str] = Field(default='Vendedor', max_length=80)

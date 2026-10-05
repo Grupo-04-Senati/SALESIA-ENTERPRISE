@@ -46,10 +46,10 @@ def test_correo_se_pasa_a_minusculas():
     assert created.email == 'ana.example@example.com'
 
 
-def test_nombre_con_signos_se_acepta():
-    # '###' vale como nombre (3 caracteres); lo importante es que la
-    # cadena de solo espacios sí falle (test anterior).
-    assert _customer(name='###').name == '###'
+def test_nombre_con_signos_se_rechaza():
+    # '###' tiene 3 caracteres pero ninguna letra: regla hasLetter.
+    with pytest.raises(ValidationError, match='letra'):
+        _customer(name='###')
 
 
 def test_password_corta_en_user_update():
@@ -172,3 +172,28 @@ def test_correo_vacio_opcional_se_convierte_en_none():
     assert created.email is None
     created2 = _customer(email='   ')
     assert created2.email is None
+
+
+# ------------------------------------------------------- letras obligatorias
+
+def test_nombre_de_cliente_rechaza_basura():
+    from app.schemas.product import ProductCreate
+    for junk in ('###', '1234', '----', '@@@@'):
+        with pytest.raises(ValidationError, match='letra'):
+            _customer(name=junk)
+        with pytest.raises(ValidationError, match='letra'):
+            ProductCreate(sku='SKU-1', name=junk, cost_price=1, sale_price=2)
+
+
+def test_titulo_de_notificacion_rechaza_basura():
+    from app.schemas.system import NotificationCreate
+    with pytest.raises(ValidationError, match='letra'):
+        NotificationCreate(title='###', message='Mensaje de prueba')
+    ok = NotificationCreate(title='Alerta de stock', message='Mensaje de prueba')
+    assert ok.title == 'Alerta de stock'
+
+
+def test_reporte_con_titulo_vacio_o_nulo_no_bloquea():
+    from app.schemas.report import ReportCreate
+    report = ReportCreate(report_type='ventas', title=None)
+    assert report.title is None

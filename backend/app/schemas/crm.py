@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import Field
 
@@ -15,6 +15,7 @@ SegmentStatus = Literal['active', 'inactive']
 
 
 class CustomerSegmentData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: str = Field(min_length=2, max_length=60)
     description: Optional[str] = Field(default=None, max_length=300)
     min_purchases: int = Field(default=0, ge=0, le=9_999_999)
@@ -31,6 +32,7 @@ class CustomerSegmentUpdate(CustomerSegmentData):
 
 
 class CustomerInteractionData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'subject'})
     customer_id: int = Field(ge=1)
     kind: InteractionKind = 'note'
     subject: str = Field(min_length=3, max_length=150)

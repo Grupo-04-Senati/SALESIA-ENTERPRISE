@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import Field
 
@@ -13,6 +13,7 @@ ProductStatus = Literal['active', 'inactive']
 
 
 class CategoryData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: str = Field(min_length=2, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
 
@@ -32,6 +33,7 @@ class CategoryOut(NormalizedModel):
 
 
 class ProductData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     sku: str = Field(
         min_length=1, max_length=50, pattern=r'^[A-Za-z0-9][A-Za-z0-9\-_.]{0,49}$'
     )

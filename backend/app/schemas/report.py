@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, ClassVar, Dict, List, Literal, Optional
 
 from pydantic import Field
 
@@ -13,6 +13,7 @@ ReportType = Literal['ventas', 'estadistico', 'productos', 'clientes', 'vendedor
 
 
 class ReportCreate(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'title'})
     report_type: ReportType
     title: Optional[str] = Field(default=None, min_length=3, max_length=200)
     filters: Dict[str, Any] = {}

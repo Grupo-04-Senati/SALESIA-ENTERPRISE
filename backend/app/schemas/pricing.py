@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, ClassVar, List, Literal, Optional
 
 from pydantic import Field
 
@@ -14,6 +14,7 @@ PriceListStatus = Literal['active', 'inactive']
 
 
 class PriceListData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
     status: Optional[PriceListStatus] = None
@@ -38,6 +39,7 @@ class PriceListItemsPayload(NormalizedModel):
 
 
 class PromotionData(NormalizedModel):
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: str = Field(min_length=2, max_length=120)
     kind: PromotionKind = 'percent'
     value: float = Field(gt=0, le=100_000_000)
