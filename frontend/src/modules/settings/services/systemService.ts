@@ -21,8 +21,36 @@ export interface AppNotification {
   level: NotificationLevel
   title: string
   message: string
+  /** Lectura individual del usuario actual (fila en notificaciones_leidas). */
+  read?: boolean
   read_at: string | null
   created_at: string
+  module?: string | null
+  entity?: string | null
+  entity_id?: number | null
+  link?: string | null
+  target_role?: string | null
+  group_id?: string | null
+  detail?: Record<string, unknown> | null
+  actor_name?: string | null
+}
+
+/** ¿La notificación está leída por el usuario actual? */
+export const isNotificationRead = (item: AppNotification): boolean =>
+  item.read ?? item.read_at !== null
+
+export interface NotificationReader {
+  user_id: number
+  name: string
+  role: string
+  read_at: string | null
+}
+
+export interface NotificationModuleConfig {
+  key: string
+  label: string
+  link: string
+  roles: string[]
 }
 
 export interface NotificationInput {
@@ -137,6 +165,46 @@ export async function markAllNotificationsRead(): Promise<{ updated: number }> {
 
 export async function deleteNotification(id: number): Promise<void> {
   await apiFetch(`${ENDPOINTS.notifications}/${id}`, { method: 'DELETE' })
+}
+
+/** Quiénes leyeron la notificación (agrupa las filas del mismo evento). */
+export async function listNotificationReaders(
+  id: number,
+): Promise<{ items: NotificationReader[] }> {
+  return apiFetch(`${ENDPOINTS.notifications}/${id}/readers`)
+}
+
+/** Vaciar todo el historial de notificaciones de la empresa (solo Admin). */
+export async function clearNotifications(): Promise<{ deleted: number }> {
+  return apiFetch(ENDPOINTS.notifications, { method: 'DELETE' })
+}
+
+/** Descarga el historial visible en CSV (UTF-8 con BOM para Excel). */
+export async function downloadNotificationsCsv(): Promise<void> {
+  const csv = await apiFetch<string>(`${ENDPOINTS.notifications}/export`)
+  const blob = new Blob([`\ufeff${csv ?? ''}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `notificaciones-${new Date().toISOString().slice(0, 10)}.csv`
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Matriz módulo → roles que reciben notificaciones (solo Admin). */
+export async function getNotificationsConfig(): Promise<{
+  modules: NotificationModuleConfig[]
+}> {
+  return apiFetch(`${ENDPOINTS.notifications}/config`)
+}
+
+export async function updateNotificationsConfig(
+  modules: Record<string, string[]>,
+): Promise<{ modules: NotificationModuleConfig[] }> {
+  return apiFetch(`${ENDPOINTS.notifications}/config`, {
+    method: 'PUT',
+    body: JSON.stringify({ modules }),
+  })
 }
 
 export async function listDataExports(): Promise<DataExport[]> {

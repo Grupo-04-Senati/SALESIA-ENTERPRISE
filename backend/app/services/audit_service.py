@@ -33,6 +33,10 @@ def write_audit(
         ip_address=ip_address,
     )
     db.add(entry)
+    # Notificaciones automáticas del módulo afectado (best-effort, jamás rompe).
+    from app.services.notification_bridge import notify_from_audit
+
+    notify_from_audit(db, entry=entry, actor=user)
     if commit:
         db.commit()
         db.refresh(entry)

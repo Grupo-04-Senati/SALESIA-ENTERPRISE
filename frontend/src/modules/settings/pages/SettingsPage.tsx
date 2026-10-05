@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Camera,
   Database,
@@ -155,7 +156,23 @@ export default function SettingsPage() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [savingProfile, setSavingProfile] = useState(false)
   const [apiStatus, setApiStatus] = useState<'checking' | 'up' | 'down'>('checking')
-  const [tab, setTab] = useState('perfil')
+  // La pestaña activa se refleja en la URL (?tab=notificaciones) para
+  // poder enlazar a una sección concreta desde otras pantallas.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tab, setTabState] = useState(() => {
+    const requested = searchParams.get('tab')
+    return TAB_ITEMS.some((item) => item.id === requested) ? (requested as string) : 'perfil'
+  })
+  const setTab = (id: string) => {
+    setTabState(id)
+    setSearchParams({ tab: id }, { replace: true })
+  }
+  useEffect(() => {
+    const requested = searchParams.get('tab')
+    if (requested && TAB_ITEMS.some((item) => item.id === requested)) {
+      setTabState((current) => (current === requested ? current : requested))
+    }
+  }, [searchParams])
   const tabs =
     user?.role === 'Admin'
       ? TAB_ITEMS

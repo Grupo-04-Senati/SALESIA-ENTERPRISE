@@ -1,14 +1,14 @@
-"""Notificaciones: listado, creación, marcado de lectura y borrado (BE-3)."""
+"""Notificaciones: listado, creación, lectura, lectores, CSV y config (BE-3)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.system import NotificationCreate
+from app.schemas.system import NotificationCreate, NotificationsConfigData
 from app.services import system_service
 
 router = APIRouter(prefix='/notifications', tags=['notifications'])
@@ -30,17 +30,41 @@ def list_notifications(
     page_size: int = Query(default=20, ge=1, le=100),
 ):
     return system_service.list_notifications(
-        db, company_id_of(user), unread=unread, page=page, page_size=page_size
+        db, company_id_of(user), actor=user, unread=unread, page=page, page_size=page_size
     )
 
 
-@router.get('/{notification_id}')
-def get_notification(
-    notification_id: int,
+@router.get('/export')
+def export_notifications_csv(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
 ):
-    return system_service.get_notification(db, company_id_of(user), notification_id)
+    content, filename = system_service.export_notifications_csv(db, company_id_of(user), actor=user)
+    return Response(
+        content=content,
+        media_type='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get('/config')
+def get_notifications_config(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+):
+    return system_service.get_notifications_config(db, company_id_of(user))
+
+
+@router.put('/config')
+def update_notifications_config(
+    payload: NotificationsConfigData,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_role(*write_roles)),
+):
+    return system_service.update_notifications_config(
+        db, company_id_of(actor), payload, actor=actor, ip=_ip(request)
+    )
 
 
 @router.post('', status_code=status.HTTP_201_CREATED)
@@ -63,6 +87,37 @@ def read_all_notifications(
 ):
     return system_service.mark_all_notifications_read(
         db, company_id_of(actor), actor=actor, ip=_ip(request)
+    )
+
+
+@router.delete('')
+def clear_notifications(
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_role(*write_roles)),
+):
+    return system_service.clear_notifications(
+        db, company_id_of(actor), actor=actor, ip=_ip(request)
+    )
+
+
+@router.get('/{notification_id}')
+def get_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+):
+    return system_service.get_notification(db, company_id_of(user), notification_id, actor=user)
+
+
+@router.get('/{notification_id}/readers')
+def notification_readers(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+):
+    return system_service.notification_readers(
+        db, company_id_of(user), notification_id, actor=user
     )
 
 

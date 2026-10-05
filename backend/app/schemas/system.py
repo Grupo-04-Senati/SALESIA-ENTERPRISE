@@ -34,10 +34,26 @@ class NotificationData(NormalizedModel):
     message: str = Field(min_length=3, max_length=2000)
     level: NotificationLevel = 'info'
     user_id: Optional[int] = Field(default=None, ge=1)
+    # Origen (opcional): usado por el backfill y por anuncios con destino.
+    module: Optional[str] = Field(default=None, max_length=60)
+    link: Optional[str] = Field(default=None, max_length=255)
+    target_role: Optional[str] = Field(default=None, max_length=30)
+    detail: Optional[dict] = None
+
+    @field_validator('detail')
+    @classmethod
+    def _detail_size(cls, value: Optional[dict]) -> Optional[dict]:
+        return _check_serialized_size(value)
 
 
 class NotificationCreate(NotificationData):
     pass
+
+
+class NotificationsConfigData(NormalizedModel):
+    """PUT /notifications/config — {modules: {clave: [roles]}}."""
+
+    modules: dict[str, list[str]]
 
 
 class DataExportData(NormalizedModel):

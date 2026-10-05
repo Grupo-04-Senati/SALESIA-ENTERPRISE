@@ -238,7 +238,13 @@ export default function ProbabilityPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={grafico} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
                   <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
-                  <XAxis dataKey="index" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                  <XAxis
+                    dataKey="index"
+                    tick={{ fill: CHART_AXIS, fontSize: 12 }}
+                    axisLine={{ stroke: CHART_GRID }}
+                    tickLine={false}
+                    tickFormatter={(value: number) => `N.º ${value}`}
+                  />
                   <YAxis
                     tick={{ fill: CHART_AXIS, fontSize: 12 }}
                     axisLine={false}
@@ -257,7 +263,9 @@ export default function ProbabilityPage() {
             </div>
 
             <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
-              {t('probability.linea-azul-media-linea-cyan-mediana')}{t(estadistico.interpretacion)}
+              {t('probability.linea-azul-media-linea-cyan-mediana')}{t(estadistico.interpretacion)}{' '}
+              El eje X numera cada venta ordenada de menor a mayor (N.º 1, N.º 2…) sobre la que se
+              calculan la media y la mediana.
             </p>
           </section>
         </>

@@ -2,11 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, CheckCheck, CircleCheck, CircleX, Info, TriangleAlert } from 'lucide-react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useLang } from '@/i18n/i18n'
+import NotificationDetailModal from '@/components/ui/NotificationDetailModal'
+import { isNotificationRead } from '@/modules/settings/services/systemService'
+import type { AppNotification } from '@/modules/settings/services/systemService'
 
 /**
  * Campana de notificaciones (Diseño E): conectada al endpoint real
  * /api/v1/notifications. El badge muestra las no leídas (oculto si no
- * hay); el panel lista las últimas y permite marcar como leídas.
+ * hay); pulsar una notificación la marca como leída y abre su detalle
+ * (cambios + quién la leyó) con enlace «Ir al módulo».
  */
 
 const LEVEL_STYLES: Record<string, { icon: typeof Info; box: string }> = {
@@ -51,6 +55,7 @@ export default function NotificationsMenu() {
   const { t, lang } = useLang()
   const { items, unread, loading, markRead, markAllRead } = useNotifications()
   const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<AppNotification | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -62,7 +67,12 @@ export default function NotificationsMenu() {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
-  const visible = useMemo(() => items.slice(0, 20), [items])
+  const visible = useMemo(() => items.slice(0, 12), [items])
+
+  // Refleja el estado leído/no leído actualizado del hook.
+  const active = selected
+    ? (items.find((item) => item.id === selected.id) ?? selected)
+    : null
 
   return (
     <div ref={rootRef} className="relative">
@@ -117,13 +127,15 @@ export default function NotificationsMenu() {
                 {visible.map((item) => {
                   const style = LEVEL_STYLES[item.level] ?? LEVEL_STYLES.info
                   const Icon = style.icon
-                  const isUnread = item.read_at === null
+                  const isUnread = !isNotificationRead(item)
                   return (
                     <li key={item.id}>
                       <button
                         type="button"
                         onClick={() => {
                           if (isUnread) void markRead(item.id)
+                          setOpen(false)
+                          setSelected(item)
                         }}
                         className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50 dark:border-gray-700/60 dark:hover:bg-gray-700/50 ${
                           isUnread ? 'bg-[#F7F9FF] dark:bg-[#161C2E]' : ''
@@ -172,6 +184,8 @@ export default function NotificationsMenu() {
           )}
         </div>
       )}
+
+      <NotificationDetailModal notification={active} onClose={() => setSelected(null)} />
     </div>
   )
 }

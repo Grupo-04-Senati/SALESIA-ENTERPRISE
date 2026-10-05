@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, CheckCheck, Plus, Trash2 } from 'lucide-react'
+import { Bell, CheckCheck, Download, Layers, Plus, Trash2 } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -11,18 +11,32 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
+import { useAuth } from '@/hooks/useAuth'
 import { formatDateTime } from '@/utils/formatters'
 import { cleanText, hasLetter, maxLength, minLength } from '@/utils/validators'
+import { ROLES } from '@/modules/auth/services/authService'
 import {
+  clearNotifications,
   createNotification,
   deleteNotification,
+  downloadNotificationsCsv,
+  getNotificationsConfig,
+  isNotificationRead,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  updateNotificationsConfig,
 } from '../services/systemService'
-import type { AppNotification, NotificationLevel } from '../services/systemService'
+import type {
+  AppNotification,
+  NotificationLevel,
+  NotificationModuleConfig,
+} from '../services/systemService'
 
-/** Pestaña «Notificaciones» de Configuración (ENDPOINTS.notifications). */
+/**
+ * Pestaña «Notificaciones» de Configuración (ENDPOINTS.notifications):
+ * historial, CSV, vaciar, alta manual (Admin) y matriz módulo → roles.
+ */
 
 const LEVELS: NotificationLevel[] = ['info', 'warning', 'success', 'error']
 
@@ -45,6 +59,8 @@ const LEVEL_KEYS: Record<NotificationLevel, string> = {
 export default function NotificationsPanel() {
   const toast = useToast()
   const { t } = useLang()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'Admin'
 
   const [items, setItems] = useState<AppNotification[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +74,19 @@ export default function NotificationsPanel() {
   const [markingAll, setMarkingAll] = useState(false)
   const [deleting, setDeleting] = useState<AppNotification | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Exportar CSV y vaciar historial.
+  const [exporting, setExporting] = useState(false)
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [clearError, setClearError] = useState<string | null>(null)
+
+  // Matriz módulo → roles (solo Admin).
+  const [matrixOpen, setMatrixOpen] = useState(false)
+  const [modules, setModules] = useState<NotificationModuleConfig[]>([])
+  const [matrixLoading, setMatrixLoading] = useState(false)
+  const [matrixError, setMatrixError] = useState<string | null>(null)
+  const [savingMatrix, setSavingMatrix] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -174,7 +203,81 @@ export default function NotificationsPanel() {
     }
   }
 
-  const unread = items.filter((row) => !row.read_at).length
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      await downloadNotificationsCsv()
+      toast.success('CSV descargado', 'El historial de notificaciones se descargó en tu equipo.')
+    } catch (reason: unknown) {
+      toast.error(
+        'No se pudo descargar',
+        reason instanceof Error ? reason.message : t('settings.error-inesperado'),
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleClear = async () => {
+    setClearing(true)
+    setClearError(null)
+    try {
+      const result = await clearNotifications()
+      toast.success('Historial vaciado', `${result.deleted} notificaciones eliminadas.`)
+      setClearOpen(false)
+      reload()
+    } catch (reason: unknown) {
+      setClearError(reason instanceof Error ? reason.message : t('settings.error-inesperado'))
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  const openMatrix = () => {
+    setMatrixOpen(true)
+    setMatrixLoading(true)
+    setMatrixError(null)
+    getNotificationsConfig()
+      .then((result) => setModules(result.modules))
+      .catch((reason: unknown) => {
+        setMatrixError(
+          reason instanceof Error ? reason.message : 'No se pudo cargar la configuración.',
+        )
+      })
+      .finally(() => setMatrixLoading(false))
+  }
+
+  const toggleRole = (key: string, role: string) =>
+    setModules((current) =>
+      current.map((module) =>
+        module.key === key
+          ? {
+              ...module,
+              roles: module.roles.includes(role)
+                ? module.roles.filter((value) => value !== role)
+                : [...module.roles, role],
+            }
+          : module,
+      ),
+    )
+
+  const handleSaveMatrix = async () => {
+    setSavingMatrix(true)
+    setMatrixError(null)
+    try {
+      const payload = Object.fromEntries(modules.map((module) => [module.key, module.roles]))
+      const result = await updateNotificationsConfig(payload)
+      setModules(result.modules)
+      toast.success('Configuración guardada', 'Los destinatarios por módulo se actualizaron.')
+      setMatrixOpen(false)
+    } catch (reason: unknown) {
+      setMatrixError(reason instanceof Error ? reason.message : 'No se pudo guardar.')
+    } finally {
+      setSavingMatrix(false)
+    }
+  }
+
+  const unread = items.filter((row) => !isNotificationRead(row)).length
 
   return (
     <div className="space-y-4">
@@ -183,20 +286,44 @@ export default function NotificationsPanel() {
           {t('settings.avisos-de-la-empresa-sin-leer', { n: unread })}
         </p>
         <div className="flex flex-wrap gap-3">
+          <Button variant="outline" onClick={handleExport} loading={exporting}>
+            <Download aria-hidden="true" className="h-4 w-4" />
+            Descargar CSV
+          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setClearError(null)
+                setClearOpen(true)
+              }}
+            >
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+              Vaciar historial
+            </Button>
+          )}
+          {isAdmin && (
+            <Button variant="outline" onClick={openMatrix}>
+              <Layers aria-hidden="true" className="h-4 w-4" />
+              Módulos y roles
+            </Button>
+          )}
           <Button variant="outline" onClick={handleMarkAllRead} loading={markingAll}>
             <CheckCheck aria-hidden="true" className="h-4 w-4" />
             {t('settings.marcar-todas-como-leidas')}
           </Button>
-          <Button
-            onClick={() => {
-              setForm(EMPTY_FORM)
-              setFormError(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus aria-hidden="true" className="h-4 w-4" />
-            {t('settings.nueva-notificacion')}
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => {
+                setForm(EMPTY_FORM)
+                setFormError(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {t('settings.nueva-notificacion')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -238,16 +365,18 @@ export default function NotificationsPanel() {
             title={t('settings.sin-notificaciones')}
             description={t('settings.todavia-no-hay-avisos-registrados')}
             action={
-              <Button
-                onClick={() => {
-                  setForm(EMPTY_FORM)
-                  setFormError(null)
-                  setFormOpen(true)
-                }}
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                {t('settings.nueva-notificacion')}
-              </Button>
+              isAdmin ? (
+                <Button
+                  onClick={() => {
+                    setForm(EMPTY_FORM)
+                    setFormError(null)
+                    setFormOpen(true)
+                  }}
+                >
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  {t('settings.nueva-notificacion')}
+                </Button>
+              ) : undefined
             }
           />
         </div>
@@ -274,13 +403,13 @@ export default function NotificationsPanel() {
                 <TableCell className="font-medium text-gray-900">{row.title}</TableCell>
                 <TableCell className="max-w-64 truncate text-gray-600">{row.message}</TableCell>
                 <TableCell>
-                  <Badge variant={row.read_at ? 'neutral' : 'warning'}>
-                    {row.read_at ? t('settings.leida') : t('settings.sin-leer')}
+                  <Badge variant={isNotificationRead(row) ? 'neutral' : 'warning'}>
+                    {isNotificationRead(row) ? t('settings.leida') : t('settings.sin-leer')}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    {!row.read_at && (
+                    {!isNotificationRead(row) && (
                       <button
                         type="button"
                         onClick={() => handleMarkRead(row)}
@@ -386,6 +515,99 @@ export default function NotificationsPanel() {
           <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
             {deleteError}
           </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        title="Vaciar historial"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setClearOpen(false)} disabled={clearing}>
+              {t('settings.cancelar')}
+            </Button>
+            <Button variant="danger" onClick={handleClear} loading={clearing}>
+              Vaciar
+            </Button>
+          </>
+        }
+      >
+        <p className="text-body-sm text-gray-700">
+          Se eliminarán <strong>todas</strong> las notificaciones de la empresa. Descarga primero
+          el CSV si quieres conservarlas.
+        </p>
+        {clearError && (
+          <p className="mt-3 rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
+            {clearError}
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={matrixOpen}
+        onClose={() => setMatrixOpen(false)}
+        title="Módulos y roles"
+        size="lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setMatrixOpen(false)} disabled={savingMatrix}>
+              {t('settings.cancelar')}
+            </Button>
+            <Button onClick={handleSaveMatrix} loading={savingMatrix} disabled={matrixLoading}>
+              Guardar
+            </Button>
+          </>
+        }
+      >
+        {matrixLoading ? (
+          <p className="flex items-center gap-2 py-6 text-caption text-gray-500">
+            <Spinner size={16} className="text-loading" />
+            Cargando configuración…
+          </p>
+        ) : matrixError ? (
+          <p className="rounded-md bg-error-bg px-3 py-2 text-caption text-error-fg">
+            {matrixError}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-body-sm text-gray-600">
+              Elige qué roles reciben notificaciones de cada módulo. Los cambios afectan a los
+              avisos futuros.
+            </p>
+            <div className="max-h-[55vh] overflow-auto rounded-lg border border-gray-200">
+              <table className="w-full border-collapse text-body-sm">
+                <thead className="sticky top-0 bg-gray-50">
+                  <tr className="border-b border-gray-200 text-caption text-gray-600">
+                    <th className="px-3 py-2 text-left font-medium">Módulo</th>
+                    {ROLES.map((role) => (
+                      <th key={role} className="px-2 py-2 text-center font-medium">
+                        {role}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {modules.map((module) => (
+                    <tr key={module.key} className="border-b border-gray-100 last:border-b-0">
+                      <td className="px-3 py-2 font-medium text-gray-900">{module.label}</td>
+                      {ROLES.map((role) => (
+                        <td key={role} className="px-2 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={module.roles.includes(role)}
+                            onChange={() => toggleRole(module.key, role)}
+                            aria-label={`${module.label} — ${role}`}
+                            className="h-4 w-4 accent-primary"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
