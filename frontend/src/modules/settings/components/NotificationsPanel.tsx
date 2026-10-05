@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
+import NotificationDetailModal from '@/components/ui/NotificationDetailModal'
 import { Input, Select, Textarea } from '@/components/ui/form'
 import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
@@ -74,6 +75,9 @@ export default function NotificationsPanel() {
   const [markingAll, setMarkingAll] = useState(false)
   const [deleting, setDeleting] = useState<AppNotification | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Detalle al hacer click en una fila del historial.
+  const [selected, setSelected] = useState<AppNotification | null>(null)
 
   // Exportar CSV y vaciar historial.
   const [exporting, setExporting] = useState(false)
@@ -164,6 +168,15 @@ export default function NotificationsPanel() {
         t('settings.no-se-pudo-marcar'),
         reason instanceof Error ? reason.message : t('settings.error-inesperado'),
       )
+    }
+  }
+
+  const openDetail = (row: AppNotification) => {
+    setSelected(row)
+    if (!isNotificationRead(row)) {
+      markNotificationRead(row.id)
+        .then(reload)
+        .catch(() => undefined)
     }
   }
 
@@ -279,6 +292,11 @@ export default function NotificationsPanel() {
 
   const unread = items.filter((row) => !isNotificationRead(row)).length
 
+  // Refleja el estado leído/no leído actualizado tras recargar.
+  const active = selected
+    ? (items.find((row) => row.id === selected.id) ?? selected)
+    : null
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -393,7 +411,7 @@ export default function NotificationsPanel() {
             ]}
           >
             {items.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} onClick={() => openDetail(row)}>
                 <TableCell className="whitespace-nowrap">{formatDateTime(row.created_at)}</TableCell>
                 <TableCell>
                   <Badge variant={LEVEL_BADGES[row.level]}>
@@ -412,7 +430,10 @@ export default function NotificationsPanel() {
                     {!isNotificationRead(row) && (
                       <button
                         type="button"
-                        onClick={() => handleMarkRead(row)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleMarkRead(row)
+                        }}
                         aria-label={`${t('settings.marcar')} ${row.title} ${t('settings.como-leida')}`}
                         title={t('settings.marcar-como-leida')}
                         className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
@@ -422,7 +443,8 @@ export default function NotificationsPanel() {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation()
                         setDeleteError(null)
                         setDeleting(row)
                       }}
@@ -610,6 +632,8 @@ export default function NotificationsPanel() {
           </div>
         )}
       </Modal>
+
+      <NotificationDetailModal notification={active} onClose={() => setSelected(null)} />
     </div>
   )
 }
