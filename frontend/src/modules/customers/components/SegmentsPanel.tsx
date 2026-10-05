@@ -11,6 +11,15 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/formatters'
 import {
+  cleanText,
+  hasLetter,
+  integer,
+  maxDecimals,
+  maxLength,
+  minLength,
+  numberRange,
+} from '@/utils/validators'
+import {
   createSegment,
   deleteSegment,
   listSegments,
@@ -87,9 +96,18 @@ export default function SegmentsPanel() {
   }
 
   const handleSubmit = async () => {
-    const name = form.name.trim()
-    if (name.length < 2) {
-      setFormError(t('customers.el-nombre-debe-tener-al-menos-2-caracteres'))
+    const name = cleanText(form.name)
+    const nameError =
+      minLength(2, t('customers.el-nombre-debe-tener-al-menos-2-caracteres'))(name) ??
+      maxLength(60)(name) ??
+      hasLetter()(name)
+    if (nameError) {
+      setFormError(nameError)
+      return
+    }
+    const descriptionError = maxLength(300)(form.description)
+    if (descriptionError) {
+      setFormError(descriptionError)
       return
     }
     const minPurchases = Number(form.min_purchases)
@@ -102,9 +120,20 @@ export default function SegmentsPanel() {
       setFormError(t('customers.el-monto-minimo-debe-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
+    const minPurchasesError = integer(0, 999999)(form.min_purchases)
+    if (minPurchasesError) {
+      setFormError(minPurchasesError)
+      return
+    }
+    const minTotalError =
+      maxDecimals(2)(form.min_total) ?? numberRange(0, 100000000)(form.min_total)
+    if (minTotalError) {
+      setFormError(minTotalError)
+      return
+    }
     const input: SegmentInput = {
       name,
-      description: form.description.trim() || null,
+      description: cleanText(form.description) || null,
       min_purchases: minPurchases,
       min_total: minTotal,
     }
@@ -269,6 +298,8 @@ export default function SegmentsPanel() {
           <Input
             label={t('customers.nombre')}
             required
+            minLength={2}
+            maxLength={60}
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
             placeholder={t('customers.ej-mayoristas')}
@@ -277,6 +308,7 @@ export default function SegmentsPanel() {
           />
           <Textarea
             label={t('customers.descripcion')}
+            maxLength={300}
             hint={t('customers.opcional-describe-que-clientes-agrupa-este-segmento')}
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
@@ -287,6 +319,7 @@ export default function SegmentsPanel() {
               label={t('customers.min-compras')}
               type="number"
               min={0}
+              max={999999}
               step={1}
               value={form.min_purchases}
               onChange={(event) => setForm({ ...form, min_purchases: event.target.value })}
@@ -296,6 +329,7 @@ export default function SegmentsPanel() {
               label={t('customers.min-monto')}
               type="number"
               min={0}
+              max={100000000}
               step="0.01"
               value={form.min_total}
               onChange={(event) => setForm({ ...form, min_total: event.target.value })}

@@ -1,15 +1,17 @@
-"""Schemas de insights (docs/05 §2.10 · RF-19 · RN-47)."""
+"""Schemas de insights (docs/05 ��2.10 �� RF-19 �� RN-47, RN-48)."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 
-class InsightResponse(BaseModel):
-    id: int
+class InsightResponse(NormalizedModel):
+    id: int = Field(ge=1)
     title: str
     severity: str
     rule: str
@@ -21,7 +23,7 @@ class InsightResponse(BaseModel):
     read: bool = False
 
 
-class InsightRule(BaseModel):
+class InsightRule(NormalizedModel):
     code: str
     description: str
     severity: str

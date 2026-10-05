@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatDateTime, formatNumber } from '@/utils/formatters'
+import { required } from '@/utils/validators'
 import {
   createDataExport,
   deleteDataExport,
@@ -86,6 +87,11 @@ export default function ExportsPanel() {
   const reload = () => setAttempt((value) => value + 1)
 
   const handleSubmit = async () => {
+    const enumError = required()(form.export_type) ?? required()(form.format)
+    if (enumError) {
+      setFormError(enumError)
+      return
+    }
     setSaving(true)
     try {
       const created = await createDataExport(form)

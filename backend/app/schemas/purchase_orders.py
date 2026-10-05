@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
+
+# purchase_order_service.PURCHASE_STATUSES (TRANSITIONS restringe además).
+PurchaseOrderStatusValue = Literal['pending', 'approved', 'received', 'cancelled']
 
 
-class PurchaseOrderItemInput(BaseModel):
-    product_id: int
-    quantity: int = Field(gt=0)
-    unit_cost: float = Field(ge=0)
+class PurchaseOrderItemInput(NormalizedModel):
+    product_id: int = Field(ge=1)
+    quantity: int = Field(gt=0, le=1_000_000)
+    unit_cost: float = Field(ge=0, le=100_000_000)
 
 
-class PurchaseOrderData(BaseModel):
-    supplier_id: int
-    notes: Optional[str] = None
+class PurchaseOrderData(NormalizedModel):
+    supplier_id: int = Field(ge=1)
+    notes: Optional[str] = Field(default=None, max_length=500)
     items: List[PurchaseOrderItemInput] = Field(min_length=1)
 
 
@@ -27,5 +32,5 @@ class PurchaseOrderUpdate(PurchaseOrderData):
     pass
 
 
-class PurchaseOrderStatusUpdate(BaseModel):
-    status: str = Field(max_length=20)
+class PurchaseOrderStatusUpdate(NormalizedModel):
+    status: PurchaseOrderStatusValue

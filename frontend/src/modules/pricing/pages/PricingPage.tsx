@@ -15,6 +15,7 @@ import { useLang } from '@/i18n/i18n'
 import { useDataVersion } from '@/data/DataProvider'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDate, formatNumber } from '@/utils/formatters'
+import { cleanText, hasLetter, maxDecimals, maxLength } from '@/utils/validators'
 import {
   createPriceList,
   createPromotion,
@@ -213,9 +214,19 @@ export default function PricingPage() {
   }
 
   const handleListSubmit = async () => {
-    const name = listForm.name.trim()
+    const name = cleanText(listForm.name)
     if (name.length < 2) {
       setListError(t('pricing.err-name-min'))
+      return
+    }
+    const nameMaxError = maxLength(120, 'El nombre debe tener como máximo 120 caracteres.')(name)
+    if (nameMaxError) {
+      setListError(nameMaxError)
+      return
+    }
+    const nameLetterError = hasLetter()(name)
+    if (nameLetterError) {
+      setListError(nameLetterError)
       return
     }
     setListError(null)
@@ -304,6 +315,15 @@ export default function PricingPage() {
         setPricesError(t('pricing.err-price-invalid'))
         return
       }
+      const priceDecimalsError = maxDecimals(2)(line.price)
+      if (priceDecimalsError) {
+        setPricesError(priceDecimalsError)
+        return
+      }
+      if (price > 100000000) {
+        setPricesError('El precio no puede superar 100000000.')
+        return
+      }
       const productId = Number(line.product_id)
       if (seen.has(productId)) {
         setPricesError(t('pricing.err-duplicate-product'))
@@ -374,10 +394,20 @@ export default function PricingPage() {
 
   const handlePromoSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const name = promoForm.name.trim()
+    const name = cleanText(promoForm.name)
     const value = Number(promoForm.value)
     if (name.length < 2) {
       setPromoError(t('pricing.err-name-min'))
+      return
+    }
+    const nameMaxError = maxLength(120, 'El nombre debe tener como máximo 120 caracteres.')(name)
+    if (nameMaxError) {
+      setPromoError(nameMaxError)
+      return
+    }
+    const nameLetterError = hasLetter()(name)
+    if (nameLetterError) {
+      setPromoError(nameLetterError)
       return
     }
     if (promoForm.value.trim() === '' || Number.isNaN(value) || value <= 0) {
@@ -386,6 +416,15 @@ export default function PricingPage() {
     }
     if (promoForm.kind === 'percent' && value > 100) {
       setPromoError(t('pricing.err-percent-max'))
+      return
+    }
+    const valueDecimalsError = maxDecimals(2)(promoForm.value)
+    if (valueDecimalsError) {
+      setPromoError(valueDecimalsError)
+      return
+    }
+    if (value > 100000000) {
+      setPromoError('El valor no puede superar 100000000.')
       return
     }
     if (promoForm.starts_at && promoForm.ends_at) {
@@ -751,6 +790,7 @@ export default function PricingPage() {
           <Input
             label={t('pricing.name')}
             required
+            maxLength={120}
             value={listForm.name}
             onChange={(event) => setListForm({ ...listForm, name: event.target.value })}
             placeholder={t('pricing.list-name-placeholder')}
@@ -820,6 +860,7 @@ export default function PricingPage() {
                       aria-label={t('pricing.price')}
                       type="number"
                       min="0"
+                      max="100000000"
                       step="0.01"
                       inputMode="decimal"
                       placeholder="0.00"
@@ -886,6 +927,7 @@ export default function PricingPage() {
           <Input
             label={t('pricing.name')}
             required
+            maxLength={120}
             value={promoForm.name}
             onChange={(event) => setPromoForm({ ...promoForm, name: event.target.value })}
             placeholder={t('pricing.promo-name-placeholder')}
@@ -910,6 +952,7 @@ export default function PricingPage() {
               required
               type="number"
               min="0.01"
+              max={promoForm.kind === 'percent' ? 100 : 100000000}
               step="0.01"
               inputMode="decimal"
               value={promoForm.value}

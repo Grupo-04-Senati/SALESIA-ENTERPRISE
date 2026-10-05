@@ -4,14 +4,18 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import EmailStr, Field
+
+from app.schemas.base import NormalizedModel
+
+PHONE_PATTERN = r'^(\+?\d{7,15})?$'
 
 
-class SupplierData(BaseModel):
-    ruc: str = Field(min_length=8, max_length=15)
+class SupplierData(NormalizedModel):
+    ruc: str = Field(min_length=8, max_length=15, pattern=r'^\d{8,15}$')
     name: str = Field(min_length=2, max_length=150)
-    email: Optional[str] = Field(default=None, max_length=160)
-    phone: Optional[str] = Field(default=None, max_length=20)
+    email: Optional[EmailStr] = Field(default=None, max_length=160)
+    phone: Optional[str] = Field(default=None, max_length=20, pattern=PHONE_PATTERN)
     address: Optional[str] = Field(default=None, max_length=255)
 
 

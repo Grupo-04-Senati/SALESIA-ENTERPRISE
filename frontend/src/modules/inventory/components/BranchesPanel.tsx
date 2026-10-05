@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
+import { cleanText, code, hasLetter, maxLength, minLength, phone, required } from '@/utils/validators'
 import { createBranch, deleteBranch, listBranches, updateBranch } from '../services/branchService'
 import type { Branch, BranchInput } from '../services/branchService'
 
@@ -79,21 +80,38 @@ export default function BranchesPanel() {
   }
 
   const handleSubmit = async () => {
-    const code = form.code.trim()
-    const name = form.name.trim()
-    if (code.length < 1) {
-      setFormError(t('inventory.el-codigo-es-obligatorio'))
+    const branchCode = cleanText(form.code)
+    const name = cleanText(form.name)
+    const address = cleanText(form.address ?? '')
+    const phoneValue = cleanText(form.phone ?? '')
+    const codeError = required(t('inventory.el-codigo-es-obligatorio'))(branchCode) ?? code(20)(branchCode)
+    if (codeError) {
+      setFormError(codeError)
       return
     }
-    if (name.length < 2) {
-      setFormError(t('inventory.el-nombre-debe-tener-al-menos-2-caracteres'))
+    const nameError =
+      minLength(2, t('inventory.el-nombre-debe-tener-al-menos-2-caracteres'))(name) ??
+      maxLength(120)(name) ??
+      hasLetter()(name)
+    if (nameError) {
+      setFormError(nameError)
+      return
+    }
+    const addressError = maxLength(255)(address)
+    if (addressError) {
+      setFormError(addressError)
+      return
+    }
+    const phoneError = maxLength(20)(phoneValue) ?? phone()(phoneValue)
+    if (phoneError) {
+      setFormError(phoneError)
       return
     }
     const input: BranchInput = {
-      code,
+      code: branchCode,
       name,
-      address: form.address?.trim() || null,
-      phone: form.phone?.trim() || null,
+      address: address || null,
+      phone: phoneValue || null,
     }
     setSaving(true)
     try {
@@ -282,6 +300,7 @@ export default function BranchesPanel() {
           </div>
           <Input
             label={t('inventory.direccion')}
+            maxLength={255}
             value={form.address ?? ''}
             onChange={(event) => setForm({ ...form, address: event.target.value })}
             placeholder={t('inventory.ej-jr-comercio-456')}
@@ -289,6 +308,7 @@ export default function BranchesPanel() {
           />
           <Input
             label={t('inventory.telefono')}
+            maxLength={20}
             value={form.phone ?? ''}
             onChange={(event) => setForm({ ...form, phone: event.target.value })}
             placeholder={t('inventory.ej-01-234-5678')}

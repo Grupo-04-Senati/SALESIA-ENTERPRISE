@@ -25,7 +25,7 @@ def _ip(request: Request) -> str:
 def list_returns(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     status_: str = Query(default='', alias='status'),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),

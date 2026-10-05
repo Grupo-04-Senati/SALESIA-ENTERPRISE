@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
+
+# return_service.update_return_status solo admite rechazar ('rejected').
+ReturnStatusValue = Literal['rejected']
 
 
-class ReturnItemInput(BaseModel):
-    product_id: int
-    quantity: int = Field(gt=0)
+class ReturnItemInput(NormalizedModel):
+    product_id: int = Field(ge=1)
+    quantity: int = Field(gt=0, le=1_000_000)
 
 
-class ReturnData(BaseModel):
-    sale_id: int
+class ReturnData(NormalizedModel):
+    sale_id: int = Field(ge=1)
     reason: str = Field(min_length=3, max_length=500)
     items: List[ReturnItemInput] = Field(min_length=1)
 
@@ -26,5 +31,5 @@ class ReturnUpdate(ReturnData):
     pass
 
 
-class ReturnStatusUpdate(BaseModel):
-    status: str = Field(max_length=20)
+class ReturnStatusUpdate(NormalizedModel):
+    status: ReturnStatusValue

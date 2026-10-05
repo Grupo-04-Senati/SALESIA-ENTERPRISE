@@ -5,25 +5,27 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 ReportType = Literal['ventas', 'estadistico', 'productos', 'clientes', 'vendedores']
 
 
-class ReportCreate(BaseModel):
+class ReportCreate(NormalizedModel):
     report_type: ReportType
-    title: Optional[str] = Field(default=None, max_length=200)
+    title: Optional[str] = Field(default=None, min_length=3, max_length=200)
     filters: Dict[str, Any] = {}
 
 
-class ReportColumn(BaseModel):
+class ReportColumn(NormalizedModel):
     key: str
     label: str
     align: Optional[str] = None
 
 
-class ReportResponse(BaseModel):
-    id: int
+class ReportResponse(NormalizedModel):
+    id: int = Field(ge=1)
     report_type: str
     title: str
     description: str = ''

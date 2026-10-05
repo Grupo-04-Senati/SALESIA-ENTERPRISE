@@ -4,21 +4,23 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+
+from app.schemas.base import NormalizedModel
 
 
-class BayesRequest(BaseModel):
+class BayesRequest(NormalizedModel):
     """Acepta la nomenclatura del contrato (p_a…) y la del frontend (prior…)."""
 
     label: Optional[str] = Field(default=None, max_length=200)
 
-    prior: Optional[float] = None
-    likelihood: Optional[float] = None
-    evidence: Optional[float] = None
+    prior: Optional[float] = Field(default=None, ge=0, le=1)
+    likelihood: Optional[float] = Field(default=None, ge=0, le=1)
+    evidence: Optional[float] = Field(default=None, ge=0, le=1)
 
-    p_a: Optional[float] = None
-    p_b_given_a: Optional[float] = None
-    p_b: Optional[float] = None
+    p_a: Optional[float] = Field(default=None, ge=0, le=1)
+    p_b_given_a: Optional[float] = Field(default=None, ge=0, le=1)
+    p_b: Optional[float] = Field(default=None, ge=0, le=1)
 
     save_history: bool = True
 
@@ -32,7 +34,7 @@ class BayesRequest(BaseModel):
         return self
 
 
-class BayesResponse(BaseModel):
+class BayesResponse(NormalizedModel):
     posterior: float
     prior: float
     likelihood: float
@@ -49,14 +51,14 @@ class BayesResponse(BaseModel):
     analysis_id: Optional[int] = None
 
 
-class BasicProbabilityRequest(BaseModel):
+class BasicProbabilityRequest(NormalizedModel):
     p_a: float = Field(ge=0, le=1)
     p_b: float = Field(ge=0, le=1)
     p_intersection: float = Field(ge=0, le=1)
     save_history: bool = False
 
 
-class BasicProbabilityResponse(BaseModel):
+class BasicProbabilityResponse(NormalizedModel):
     p_a: float
     p_b: float
     p_a_complement: float
@@ -67,24 +69,24 @@ class BasicProbabilityResponse(BaseModel):
     summary: str
 
 
-class EventCreate(BaseModel):
+class EventCreate(NormalizedModel):
     """Evento definido sobre un dataset (docs/05 §2.9)."""
 
     name: str = Field(min_length=2, max_length=150)
     description: Optional[str] = Field(default=None, max_length=300)
     probability: float = Field(ge=0, le=1)
-    dataset_id: Optional[int] = None
+    dataset_id: Optional[int] = Field(default=None, ge=1)
 
 
-class RandomVariableRequest(BaseModel):
+class RandomVariableRequest(NormalizedModel):
     values: Optional[List[float]] = None
-    dataset_id: Optional[int] = None
+    dataset_id: Optional[int] = Field(default=None, ge=1)
     field: Optional[str] = None
     distribution: Literal['discrete', 'continuous'] = 'discrete'
     save_history: bool = True
 
 
-class RandomVariableResponse(BaseModel):
+class RandomVariableResponse(NormalizedModel):
     field: str = 'variable'
     distribution: str
     count: int

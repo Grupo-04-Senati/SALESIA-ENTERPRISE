@@ -28,7 +28,7 @@ def list_warehouse_stock(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
     warehouse_id: Optional[int] = Query(default=None),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ):

@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
+import { cleanText, hasLetter, maxLength, minLength, notPastDate } from '@/utils/validators'
 import {
   createScheduledReport,
   deleteScheduledReport,
@@ -125,9 +126,18 @@ export default function ReportsPanel() {
   }
 
   const handleSubmit = async () => {
-    const title = form.title.trim()
-    if (title.length < 3) {
-      setFormError(t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))
+    const title = cleanText(form.title)
+    const titleError =
+      minLength(3, t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))(title) ??
+      maxLength(150)(title) ??
+      hasLetter()(title)
+    if (titleError) {
+      setFormError(titleError)
+      return
+    }
+    const dateError = notPastDate()(form.next_run_at)
+    if (dateError) {
+      setFormError(dateError)
       return
     }
     const input: ScheduledReportInput = {

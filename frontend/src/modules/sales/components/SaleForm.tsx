@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/form'
 import { useLang } from '@/i18n/i18n'
+import { integer, maxDecimals, minNumber, numberRange } from '@/utils/validators'
 import { formatCurrency } from '@/utils/formatters'
 import { useDataVersion } from '@/data/DataProvider'
 import {
@@ -86,8 +87,23 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   const addItem = () => {
     const product = products.find((entry) => entry.id === Number(productId))
     if (!product) return
-    const parsedQuantity = Math.max(Number(quantity) || 1, 1)
+    const quantityText = quantity.trim()
+    const quantityNumber = Number(quantityText)
+    if (quantityText !== '' && (!Number.isInteger(quantityNumber) || quantityNumber > 999999)) {
+      setError(integer(1, 999999)(quantity))
+      return
+    }
+    const parsedQuantity = Math.max(quantityNumber || 1, 1)
+    const discountError = maxDecimals(2)(discount)
+    if (discountError) {
+      setError(discountError)
+      return
+    }
     const parsedDiscount = Math.max(Number(discount) || 0, 0)
+    if (parsedDiscount > 100000000) {
+      setError(numberRange(0, 100000000)(discount))
+      return
+    }
     setItems((previous) => {
       const existing = previous.find((item) => item.product_id === product.id)
       if (existing) {
@@ -133,6 +149,14 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
     }
     if (items.length === 0) {
       setError(t('sales.agrega-al-menos-un-producto-a-la-venta'))
+      return
+    }
+    const paymentError =
+      minNumber(0, t('sales.ingresa-un-monto-de-pago-valido'))(amount) ??
+      maxDecimals(2)(amount) ??
+      numberRange(0, 100000000)(amount)
+    if (paymentError) {
+      setError(paymentError)
       return
     }
     const payment = amount.trim() === '' ? totals.total : Number(amount)
@@ -230,6 +254,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
                 aria-label={t('sales.cantidad')}
                 type="number"
                 min="1"
+                max="999999"
                 step="1"
                 inputMode="numeric"
                 value={quantity}
@@ -241,6 +266,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
                 aria-label={t('sales.descuento')}
                 type="number"
                 min="0"
+                max="100000000"
                 step="0.01"
                 inputMode="decimal"
                 value={discount}
@@ -329,6 +355,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
               label={t('sales.monto-pagado-s')}
               type="number"
               min="0"
+              max="100000000"
               step="0.01"
               inputMode="decimal"
               placeholder={totals.total > 0 ? String(totals.total) : '0.00'}

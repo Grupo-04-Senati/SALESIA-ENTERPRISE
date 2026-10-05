@@ -17,6 +17,16 @@ import { useLang } from '@/i18n/i18n'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
 import {
+  cleanText,
+  digitsBetween,
+  email,
+  hasLetter,
+  maxDecimals,
+  maxLength,
+  pattern,
+  phone,
+} from '@/utils/validators'
+import {
   createPurchaseOrder,
   createShipment,
   createSupplier,
@@ -226,8 +236,11 @@ function ProveedoresTab() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const ruc = form.ruc.trim()
-    const name = form.name.trim()
-    if (!/^\d{8,15}$/.test(ruc)) {
+    const name = cleanText(form.name)
+    const emailValue = form.email.trim()
+    const phoneValue = form.phone.trim()
+    const address = cleanText(form.address)
+    if (digitsBetween(8, 15)(ruc)) {
       setFormError('purchasing.ruc-digitos')
       return
     }
@@ -235,12 +248,54 @@ function ProveedoresTab() {
       setFormError('purchasing.nombre-minimo')
       return
     }
+    const nameMaxError = maxLength(150, 'El nombre debe tener como máximo 150 caracteres.')(name)
+    if (nameMaxError) {
+      setFormError(nameMaxError)
+      return
+    }
+    const nameLetterError = hasLetter()(name)
+    if (nameLetterError) {
+      setFormError(nameLetterError)
+      return
+    }
+    const emailMaxError = maxLength(160, 'El correo debe tener como máximo 160 caracteres.')(
+      emailValue,
+    )
+    if (emailMaxError) {
+      setFormError(emailMaxError)
+      return
+    }
+    const emailError = email()(emailValue)
+    if (emailError) {
+      setFormError(emailError)
+      return
+    }
+    const phoneMaxError = maxLength(20, 'El teléfono debe tener como máximo 20 caracteres.')(
+      phoneValue,
+    )
+    if (phoneMaxError) {
+      setFormError(phoneMaxError)
+      return
+    }
+    const phoneError = phone()(phoneValue)
+    if (phoneError) {
+      setFormError(phoneError)
+      return
+    }
+    const addressMaxError = maxLength(
+      255,
+      'La dirección debe tener como máximo 255 caracteres.',
+    )(address)
+    if (addressMaxError) {
+      setFormError(addressMaxError)
+      return
+    }
     const input = {
       ruc,
       name,
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      address: form.address.trim() || null,
+      email: emailValue || null,
+      phone: phoneValue || null,
+      address: address || null,
     }
     setSaving(true)
     try {
@@ -443,12 +498,14 @@ function ProveedoresTab() {
             <Input
               label={t('purchasing.correo')}
               type="email"
+              maxLength={160}
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
               placeholder={t('purchasing.ej-correo')}
             />
             <Input
               label={t('purchasing.telefono')}
+              maxLength={20}
               value={form.phone}
               onChange={(event) => setForm({ ...form, phone: event.target.value })}
               placeholder={t('purchasing.ej-telefono')}
@@ -457,6 +514,7 @@ function ProveedoresTab() {
           <Textarea
             label={t('purchasing.direccion')}
             hint={t('purchasing.opcional')}
+            maxLength={255}
             value={form.address}
             onChange={(event) => setForm({ ...form, address: event.target.value })}
             placeholder={t('purchasing.ej-direccion')}
@@ -653,10 +711,25 @@ function OrdenesTab() {
       setFormError('purchasing.producto-ya-en-orden')
       return
     }
-    const quantity = Math.max(Number(lineQuantity) || 0, 1)
+    const quantityRaw = lineQuantity.trim()
+    const quantityValue = Number(lineQuantity)
+    if (quantityRaw !== '' && (!Number.isInteger(quantityValue) || quantityValue > 999999)) {
+      setFormError('La cantidad debe ser un número entero como máximo 999999.')
+      return
+    }
+    const quantity = Math.max(quantityValue || 0, 1)
     const unitCost = Number(lineCost)
     if (Number.isNaN(unitCost) || unitCost < 0) {
       setFormError('purchasing.costo-unitario-invalido')
+      return
+    }
+    const costDecimalsError = maxDecimals(2)(lineCost)
+    if (costDecimalsError) {
+      setFormError(costDecimalsError)
+      return
+    }
+    if (unitCost > 100000000) {
+      setFormError('El costo unitario no puede superar 100000000.')
       return
     }
     setLines((previous) => [...previous, { product_id: product.id, quantity, unit_cost: unitCost }])
@@ -680,11 +753,17 @@ function OrdenesTab() {
       setFormError('purchasing.agrega-al-menos-un-item')
       return
     }
+    const notesValue = cleanText(notes)
+    const notesMaxError = maxLength(500, 'Las notas no pueden superar 500 caracteres.')(notesValue)
+    if (notesMaxError) {
+      setFormError(notesMaxError)
+      return
+    }
     setFormError(null)
     setSaving(true)
     const input = {
       supplier_id: Number(supplierId),
-      notes: notes.trim() || null,
+      notes: notesValue || null,
       items: lines.map((line) => ({ ...line })),
     }
     try {
@@ -951,6 +1030,7 @@ function OrdenesTab() {
             <Textarea
               label={t('purchasing.notas')}
               hint={t('purchasing.hint-notas')}
+              maxLength={500}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder={t('purchasing.ej-notas')}
@@ -987,6 +1067,7 @@ function OrdenesTab() {
                   aria-label={t('purchasing.cantidad')}
                   type="number"
                   min="1"
+                  max="999999"
                   step="1"
                   inputMode="numeric"
                   value={lineQuantity}
@@ -998,6 +1079,7 @@ function OrdenesTab() {
                   aria-label={t('purchasing.costo-unitario')}
                   type="number"
                   min="0"
+                  max="100000000"
                   step="0.01"
                   inputMode="decimal"
                   value={lineCost}
@@ -1305,10 +1387,34 @@ function EnviosTab() {
       setFormError('purchasing.selecciona-venta')
       return
     }
+    const carrierValue = cleanText(carrier)
+    const trackingValue = cleanText(tracking)
+    const carrierMaxError = maxLength(80, 'El transportista no puede superar 80 caracteres.')(
+      carrierValue,
+    )
+    if (carrierMaxError) {
+      setFormError(carrierMaxError)
+      return
+    }
+    const trackingMaxError = maxLength(60, 'El código de seguimiento no puede superar 60 caracteres.')(
+      trackingValue,
+    )
+    if (trackingMaxError) {
+      setFormError(trackingMaxError)
+      return
+    }
+    const trackingPatternError = pattern(
+      /^[A-Za-z0-9\-]{0,60}$/,
+      'El código de seguimiento sólo puede contener letras, dígitos o guiones.',
+    )(trackingValue)
+    if (trackingPatternError) {
+      setFormError(trackingPatternError)
+      return
+    }
     const input = {
       sale_id: Number(saleId),
-      carrier: carrier.trim() || null,
-      tracking_code: tracking.trim() || null,
+      carrier: carrierValue || null,
+      tracking_code: trackingValue || null,
     }
     setFormError(null)
     setSaving(true)
@@ -1541,6 +1647,7 @@ function EnviosTab() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label={t('purchasing.transportista')}
+              maxLength={80}
               value={carrier}
               onChange={(event) => setCarrier(event.target.value)}
               placeholder={t('purchasing.ej-transportista')}
@@ -1548,6 +1655,7 @@ function EnviosTab() {
             />
             <Input
               label={t('purchasing.codigo-seguimiento')}
+              maxLength={60}
               value={tracking}
               onChange={(event) => setTracking(event.target.value)}
               placeholder={t('purchasing.ej-tracking')}

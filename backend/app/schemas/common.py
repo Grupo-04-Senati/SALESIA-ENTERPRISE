@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Generic, List, TypeVar
 
-from pydantic import BaseModel
+from app.schemas.base import NormalizedModel
 
 T = TypeVar('T')
 
 
-class Page(BaseModel, Generic[T]):
+class Page(NormalizedModel, Generic[T]):
     """Envoltura estándar de listados."""
 
     items: List[T]
@@ -19,5 +19,5 @@ class Page(BaseModel, Generic[T]):
     pages: int
 
 
-class OkResponse(BaseModel):
+class OkResponse(NormalizedModel):
     detail: str

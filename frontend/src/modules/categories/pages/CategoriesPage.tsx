@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
 import { createCategory, deleteCategory, listCategories, updateCategory } from '../services/categoryService'
 import type { Category, CategoryInput } from '@/types/product'
+import { cleanText, hasLetter, maxLength, minLength } from '@/utils/validators'
 import { useLang } from '@/i18n/i18n'
 
 /**
@@ -86,12 +87,16 @@ export default function CategoriesPage() {
   }
 
   const handleSubmit = async () => {
-    const name = form.name.trim()
-    if (name.length < 2) {
-      setFormError(t('categories.el-nombre-debe-tener-al-menos-2-caracteres', { n: 2 }))
+    const name = cleanText(form.name)
+    const nameError =
+      minLength(2, t('categories.el-nombre-debe-tener-al-menos-2-caracteres', { n: 2 }))(name) ??
+      maxLength(100)(name) ??
+      hasLetter()(name)
+    if (nameError) {
+      setFormError(nameError)
       return
     }
-    const input: CategoryInput = { name, description: form.description.trim() || null }
+    const input: CategoryInput = { name, description: cleanText(form.description) || null }
     setSaving(true)
     try {
       if (editing) {
@@ -251,6 +256,8 @@ export default function CategoriesPage() {
           <Input
             label={t('categories.nombre')}
             required
+            minLength={2}
+            maxLength={100}
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
             placeholder={t('categories.ej-bebidas')}

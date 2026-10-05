@@ -17,6 +17,15 @@ import { useDataVersion } from '@/data/DataProvider'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDate, formatDateTime, formatPercent } from '@/utils/formatters'
 import {
+  cleanText,
+  integer,
+  maxDecimals,
+  maxLength,
+  minNumber,
+  notPastDate,
+  numberRange,
+} from '@/utils/validators'
+import {
   convertQuote,
   createQuote,
   deleteQuote,
@@ -235,15 +244,33 @@ export default function QuotesPage() {
       setFormError(t('quotes.ese-producto-ya-esta-en-la-cotizacion'))
       return
     }
-    const quantity = Math.max(Number(lineQuantity) || 0, 1)
-    const unitPrice = Number(linePrice)
-    const discount = Number(lineDiscount) || 0
-    if (Number.isNaN(unitPrice) || unitPrice < 0) {
-      setFormError(t('quotes.ingresa-un-precio-unitario-valido'))
+    const quantityText = lineQuantity.trim()
+    const quantityNumber = Number(quantityText)
+    if (quantityText !== '' && (!Number.isInteger(quantityNumber) || quantityNumber > 999999)) {
+      setFormError(integer(1, 999999)(lineQuantity))
       return
     }
-    if (discount < 0) {
-      setFormError(t('quotes.el-descuento-no-puede-ser-negativo'))
+    const quantity = Math.max(Number(lineQuantity) || 0, 1)
+    const priceError =
+      minNumber(0, t('quotes.ingresa-un-precio-unitario-valido'))(linePrice) ??
+      maxDecimals(2)(linePrice) ??
+      numberRange(0, 100000000)(linePrice)
+    if (priceError) {
+      setFormError(priceError)
+      return
+    }
+    const unitPrice = Number(linePrice)
+    const discountError =
+      minNumber(0, t('quotes.el-descuento-no-puede-ser-negativo'))(lineDiscount) ??
+      maxDecimals(2)(lineDiscount) ??
+      numberRange(0, 100000000)(lineDiscount)
+    if (discountError) {
+      setFormError(discountError)
+      return
+    }
+    const discount = Number(lineDiscount) || 0
+    if (discount > round2(quantity * unitPrice)) {
+      setFormError('El descuento de la línea supera su subtotal (RN-13).')
       return
     }
     setLines((previous) => [
@@ -276,12 +303,22 @@ export default function QuotesPage() {
       setFormError(t('quotes.la-tasa-de-impuesto-debe-estar-entre-0-y-1'))
       return
     }
+    const untilError = notPastDate()(validUntil)
+    if (untilError) {
+      setFormError(untilError)
+      return
+    }
+    const notesError = maxLength(500)(notes)
+    if (notesError) {
+      setFormError(notesError)
+      return
+    }
     setFormError(null)
     setSaving(true)
     const input = {
       customer_id: Number(customerId),
       valid_until: validUntil || null,
-      notes: notes.trim() || null,
+      notes: cleanText(notes) || null,
       tax_rate: rate,
       items: lines.map((line) => ({ ...line })),
     }
@@ -627,6 +664,7 @@ export default function QuotesPage() {
           </div>
           <Textarea
             label={t('quotes.notas')}
+            maxLength={500}
             hint={t('quotes.opcional-condiciones-de-la-propuesta')}
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
@@ -665,6 +703,7 @@ export default function QuotesPage() {
                   aria-label={t('quotes.cantidad')}
                   type="number"
                   min="1"
+                  max="999999"
                   step="1"
                   inputMode="numeric"
                   value={lineQuantity}
@@ -676,6 +715,7 @@ export default function QuotesPage() {
                   aria-label={t('quotes.precio')}
                   type="number"
                   min="0"
+                  max="100000000"
                   step="0.01"
                   inputMode="decimal"
                   value={linePrice}
@@ -687,6 +727,7 @@ export default function QuotesPage() {
                   aria-label={t('quotes.descuento')}
                   type="number"
                   min="0"
+                  max="100000000"
                   step="0.01"
                   inputMode="decimal"
                   value={lineDiscount}

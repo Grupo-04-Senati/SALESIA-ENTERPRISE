@@ -214,8 +214,14 @@ export default function AutomationPage() {
                                 value={Number(param.value)}
                                 disabled={!rule.enabled}
                                 onChange={(event) => {
-                                  const value = Number(event.target.value)
-                                  if (!Number.isNaN(value)) setRuleParam(rule.code, param.key, value)
+                                  const raw = event.target.value
+                                  if (raw.trim() === '') return
+                                  const value = Number(raw)
+                                  if (!Number.isFinite(value)) return
+                                  if (param.min !== undefined && value < param.min) return
+                                  if (param.max !== undefined && value > param.max) return
+                                  if (param.step === 1 && !Number.isInteger(value)) return
+                                  setRuleParam(rule.code, param.key, value)
                                 }}
                               />
                             </div>

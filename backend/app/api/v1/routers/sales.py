@@ -42,7 +42,7 @@ def create_sale(
 def list_sales(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     status_: str = Query(default='', alias='status'),
     customer_id: Optional[int] = Query(default=None),
     seller_id: Optional[int] = Query(default=None),

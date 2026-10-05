@@ -31,7 +31,7 @@ def _ip(request: Request) -> str:
 def list_purchase_orders(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     status_: str = Query(default='', alias='status'),
     supplier_id: Optional[int] = Query(default=None),
     page: int = Query(default=1, ge=1),

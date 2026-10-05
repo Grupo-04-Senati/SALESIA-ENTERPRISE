@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
+import { cleanText, hasLetter, maxLength, minLength } from '@/utils/validators'
 import {
   createNotification,
   deleteNotification,
@@ -86,14 +87,21 @@ export default function NotificationsPanel() {
   const reload = () => setAttempt((value) => value + 1)
 
   const handleSubmit = async () => {
-    const title = form.title.trim()
-    const message = form.message.trim()
-    if (title.length < 3) {
-      setFormError(t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))
+    const title = cleanText(form.title)
+    const message = cleanText(form.message)
+    const titleError =
+      minLength(3, t('settings.el-titulo-debe-tener-al-menos-3-caracteres'))(title) ??
+      maxLength(150)(title) ??
+      hasLetter()(title)
+    if (titleError) {
+      setFormError(titleError)
       return
     }
-    if (message.length < 3) {
-      setFormError(t('settings.el-mensaje-debe-tener-al-menos-3-caracteres'))
+    const messageError =
+      minLength(3, t('settings.el-mensaje-debe-tener-al-menos-3-caracteres'))(message) ??
+      maxLength(2000)(message)
+    if (messageError) {
+      setFormError(messageError)
       return
     }
     setSaving(true)
@@ -333,6 +341,8 @@ export default function NotificationsPanel() {
           <Textarea
             label={t('settings.mensaje')}
             required
+            minLength={3}
+            maxLength={2000}
             value={form.message}
             onChange={(event) => setForm({ ...form, message: event.target.value })}
             placeholder={t('settings.ej-recuerda-registrar-los-ingresos-del-turno')}

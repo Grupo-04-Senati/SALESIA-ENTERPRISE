@@ -19,7 +19,7 @@ admin_only = require_role('Admin')
 def list_users(
     db: Session = Depends(get_db),
     actor: User = Depends(admin_only),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ):

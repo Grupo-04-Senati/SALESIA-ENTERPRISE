@@ -5,42 +5,46 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 PaymentMethod = Literal['cash', 'card', 'transfer']
 MovementKind = Literal['IN', 'OUT', 'RETURN', 'SHRINKAGE', 'ADJUSTMENT']
+# sale_service.update_sale_status (L488) acepta exactamente estos estados.
+SaleStatusValue = Literal['pending', 'partial', 'paid', 'cancelled']
 
 
-class SaleItemInput(BaseModel):
-    product_id: int
-    quantity: int = Field(gt=0)
-    unit_price: float = Field(ge=0)
-    discount: float = Field(default=0, ge=0)
+class SaleItemInput(NormalizedModel):
+    product_id: int = Field(ge=1)
+    quantity: int = Field(gt=0, le=1_000_000)
+    unit_price: float = Field(ge=0, le=100_000_000)
+    discount: float = Field(default=0, ge=0, le=100_000_000)
 
 
-class PaymentInput(BaseModel):
+class PaymentInput(NormalizedModel):
     method: PaymentMethod = 'cash'
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, le=100_000_000)
     reference: Optional[str] = Field(default=None, max_length=100)
 
 
-class SaleCreate(BaseModel):
-    customer_id: int
-    seller_id: int
+class SaleCreate(NormalizedModel):
+    customer_id: int = Field(ge=1)
+    seller_id: int = Field(ge=1)
     items: List[SaleItemInput] = Field(min_length=1)
     payment: Optional[PaymentInput] = None
     tax_rate: float = Field(default=0.18, ge=0, le=1)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
 
 
-class TraceStep(BaseModel):
+class TraceStep(NormalizedModel):
     module: str
     label: str
     detail: str
 
 
-class SaleCreated(BaseModel):
-    id: int
+class SaleCreated(NormalizedModel):
+    id: int = Field(ge=1)
     sale_number: str
     subtotal: float
     discount: float
@@ -53,8 +57,8 @@ class SaleCreated(BaseModel):
     trace: List[TraceStep] = []
 
 
-class SaleItemResponse(BaseModel):
-    product_id: int
+class SaleItemResponse(NormalizedModel):
+    product_id: int = Field(ge=1)
     sku: str = ''
     name: str = ''
     quantity: int
@@ -63,21 +67,21 @@ class SaleItemResponse(BaseModel):
     subtotal: float
 
 
-class PaymentResponse(BaseModel):
-    id: int
+class PaymentResponse(NormalizedModel):
+    id: int = Field(ge=1)
     method: str
     amount: float
     paid_at: datetime
     reference: Optional[str] = None
 
 
-class PartyRef(BaseModel):
-    id: Optional[int] = None
+class PartyRef(NormalizedModel):
+    id: Optional[int] = Field(default=None, ge=1)
     name: str
 
 
-class SaleResponse(BaseModel):
-    id: int
+class SaleResponse(NormalizedModel):
+    id: int = Field(ge=1)
     sale_number: str
     customer: Optional[PartyRef] = None
     seller: Optional[PartyRef] = None
@@ -95,31 +99,31 @@ class SaleResponse(BaseModel):
     payments: List[PaymentResponse] = []
 
 
-class PaymentCreate(BaseModel):
+class PaymentCreate(NormalizedModel):
     method: PaymentMethod = 'cash'
-    amount: float = Field(gt=0)
-    reference: Optional[str] = None
+    amount: float = Field(gt=0, le=100_000_000)
+    reference: Optional[str] = Field(default=None, max_length=100)
 
 
-class StatusUpdate(BaseModel):
-    status: str
-    reason: Optional[str] = None
-
-
-class CancelRequest(BaseModel):
-    reason: str = Field(min_length=10, max_length=500)
-
-
-class MovementCreate(BaseModel):
-    product_id: int
-    type: MovementKind
-    quantity: int = Field(gt=0)
+class StatusUpdate(NormalizedModel):
+    status: SaleStatusValue
     reason: Optional[str] = Field(default=None, max_length=255)
 
 
-class MovementResponse(BaseModel):
-    id: int
-    product_id: int
+class CancelRequest(NormalizedModel):
+    reason: str = Field(min_length=10, max_length=500)
+
+
+class MovementCreate(NormalizedModel):
+    product_id: int = Field(ge=1)
+    type: MovementKind
+    quantity: int = Field(gt=0, le=1_000_000)
+    reason: Optional[str] = Field(default=None, max_length=255)
+
+
+class MovementResponse(NormalizedModel):
+    id: int = Field(ge=1)
+    product_id: int = Field(ge=1)
     sku: str = ''
     type: str
     quantity: int
@@ -129,8 +133,8 @@ class MovementResponse(BaseModel):
     created_at: datetime
 
 
-class StockRow(BaseModel):
-    product_id: int
+class StockRow(NormalizedModel):
+    product_id: int = Field(ge=1)
     sku: str
     name: str
     category: str = ''

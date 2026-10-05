@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import client_ip, company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.product import CategoryCreate, CategoryUpdate, ProductCreate, ProductUpdate
+from app.schemas.product import (
+    CategoryCreate,
+    CategoryUpdate,
+    ProductCreate,
+    ProductStatusPatch,
+    ProductUpdate,
+)
 from app.services import product_service
 
 router = APIRouter(tags=['products'])
@@ -23,7 +29,7 @@ admin_only = require_role('Admin')
 def list_products(
     db: Session = Depends(get_db),
     user: User = Depends(require_role(*read_roles)),
-    q: str = Query(default=''),
+    q: str = Query(default='', max_length=100),
     status_: str = Query(default='', alias='status'),
     category_id: Optional[int] = Query(default=None),
     low_stock: bool = Query(default=False),
@@ -73,13 +79,13 @@ def update_product(
 @router.patch('/products/{product_id}/status')
 def patch_status(
     product_id: int,
-    payload: dict,
+    payload: ProductStatusPatch,
     request: Request,
     db: Session = Depends(get_db),
     actor: User = Depends(admin_only),
 ):
     return product_service.set_product_status(
-        db, company_id_of(actor), product_id, payload.get('status', 'active'),
+        db, company_id_of(actor), product_id, payload.status,
         actor=actor, ip=client_ip(request),
     )
 

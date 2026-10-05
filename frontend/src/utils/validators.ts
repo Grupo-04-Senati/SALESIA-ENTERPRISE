@@ -73,6 +73,99 @@ export const numberRange =
       : (message ?? `Debe estar entre ${min} y ${max}`)
   }
 
+/**
+ * Normaliza un texto de usuario: recorta los extremos y colapsa los
+ * espacios internos repetidos ("  hola   mundo " → "hola mundo").
+ * Usar antes de validar y de enviar al backend.
+ */
+export const cleanText = (value: string): string =>
+  value.trim().replace(/\s+/g, ' ')
+
+/** Debe contener al menos una letra (rechaza "###", "---", "123", "@@"). */
+export const hasLetter =
+  (message = 'Debe contener al menos una letra'): Validator =>
+  (value) =>
+    value.trim().length === 0 || /\p{L}/u.test(value.trim()) ? null : message
+
+/** El valor (recortado) debe coincidir con la expresión indicada. */
+export const pattern =
+  (re: RegExp, message = 'Formato no válido'): Validator =>
+  (value) =>
+    value.trim().length === 0 || re.test(value.trim()) ? null : message
+
+/** Entre `min` y `max` dígitos (documentos: DNI=8, RUC=11, CE 6..12). */
+export const digitsBetween =
+  (min: number, max: number, message?: string): Validator =>
+  (value) => {
+    const v = value.trim()
+    if (v.length === 0) return null
+    return new RegExp(`^\\d{${min},${max}}$`).test(v)
+      ? null
+      : (message ?? `Debe tener entre ${min} y ${max} dígitos`)
+  }
+
+/** Teléfono: 7 a 15 dígitos con `+` opcional al inicio (sin espacios). */
+export const phone =
+  (message = 'Teléfono inválido: de 7 a 15 dígitos'): Validator =>
+  (value) => {
+    const v = value.trim()
+    return v.length === 0 || /^\+?\d{7,15}$/.test(v) ? null : message
+  }
+
+/** Número entero dentro de [min, max] (cantidades, stock, etc.). */
+export const integer =
+  (min: number, max: number, message?: string): Validator =>
+  (value) => {
+    const v = value.trim()
+    if (v.length === 0) return null
+    const n = Number(v)
+    if (!Number.isFinite(n) || !Number.isInteger(n))
+      return message ?? 'Debe ser un número entero'
+    return n >= min && n <= max
+      ? null
+      : (message ?? `Debe ser un entero entre ${min} y ${max}`)
+  }
+
+/** Máximo de decimales permitidos (precios: 2). */
+export const maxDecimals =
+  (places: number, message?: string): Validator =>
+  (value) => {
+    const v = value.trim()
+    if (v.length === 0) return null
+    const dot = v.indexOf('.')
+    if (dot === -1) return null
+    return v.length - dot - 1 <= places
+      ? null
+      : (message ?? `Máximo ${places} decimales`)
+  }
+
+/** Código alfanumérico: letras, dígitos, punto, guion o guion bajo (1..max). */
+export const code =
+  (max = 50, message?: string): Validator =>
+  (value) => {
+    const v = value.trim()
+    if (v.length === 0) return null
+    return new RegExp(`^[A-Za-z0-9][A-Za-z0-9._\\-]{0,${max - 1}}$`).test(v)
+      ? null
+      : (message ?? `Sólo letras, dígitos, punto o guion (máx. ${max})`)
+  }
+
+/**
+ * Fecha (YYYY-MM-DD o parseable) no anterior a hoy.
+ * Para campos como "válido hasta", "próxima ejecución".
+ */
+export const notPastDate =
+  (message = 'La fecha no puede ser anterior a hoy'): Validator =>
+  (value) => {
+    const v = value.trim()
+    if (v.length === 0) return null
+    const d = new Date(`${v.slice(0, 10)}T00:00:00`)
+    if (Number.isNaN(d.getTime())) return message
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return d >= today ? null : message
+  }
+
 /** Reglas por campo de un formulario. */
 export type FormRules<T extends Record<string, string>> = {
   [K in keyof T]?: Validator

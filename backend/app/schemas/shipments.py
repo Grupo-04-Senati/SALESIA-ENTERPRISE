@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
+
+# shipment_service.SHIPMENT_STATUSES (create/update/status lo validan igual).
+ShipmentStatusValue = Literal['pending', 'shipped', 'delivered', 'cancelled']
 
 
-class ShipmentData(BaseModel):
-    sale_id: int
+class ShipmentData(NormalizedModel):
+    sale_id: int = Field(ge=1)
     carrier: Optional[str] = Field(default=None, max_length=80)
-    tracking_code: Optional[str] = Field(default=None, max_length=60)
-    status: str = Field(default='pending', max_length=20)
+    tracking_code: Optional[str] = Field(default=None, pattern=r'^[A-Za-z0-9\-]{0,60}$')
+    status: ShipmentStatusValue = 'pending'
 
 
 class ShipmentCreate(ShipmentData):
@@ -22,5 +27,5 @@ class ShipmentUpdate(ShipmentData):
     pass
 
 
-class ShipmentStatusUpdate(BaseModel):
-    status: str = Field(max_length=20)
+class ShipmentStatusUpdate(NormalizedModel):
+    status: ShipmentStatusValue

@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatDateTime } from '@/utils/formatters'
+import { cleanText, integer, maxLength } from '@/utils/validators'
 import { getState } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 import {
@@ -118,6 +119,11 @@ export default function StockCountsPanel() {
       setFormError(t('inventory.agrega-al-menos-un-producto-al-conteo'))
       return
     }
+    const notesError = maxLength(500)(form.notes)
+    if (notesError) {
+      setFormError(notesError)
+      return
+    }
     const items = form.lines.map((line) => ({
       product_id: Number(line.product_id),
       counted_qty: Number(line.counted_qty),
@@ -130,11 +136,18 @@ export default function StockCountsPanel() {
       setFormError(t('inventory.la-cantidad-contada-debe-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
+    const countedError = form.lines
+      .map((line) => integer(0, 9999999)(line.counted_qty))
+      .find((message) => message !== null)
+    if (countedError) {
+      setFormError(countedError)
+      return
+    }
     setSaving(true)
     try {
       const created = await createStockCount({
         warehouse_id: warehouseId,
-        notes: form.notes.trim() || null,
+        notes: cleanText(form.notes) || null,
         items,
       })
       toast.success(t('inventory.conteo-creado'), `${created.count_number} ${t('inventory.quedo-en-borrador')}`)
@@ -370,6 +383,7 @@ export default function StockCountsPanel() {
 
           <Textarea
             label={t('inventory.notas')}
+            maxLength={500}
             hint={t('inventory.opcional-observaciones-del-conteo')}
             value={form.notes}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
@@ -419,6 +433,7 @@ export default function StockCountsPanel() {
                       label={t('inventory.contado')}
                       type="number"
                       min={0}
+                      max={9999999}
                       step={1}
                       value={line.counted_qty}
                       onChange={(event) => setLine(index, { counted_qty: event.target.value })}

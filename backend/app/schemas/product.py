@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
+
+ProductStatus = Literal['active', 'inactive']
 
 
-class CategoryData(BaseModel):
+class CategoryData(NormalizedModel):
     name: str = Field(min_length=2, max_length=100)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
 
 
 class CategoryCreate(CategoryData):
@@ -21,21 +25,23 @@ class CategoryUpdate(CategoryData):
     pass
 
 
-class CategoryOut(BaseModel):
-    id: int
+class CategoryOut(NormalizedModel):
+    id: int = Field(ge=1)
     name: str
     status: str = 'active'
 
 
-class ProductData(BaseModel):
-    sku: str = Field(min_length=1, max_length=50)
+class ProductData(NormalizedModel):
+    sku: str = Field(
+        min_length=1, max_length=50, pattern=r'^[A-Za-z0-9][A-Za-z0-9\-_.]{0,49}$'
+    )
     name: str = Field(min_length=2, max_length=150)
-    category_id: Optional[int] = None
-    cost_price: float = Field(default=0, ge=0)
-    sale_price: float = Field(default=0, ge=0)
-    min_stock: int = Field(default=0, ge=0)
+    category_id: Optional[int] = Field(default=None, ge=1)
+    cost_price: float = Field(default=0, ge=0, le=100_000_000)
+    sale_price: float = Field(default=0, ge=0, le=100_000_000)
+    min_stock: int = Field(default=0, ge=0, le=9_999_999)
     unit: str = Field(default='UND', max_length=20)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
 
 
 class ProductCreate(ProductData):
@@ -46,8 +52,14 @@ class ProductUpdate(ProductData):
     pass
 
 
+class ProductStatusPatch(NormalizedModel):
+    """PATCH /products/{id}/status — antes era un body ``dict`` sin validar."""
+
+    status: ProductStatus
+
+
 class ProductResponse(ProductData):
-    id: int
+    id: int = Field(ge=1)
     category: Optional[CategoryOut] = None
     current_stock: int = 0
     status: str = 'active'

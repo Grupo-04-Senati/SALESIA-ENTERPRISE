@@ -5,17 +5,21 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 InteractionKind = Literal['note', 'call', 'email', 'meeting', 'visit']
+# crm_service._to_active solo admite 'active'/'inactive' (None => activo).
+SegmentStatus = Literal['active', 'inactive']
 
 
-class CustomerSegmentData(BaseModel):
+class CustomerSegmentData(NormalizedModel):
     name: str = Field(min_length=2, max_length=60)
-    description: Optional[str] = None
-    min_purchases: int = Field(default=0, ge=0)
-    min_total: float = Field(default=0, ge=0)
-    status: Optional[str] = Field(default=None, max_length=10)
+    description: Optional[str] = Field(default=None, max_length=300)
+    min_purchases: int = Field(default=0, ge=0, le=9_999_999)
+    min_total: float = Field(default=0, ge=0, le=100_000_000)
+    status: Optional[SegmentStatus] = None
 
 
 class CustomerSegmentCreate(CustomerSegmentData):
@@ -26,11 +30,11 @@ class CustomerSegmentUpdate(CustomerSegmentData):
     pass
 
 
-class CustomerInteractionData(BaseModel):
-    customer_id: int
+class CustomerInteractionData(NormalizedModel):
+    customer_id: int = Field(ge=1)
     kind: InteractionKind = 'note'
     subject: str = Field(min_length=3, max_length=150)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
     occurred_at: Optional[datetime] = None
 
 

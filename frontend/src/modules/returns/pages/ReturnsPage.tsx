@@ -18,6 +18,7 @@ import { useDataVersion } from '@/data/DataProvider'
 import { useLang } from '@/i18n/i18n'
 import { getState } from '@/data/store'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/formatters'
+import { cleanText, integer, maxLength } from '@/utils/validators'
 import {
   approveReturn,
   createReturn,
@@ -241,13 +242,18 @@ export default function ReturnsPage() {
 
   const handleSubmit = async () => {
     const saleId = Number(form.sale_id)
-    const reason = form.reason.trim()
+    const reason = cleanText(form.reason)
     if (!saleId) {
       setFormError(t('returns.selecciona-una-venta-2'))
       return
     }
     if (reason.length < 3) {
       setFormError(t('returns.el-motivo-debe-tener-al-menos-3-caracteres'))
+      return
+    }
+    const reasonError = maxLength(500)(reason)
+    if (reasonError) {
+      setFormError(reasonError)
       return
     }
     const items: ReturnLine[] = []
@@ -257,6 +263,11 @@ export default function ReturnsPage() {
       const quantity = Math.max(Number(line.quantity) || 0, 0)
       if (quantity < 1) {
         setFormError(t('returns.cada-producto-debe-tener-una-cantidad-mayor-o-igual-a-1'))
+        return
+      }
+      const quantityError = integer(1, 999999)(line.quantity)
+      if (quantityError) {
+        setFormError(quantityError)
         return
       }
       const productId = Number(line.product_id)
@@ -670,6 +681,7 @@ export default function ReturnsPage() {
           <Textarea
             label={t('returns.motivo')}
             required
+            maxLength={500}
             value={form.reason}
             onChange={(event) => setForm({ ...form, reason: event.target.value })}
             placeholder={t('returns.ej-producto-en-mal-estado-al-recibirlo')}
@@ -715,6 +727,7 @@ export default function ReturnsPage() {
                         aria-label={t('returns.cantidad')}
                         type="number"
                         min="1"
+                        max="999999"
                         step="1"
                         inputMode="numeric"
                         value={line.quantity}

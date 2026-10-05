@@ -46,6 +46,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { getState } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
 import { API_BASE } from '@/services/api'
+import {
+  cleanText,
+  email as emailRule,
+  hasLetter,
+  maxLength,
+  minLength,
+  numberRange,
+  required,
+} from '@/utils/validators'
 
 /**
  * Configuración del sistema (RF-02): secciones separadas en pestañas —
@@ -218,12 +227,13 @@ export default function SettingsPage() {
   const handleProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!user) return
-    const fullName = name.trim()
-    if (fullName.length < 2) {
-      toast.error(
-        t('settings.no-se-pudo-actualizar'),
-        t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'),
-      )
+    const fullName = cleanText(name)
+    const nameError =
+      minLength(2, t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))(fullName) ??
+      maxLength(150)(fullName) ??
+      hasLetter()(fullName)
+    if (nameError) {
+      toast.error(t('settings.no-se-pudo-actualizar'), nameError)
       return
     }
     setSavingProfile(true)
@@ -265,8 +275,18 @@ export default function SettingsPage() {
   const handlePassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setPwdError(null)
+    const currentError = required()(pwd.current)
+    if (currentError) {
+      setPwdError(currentError)
+      return
+    }
     if (pwd.next.length < 6) {
       setPwdError(t('settings.la-contrasena-debe-tener-al-menos-6-caracteres'))
+      return
+    }
+    const nextError = maxLength(72)(pwd.next)
+    if (nextError) {
+      setPwdError(nextError)
       return
     }
     if (pwd.next !== pwd.confirm) {
@@ -309,13 +329,22 @@ export default function SettingsPage() {
   const handleEditUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!editTarget || !user) return
-    const fullName = editForm.full_name.trim()
-    if (fullName.length < 2) {
-      setEditError(t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))
+    const fullName = cleanText(editForm.full_name)
+    const nameError =
+      minLength(2, t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))(fullName) ??
+      maxLength(150)(fullName) ??
+      hasLetter()(fullName)
+    if (nameError) {
+      setEditError(nameError)
       return
     }
     if (editForm.password && editForm.password.length < 6) {
       setEditError(t('settings.la-contrasena-debe-tener-al-menos-6-caracteres'))
+      return
+    }
+    const editPwdError = editForm.password ? maxLength(72)(editForm.password) : null
+    if (editPwdError) {
+      setEditError(editPwdError)
       return
     }
     const isSelf = editTarget.id === user.id
@@ -351,6 +380,11 @@ export default function SettingsPage() {
 
   const handleParams = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const taxError = required()(prefs.taxRate) ?? numberRange(0, 100)(prefs.taxRate)
+    if (taxError) {
+      toast.error(t('settings.tasa-de-impuesto'), taxError)
+      return
+    }
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
     toast.success(
       t('settings.preferencias-guardadas'),
@@ -360,18 +394,33 @@ export default function SettingsPage() {
 
   const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const fullName = userForm.full_name.trim()
+    const fullName = cleanText(userForm.full_name)
     const email = userForm.email.trim().toLowerCase()
-    if (fullName.length < 2) {
-      setUserFormError(t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))
+    const nameError =
+      minLength(2, t('settings.el-nombre-completo-debe-tener-al-menos-2-caracteres'))(fullName) ??
+      maxLength(150)(fullName) ??
+      hasLetter()(fullName)
+    if (nameError) {
+      setUserFormError(nameError)
       return
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setUserFormError(t('settings.ingresa-un-correo-electronico-valido'))
+    const emailError = emailRule(t('settings.ingresa-un-correo-electronico-valido'))(email)
+    if (emailError) {
+      setUserFormError(emailError)
+      return
+    }
+    const emailMaxLengthError = maxLength(160)(email)
+    if (emailMaxLengthError) {
+      setUserFormError(emailMaxLengthError)
       return
     }
     if (userForm.password.length < 6) {
       setUserFormError(t('settings.la-contrasena-debe-tener-al-menos-6-caracteres'))
+      return
+    }
+    const passwordError = maxLength(72)(userForm.password)
+    if (passwordError) {
+      setUserFormError(passwordError)
       return
     }
     setUserFormError(null)
@@ -473,6 +522,8 @@ export default function SettingsPage() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
+            minLength={2}
+            maxLength={150}
           />
           <Input
             label={t('settings.correo-electronico')}
@@ -516,6 +567,7 @@ export default function SettingsPage() {
             type="password"
             required
             minLength={6}
+            maxLength={72}
             autoComplete="new-password"
             value={pwd.next}
             onChange={(event) => setPwd({ ...pwd, next: event.target.value })}
@@ -526,6 +578,7 @@ export default function SettingsPage() {
             type="password"
             required
             minLength={6}
+            maxLength={72}
             autoComplete="new-password"
             value={pwd.confirm}
             onChange={(event) => setPwd({ ...pwd, confirm: event.target.value })}
@@ -812,6 +865,7 @@ export default function SettingsPage() {
             type="email"
             required
             autoComplete="off"
+            maxLength={160}
             value={userForm.email}
             onChange={(event) => setUserForm({ ...userForm, email: event.target.value })}
             placeholder="ana.torres@salesia.com"
@@ -822,6 +876,7 @@ export default function SettingsPage() {
             type="password"
             required
             minLength={6}
+            maxLength={72}
             autoComplete="new-password"
             value={userForm.password}
             onChange={(event) => setUserForm({ ...userForm, password: event.target.value })}
@@ -915,6 +970,7 @@ export default function SettingsPage() {
             type="password"
             autoComplete="new-password"
             minLength={6}
+            maxLength={72}
             value={editForm.password}
             onChange={(event) => setEditForm({ ...editForm, password: event.target.value })}
             hint={t('settings.deja-la-contrasena-vacia-para-no-cambiarla')}

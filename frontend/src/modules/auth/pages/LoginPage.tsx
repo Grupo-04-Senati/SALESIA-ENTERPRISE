@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      await login(email.trim(), password)
       navigate('/', { replace: true })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('login.error'))
@@ -59,6 +59,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
+              maxLength={160}
               placeholder={t('login.email-placeholder')}
               value={email}
               onChange={(event) => setEmail(event.target.value)}

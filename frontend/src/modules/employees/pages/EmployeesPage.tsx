@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { useDataVersion } from '@/data/DataProvider'
 import { formatCurrency } from '@/utils/formatters'
+import { cleanText, email, hasLetter, maxLength, minLength, pattern, phone } from '@/utils/validators'
 import {
   createEmployee,
   listEmployees,
@@ -111,11 +112,36 @@ export default function EmployeesPage() {
   }
 
   const handleSubmit = async () => {
-    if (form.full_name.trim().length < 2) {
-      setFormError(t('employees.el-nombre-debe-tener-al-menos-2-caracteres'))
+    const fullName = cleanText(form.full_name)
+    const nameError =
+      minLength(2, t('employees.el-nombre-debe-tener-al-menos-2-caracteres'))(fullName) ??
+      maxLength(150)(fullName) ??
+      hasLetter()(fullName)
+    if (nameError) {
+      setFormError(nameError)
       return
     }
-    const input = toEmployeeInput(form)
+    const documentError = pattern(/^[A-Za-z0-9\-]{5,20}$/)(form.document)
+    if (documentError) {
+      setFormError(documentError)
+      return
+    }
+    const emailError = email()(form.email) ?? maxLength(100)(form.email)
+    if (emailError) {
+      setFormError(emailError)
+      return
+    }
+    const phoneError = phone()(form.phone) ?? maxLength(20)(form.phone)
+    if (phoneError) {
+      setFormError(phoneError)
+      return
+    }
+    const positionError = maxLength(80)(form.position)
+    if (positionError) {
+      setFormError(positionError)
+      return
+    }
+    const input = toEmployeeInput({ ...form, full_name: fullName })
     setSaving(true)
     try {
       if (editing) {
@@ -285,6 +311,8 @@ export default function EmployeesPage() {
             label={t('employees.nombre-completo')}
             required
             className="sm:col-span-2"
+            minLength={2}
+            maxLength={150}
             value={form.full_name}
             onChange={(event) => setForm({ ...form, full_name: event.target.value })}
             placeholder={t('employees.ej-juan-perez')}
@@ -293,12 +321,14 @@ export default function EmployeesPage() {
           />
           <Input
             label={t('employees.documento')}
+            maxLength={20}
             value={form.document}
             onChange={(event) => setForm({ ...form, document: event.target.value })}
             placeholder={t('employees.dni')}
           />
           <Input
             label={t('employees.cargo')}
+            maxLength={80}
             value={form.position}
             onChange={(event) => setForm({ ...form, position: event.target.value })}
             placeholder={t('employees.vendedor')}
@@ -306,12 +336,14 @@ export default function EmployeesPage() {
           <Input
             label={t('employees.correo')}
             type="email"
+            maxLength={100}
             value={form.email}
             onChange={(event) => setForm({ ...form, email: event.target.value })}
             placeholder={t('employees.correo-empresa-com')}
           />
           <Input
             label={t('employees.telefono')}
+            maxLength={20}
             value={form.phone}
             onChange={(event) => setForm({ ...form, phone: event.target.value })}
             placeholder={t('employees.telefono-ejemplo')}

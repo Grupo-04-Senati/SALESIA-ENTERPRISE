@@ -4,7 +4,19 @@ import type { Product, ProductInput } from '@/types/product'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/form'
-import { minNumber, required, validateForm } from '@/utils/validators'
+import {
+  cleanText,
+  code,
+  hasLetter,
+  integer,
+  maxDecimals,
+  maxLength,
+  minLength,
+  minNumber,
+  numberRange,
+  required,
+  validateForm,
+} from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
 import { getProductCategories } from '../services/productService'
 import { useLang } from '@/i18n/i18n'
@@ -80,19 +92,28 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
   }
 
   const rules: FormRules<FormValues> = {
-    sku: (value) => required(t('products.el-sku-es-obligatorio'))(value),
-    name: (value) => required(t('products.este-campo-es-obligatorio'))(value),
+    sku: (value) => required(t('products.el-sku-es-obligatorio'))(value) ?? code(30)(value),
+    name: (value) =>
+      required(t('products.este-campo-es-obligatorio'))(value) ??
+      minLength(2)(value) ??
+      maxLength(150)(value) ??
+      hasLetter()(value),
     category_id: required(t('products.selecciona-una-categoria')),
     cost_price: (value) =>
       required(t('products.el-costo-es-obligatorio'))(value) ??
-      minNumber(0, t('products.el-costo-no-puede-ser-negativo'))(value),
+      minNumber(0, t('products.el-costo-no-puede-ser-negativo'))(value) ??
+      maxDecimals(2)(value) ??
+      numberRange(0, 100000000)(value),
     sale_price: (value) =>
       required(t('products.el-precio-de-venta-es-obligatorio'))(value) ??
-      minNumber(0, t('products.el-precio-no-puede-ser-negativo'))(value),
+      minNumber(0, t('products.el-precio-no-puede-ser-negativo'))(value) ??
+      maxDecimals(2)(value) ??
+      numberRange(0, 100000000)(value),
     min_stock: (value) =>
       required(t('products.este-campo-es-obligatorio'))(value) ??
-      minNumber(0, t('products.el-stock-minimo-no-puede-ser-negativo'))(value),
-    unit: required(t('products.este-campo-es-obligatorio')),
+      minNumber(0, t('products.el-stock-minimo-no-puede-ser-negativo'))(value) ??
+      integer(0, 999999)(value),
+    unit: (value) => required(t('products.este-campo-es-obligatorio'))(value) ?? maxLength(20)(value),
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -109,7 +130,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
     try {
       await onSubmit({
         sku: values.sku.trim(),
-        name: values.name.trim(),
+        name: cleanText(values.name),
         category_id: Number(values.category_id),
         cost_price: Number(values.cost_price),
         sale_price: Number(values.sale_price),
@@ -142,6 +163,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         <Input
           label={t('products.sku')}
           required
+          maxLength={30}
           placeholder="SKU-0021"
           value={values.sku}
           onChange={setValue('sku')}
@@ -152,6 +174,8 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           <Input
             label={t('products.nombre-del-producto')}
             required
+            minLength={2}
+            maxLength={150}
             placeholder={t('products.gaseosa-500ml')}
             value={values.name}
             onChange={setValue('name')}
@@ -179,6 +203,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         <Input
           label={t('products.unidad')}
           required
+          maxLength={20}
           placeholder="UND"
           value={values.unit}
           onChange={setValue('unit')}
@@ -190,6 +215,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           required
           type="number"
           min="0"
+          max="100000000"
           step="0.01"
           inputMode="decimal"
           value={values.cost_price}
@@ -202,6 +228,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           required
           type="number"
           min="0"
+          max="100000000"
           step="0.01"
           inputMode="decimal"
           value={values.sale_price}
@@ -214,6 +241,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           required
           type="number"
           min="0"
+          max="999999"
           step="1"
           inputMode="numeric"
           value={values.min_stock}

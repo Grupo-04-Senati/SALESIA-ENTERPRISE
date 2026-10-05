@@ -4,7 +4,7 @@ import type { Customer, CustomerInput } from '@/types/customer'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/form'
-import { digits, email, minLength, required, validateForm } from '@/utils/validators'
+import { cleanText, digits, email, hasLetter, maxLength, minLength, phone, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules, Validator } from '@/utils/validators'
 import { CUSTOMER_SEGMENTS, SEGMENT_KEYS } from '../services/customerService'
 import { useLang } from '@/i18n/i18n'
@@ -80,9 +80,6 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
     })
   }
 
-  const phoneRule: Validator = (value) =>
-    !value.trim() || /^\+?\d{7,15}$/.test(value.trim()) ? null : t('customers.telefono-invalido')
-
   const documentNumberRule: Validator = (value) => {
     if (values.document_type === 'DNI')
       return digits(8, t('customers.el-dni-debe-tener-8-digitos'))(value)
@@ -93,12 +90,17 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
 
   const rules: FormRules<FormValues> = {
     document_number: (value) =>
-      required(t('customers.el-documento-es-obligatorio'))(value) ?? documentNumberRule(value),
+      required(t('customers.el-documento-es-obligatorio'))(value) ??
+      documentNumberRule(value) ??
+      maxLength(20)(value),
     name: (value) =>
       required(t('customers.campo-obligatorio'))(value) ??
-      minLength(3, t('customers.ingresa-el-nombre-completo'))(value),
-    email: email(t('customers.ingresa-un-correo-valido')),
-    phone: phoneRule,
+      minLength(3, t('customers.ingresa-el-nombre-completo'))(value) ??
+      maxLength(150)(value) ??
+      hasLetter()(value),
+    email: (value) => email(t('customers.ingresa-un-correo-valido'))(value) ?? maxLength(160)(value),
+    phone: phone(t('customers.telefono-invalido')),
+    address: maxLength(255),
     segment: required(t('customers.campo-obligatorio')),
   }
 
@@ -113,10 +115,10 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
       await onSubmit({
         document_type: values.document_type,
         document_number: values.document_number.trim(),
-        name: values.name.trim(),
+        name: cleanText(values.name),
         email: values.email.trim(),
         phone: values.phone.trim(),
-        address: values.address.trim(),
+        address: cleanText(values.address),
         segment: values.segment,
       })
     } finally {
@@ -158,6 +160,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
           label={t('customers.numero-de-documento')}
           required
           inputMode="numeric"
+          maxLength={20}
           placeholder="74125896"
           value={values.document_number}
           onChange={setValue('document_number')}
@@ -168,6 +171,8 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
           <Input
             label={t('customers.nombre-o-razon-social')}
             required
+            minLength={3}
+            maxLength={150}
             placeholder="María Quispe"
             value={values.name}
             onChange={setValue('name')}
@@ -178,6 +183,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         <Input
           label={t('customers.correo-electronico')}
           type="email"
+          maxLength={160}
           placeholder="maria@correo.com"
           value={values.email}
           onChange={setValue('email')}
@@ -186,6 +192,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
 
         <Input
           label={t('customers.telefono')}
+          maxLength={20}
           placeholder="+51987654321"
           value={values.phone}
           onChange={setValue('phone')}
@@ -211,6 +218,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         <div className="sm:col-span-2">
           <Textarea
             label={t('customers.direccion')}
+            maxLength={255}
             placeholder="Av. Los Olivos 123, Lima"
             value={values.address}
             onChange={setValue('address')}

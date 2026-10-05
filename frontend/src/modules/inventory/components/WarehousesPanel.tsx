@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { getState } from '@/data/store'
+import { cleanText, code, hasLetter, integer, maxLength, minLength, required } from '@/utils/validators'
 import {
   createWarehouse,
   createWarehouseStock,
@@ -93,17 +94,28 @@ export default function WarehousesPanel() {
   }
 
   const handleSubmit = async () => {
-    const code = form.code.trim()
-    const name = form.name.trim()
-    if (code.length < 1) {
-      setFormError(t('inventory.el-codigo-es-obligatorio'))
+    const warehouseCode = cleanText(form.code)
+    const name = cleanText(form.name)
+    const address = cleanText(form.address ?? '')
+    const codeError = required(t('inventory.el-codigo-es-obligatorio'))(warehouseCode) ?? code(20)(warehouseCode)
+    if (codeError) {
+      setFormError(codeError)
       return
     }
-    if (name.length < 2) {
-      setFormError(t('inventory.el-nombre-debe-tener-al-menos-2-caracteres'))
+    const nameError =
+      minLength(2, t('inventory.el-nombre-debe-tener-al-menos-2-caracteres'))(name) ??
+      maxLength(120)(name) ??
+      hasLetter()(name)
+    if (nameError) {
+      setFormError(nameError)
       return
     }
-    const input: WarehouseInput = { code, name, address: form.address?.trim() || null }
+    const addressError = maxLength(255)(address)
+    if (addressError) {
+      setFormError(addressError)
+      return
+    }
+    const input: WarehouseInput = { code: warehouseCode, name, address: address || null }
     setSaving(true)
     try {
       if (editing) {
@@ -188,8 +200,18 @@ export default function WarehousesPanel() {
       setStockError(t('inventory.el-stock-debe-ser-un-numero-mayor-o-igual-a-0'))
       return
     }
+    const stockError = integer(0, 9999999)(stockForm.stock)
+    if (stockError) {
+      setStockError(stockError)
+      return
+    }
     if (Number.isNaN(minStock) || minStock < 0) {
       setStockError(t('inventory.el-stock-minimo-debe-ser-un-numero-mayor-o-igual-a-0'))
+      return
+    }
+    const minStockError = integer(0, 9999999)(stockForm.min_stock)
+    if (minStockError) {
+      setStockError(minStockError)
       return
     }
     setStockSaving(true)
@@ -406,6 +428,7 @@ export default function WarehousesPanel() {
           </div>
           <Input
             label={t('inventory.direccion')}
+            maxLength={255}
             value={form.address ?? ''}
             onChange={(event) => setForm({ ...form, address: event.target.value })}
             placeholder={t('inventory.ej-av-principal-123')}
@@ -514,6 +537,7 @@ export default function WarehousesPanel() {
                 label={t('inventory.stock')}
                 type="number"
                 min={0}
+                max={9999999}
                 step={1}
                 value={stockForm.stock}
                 onChange={(event) => setStockForm({ ...stockForm, stock: event.target.value })}
@@ -522,6 +546,7 @@ export default function WarehousesPanel() {
                 label={t('inventory.minimo')}
                 type="number"
                 min={0}
+                max={9999999}
                 step={1}
                 value={stockForm.min_stock}
                 onChange={(event) => setStockForm({ ...stockForm, min_stock: event.target.value })}

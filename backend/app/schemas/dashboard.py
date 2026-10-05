@@ -4,17 +4,19 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 
-class PeriodOut(BaseModel):
+class PeriodOut(NormalizedModel):
     from_: str = Field(default='', alias='from')
     to: str = ''
 
     model_config = {'populate_by_name': True}
 
 
-class DashboardSummary(BaseModel):
+class DashboardSummary(NormalizedModel):
     period: PeriodOut
     sales: int = 0
     revenue: float = 0.0
@@ -28,21 +30,21 @@ class DashboardSummary(BaseModel):
     vs_previous_period: Dict[str, float] = Field(default_factory=dict)
 
 
-class SeriesPoint(BaseModel):
+class SeriesPoint(NormalizedModel):
     label: str
     revenue: float = 0.0
     transactions: int = 0
 
 
-class TopPoint(BaseModel):
+class TopPoint(NormalizedModel):
     name: str
     revenue: float = 0.0
     units: int = 0
     transactions: int = 0
 
 
-class StockAlert(BaseModel):
-    product_id: int
+class StockAlert(NormalizedModel):
+    product_id: int = Field(ge=1)
     sku: str
     name: str
     current_stock: int

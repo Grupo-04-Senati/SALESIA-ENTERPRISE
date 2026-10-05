@@ -3,28 +3,30 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 
-class StatInput(BaseModel):
+class StatInput(NormalizedModel):
     """Valores directos (pruebas académicas) o referencia a un dataset."""
 
     values: Optional[List[float]] = None
-    dataset_id: Optional[int] = None
+    dataset_id: Optional[int] = Field(default=None, ge=1)
     field: Optional[str] = None
     save_history: bool = True
 
 
-class Period(BaseModel):
+class Period(NormalizedModel):
     from_: str = Field(alias='from')
     to: str
 
     model_config = {'populate_by_name': True}
 
 
-class MetricResult(BaseModel):
+class MetricResult(NormalizedModel):
     metric: Literal['mean', 'median']
     value: float
     count: int
@@ -35,7 +37,7 @@ class MetricResult(BaseModel):
     calculated_at: Optional[datetime] = None
 
 
-class CompareResult(BaseModel):
+class CompareResult(NormalizedModel):
     mean: float
     median: float
     difference: float
@@ -45,13 +47,13 @@ class CompareResult(BaseModel):
     count: Optional[int] = None
 
 
-class Frequency(BaseModel):
+class Frequency(NormalizedModel):
     value: str
     count: int
     pct: float
 
 
-class VariableInfo(BaseModel):
+class VariableInfo(NormalizedModel):
     name: str
     type: Literal['quantitative', 'qualitative']
     subtype: str
@@ -63,30 +65,30 @@ class VariableInfo(BaseModel):
     frequencies: Optional[List[Frequency]] = None
 
 
-class VariablesResult(BaseModel):
+class VariablesResult(NormalizedModel):
     variables: List[VariableInfo]
     analysis_id: Optional[int] = None
 
 
-class VariableSpec(BaseModel):
-    name: str
-    label: Optional[str] = None
+class VariableSpec(NormalizedModel):
+    name: str = Field(max_length=100)
+    label: Optional[str] = Field(default=None, max_length=150)
     stat_type: Literal['qualitative', 'quantitative'] = 'quantitative'
     scale: Literal['nominal', 'ordinal', 'discrete', 'continuous'] = 'continuous'
-    unit: Optional[str] = None
+    unit: Optional[str] = Field(default=None, max_length=30)
     is_random_variable: bool = False
 
 
-class DatasetCreate(BaseModel):
+class DatasetCreate(NormalizedModel):
     name: str = Field(min_length=2, max_length=150)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
     source: Literal['sales', 'customers', 'products', 'custom'] = 'sales'
     filters: dict = {}
     fields: Optional[List[VariableSpec]] = None
 
 
-class DatasetResponse(BaseModel):
-    id: int
+class DatasetResponse(NormalizedModel):
+    id: int = Field(ge=1)
     name: str
     description: Optional[str] = None
     source: str
@@ -95,10 +97,10 @@ class DatasetResponse(BaseModel):
     variables: List[VariableSpec] = []
 
 
-class AnalysisRecord(BaseModel):
+class AnalysisRecord(NormalizedModel):
     """Historial de análisis (RF-21) en la forma que consume el frontend."""
 
-    id: int
+    id: int = Field(ge=1)
     kind: Literal['media', 'mediana', 'comparacion', 'bayes', 'variable']
     label: str
     result: str

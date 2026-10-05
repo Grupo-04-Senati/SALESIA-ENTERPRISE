@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatDateTime } from '@/utils/formatters'
 import { getState } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
+import { cleanText, hasLetter, maxLength, minLength } from '@/utils/validators'
 import {
   createInteraction,
   deleteInteraction,
@@ -131,20 +132,29 @@ export default function InteractionsPanel() {
 
   const handleSubmit = async () => {
     const customerId = Number(form.customer_id)
-    const subject = form.subject.trim()
+    const subject = cleanText(form.subject)
     if (!customerId) {
       setFormError(t('customers.selecciona-el-cliente-de-la-interaccion'))
       return
     }
-    if (subject.length < 3) {
-      setFormError(t('customers.el-asunto-debe-tener-al-menos-3-caracteres'))
+    const subjectError =
+      minLength(3, t('customers.el-asunto-debe-tener-al-menos-3-caracteres'))(subject) ??
+      maxLength(150)(subject) ??
+      hasLetter()(subject)
+    if (subjectError) {
+      setFormError(subjectError)
+      return
+    }
+    const notesError = maxLength(500)(form.notes)
+    if (notesError) {
+      setFormError(notesError)
       return
     }
     const input: InteractionInput = {
       customer_id: customerId,
       kind: form.kind,
       subject,
-      notes: form.notes.trim() || null,
+      notes: cleanText(form.notes) || null,
       occurred_at: form.occurred_at || null,
     }
     setSaving(true)
@@ -360,6 +370,7 @@ export default function InteractionsPanel() {
           />
           <Textarea
             label={t('customers.notas')}
+            maxLength={500}
             hint={t('customers.opcional-detalle-de-lo-tratado-en-el-contacto')}
             value={form.notes}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}

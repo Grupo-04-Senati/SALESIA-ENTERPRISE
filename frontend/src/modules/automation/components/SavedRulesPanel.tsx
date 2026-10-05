@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
+import { cleanText, code, hasLetter, maxLength } from '@/utils/validators'
 import {
   createSavedRule,
   deleteSavedRule,
@@ -127,14 +128,38 @@ export default function SavedRulesPanel() {
   }
 
   const handleSubmit = async () => {
-    const code = form.code.trim()
-    const name = form.name.trim()
-    if (code.length < 1 || code.length > 50) {
+    const codeValue = form.code.trim()
+    const name = cleanText(form.name)
+    const description = cleanText(form.description)
+    if (codeValue.length < 1 || codeValue.length > 50) {
       setFormError(t('automation.el-codigo-debe-tener-entre-1-y-50-caracteres'))
+      return
+    }
+    const codeError = code(50)(codeValue)
+    if (codeError) {
+      setFormError(codeError)
       return
     }
     if (name.length < 3) {
       setFormError(t('automation.el-nombre-debe-tener-al-menos-3-caracteres'))
+      return
+    }
+    const nameMaxError = maxLength(150, 'El nombre debe tener como máximo 150 caracteres.')(name)
+    if (nameMaxError) {
+      setFormError(nameMaxError)
+      return
+    }
+    const nameLetterError = hasLetter()(name)
+    if (nameLetterError) {
+      setFormError(nameLetterError)
+      return
+    }
+    const descriptionMaxError = maxLength(
+      500,
+      'La descripción no puede superar 500 caracteres.',
+    )(description)
+    if (descriptionMaxError) {
+      setFormError(descriptionMaxError)
       return
     }
     const condition = parseJsonObject(form.condition)
@@ -144,9 +169,9 @@ export default function SavedRulesPanel() {
     if (condition.error || action.error) return
 
     const input: SavedRuleInput = {
-      code,
+      code: codeValue,
       name,
-      description: form.description.trim() || null,
+      description: description || null,
       severity: form.severity,
       condition: condition.value,
       action: action.value,
@@ -340,6 +365,7 @@ export default function SavedRulesPanel() {
           <Textarea
             label={t('automation.descripcion')}
             hint={t('automation.opcional-que-hace-esta-regla')}
+            maxLength={500}
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
             placeholder={t('automation.ej-avisa-cuando-un-producto-baje-del-stock-minimo')}

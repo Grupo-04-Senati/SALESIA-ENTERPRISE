@@ -4,7 +4,7 @@ import type { MovementType } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/form'
-import { minNumber, required, validateForm } from '@/utils/validators'
+import { cleanText, integer, maxLength, minNumber, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
 import { useLang } from '@/i18n/i18n'
 import type { MovementInput } from '../services/inventoryService'
@@ -69,11 +69,13 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
   const rules: FormRules<FormValues> = {
     product_id: required(t('inventory.selecciona-un-producto')),
     quantity: (value) =>
-      required()(value) ?? minNumber(1, t('inventory.la-cantidad-debe-ser-mayor-a-cero'))(value),
+      required()(value) ??
+      minNumber(1, t('inventory.la-cantidad-debe-ser-mayor-a-cero'))(value) ??
+      integer(1, 999999)(value),
     reason: (value) =>
-      needsReason
+      (needsReason
         ? required(t('inventory.ingresa-el-motivo-obligatorio-en-merma-y-ajuste'))(value)
-        : null,
+        : null) ?? maxLength(255)(value),
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -88,7 +90,7 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
         product_id: Number(values.product_id),
         type: values.type as MovementType,
         quantity: Number(values.quantity),
-        reason: values.reason,
+        reason: cleanText(values.reason),
       })
     } finally {
       setSubmitting(false)
@@ -144,6 +146,7 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
             required
             type="number"
             min="1"
+            max="999999"
             step="1"
             inputMode="numeric"
             value={values.quantity}
@@ -155,6 +158,7 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
         <Textarea
           label={t('inventory.motivo')}
           required={needsReason}
+          maxLength={255}
           placeholder={
             needsReason
               ? t('inventory.obligatorio-para-merma-y-ajuste-rn-21')

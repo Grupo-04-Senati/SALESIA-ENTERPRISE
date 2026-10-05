@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
+import { cleanText, maxLength, required } from '@/utils/validators'
 import { createUnit, deleteUnit, listUnits, updateUnit } from '../services/unitService'
 import type { Unit, UnitInput } from '../services/unitService'
 
@@ -74,12 +75,19 @@ export default function UnitsPanel() {
   }
 
   const handleSubmit = async () => {
-    const name = form.name.trim()
-    if (name.length < 1) {
-      setFormError(t('inventory.el-nombre-de-la-unidad-es-obligatorio'))
+    const name = cleanText(form.name)
+    const nameError = required(t('inventory.el-nombre-de-la-unidad-es-obligatorio'))(name) ?? maxLength(30)(name)
+    if (nameError) {
+      setFormError(nameError)
       return
     }
-    const input: UnitInput = { name, symbol: form.symbol?.trim() || null }
+    const symbol = cleanText(form.symbol ?? '')
+    const symbolError = maxLength(10)(symbol)
+    if (symbolError) {
+      setFormError(symbolError)
+      return
+    }
+    const input: UnitInput = { name, symbol: symbol || null }
     setSaving(true)
     try {
       if (editing) {

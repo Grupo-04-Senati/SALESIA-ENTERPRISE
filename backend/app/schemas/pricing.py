@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import NormalizedModel
 
 PromotionKind = Literal['percent', 'fixed']
+# pricing_service._to_active solo admite 'active'/'inactive' (None => activo).
+PriceListStatus = Literal['active', 'inactive']
 
 
-class PriceListData(BaseModel):
+class PriceListData(NormalizedModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
-    status: Optional[str] = Field(default=None, max_length=10)
+    status: Optional[PriceListStatus] = None
 
 
 class PriceListCreate(PriceListData):
@@ -24,23 +28,23 @@ class PriceListUpdate(PriceListData):
     pass
 
 
-class PriceListItemInput(BaseModel):
-    product_id: int
-    price: float = Field(ge=0)
+class PriceListItemInput(NormalizedModel):
+    product_id: int = Field(ge=1)
+    price: float = Field(ge=0, le=100_000_000)
 
 
-class PriceListItemsPayload(BaseModel):
+class PriceListItemsPayload(NormalizedModel):
     items: List[PriceListItemInput] = Field(min_length=1)
 
 
-class PromotionData(BaseModel):
+class PromotionData(NormalizedModel):
     name: str = Field(min_length=2, max_length=120)
     kind: PromotionKind = 'percent'
-    value: float = Field(gt=0)
-    starts_at: Optional[str] = None
-    ends_at: Optional[str] = None
-    status: Optional[str] = Field(default=None, max_length=10)
-    product_ids: List[int] = Field(min_length=1)
+    value: float = Field(gt=0, le=100_000_000)
+    starts_at: Optional[str] = Field(default=None, max_length=32)
+    ends_at: Optional[str] = Field(default=None, max_length=32)
+    status: Optional[PriceListStatus] = None
+    product_ids: List[Annotated[int, Field(ge=1)]] = Field(min_length=1)
 
 
 class PromotionCreate(PromotionData):

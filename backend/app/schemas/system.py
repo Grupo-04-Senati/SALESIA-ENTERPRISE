@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field, field_validator
+
+from app.schemas.base import NormalizedModel
 
 NotificationLevel = Literal['info', 'warning', 'success', 'error']
 ExportType = Literal['sales', 'products', 'customers', 'inventory', 'returns', 'quotes']
@@ -16,10 +18,19 @@ Severity = Literal['info', 'warning', 'critical']
 KpiCode = Literal['revenue', 'sales_count', 'avg_ticket', 'customers', 'low_stock']
 StatusValue = Literal['active', 'inactive']
 
+# Tope de seguridad para payloads serializados que se guardan como JSON.
+MAX_JSON_CHARS = 10_000
 
-class NotificationData(BaseModel):
+
+def _check_serialized_size(value: Optional[dict]) -> Optional[dict]:
+    if value is not None and len(str(value)) > MAX_JSON_CHARS:
+        raise ValueError(f'El contenido serializado supera los {MAX_JSON_CHARS} caracteres.')
+    return value
+
+
+class NotificationData(NormalizedModel):
     title: str = Field(min_length=3, max_length=150)
-    message: str = Field(min_length=3)
+    message: str = Field(min_length=3, max_length=2000)
     level: NotificationLevel = 'info'
     user_id: Optional[int] = Field(default=None, ge=1)
 
@@ -28,7 +39,7 @@ class NotificationCreate(NotificationData):
     pass
 
 
-class DataExportData(BaseModel):
+class DataExportData(NormalizedModel):
     export_type: ExportType
     format: ExportFormat = 'csv'
 
@@ -37,13 +48,18 @@ class DataExportCreate(DataExportData):
     pass
 
 
-class ScheduledReportData(BaseModel):
+class ScheduledReportData(NormalizedModel):
     report_type: ReportType
     title: str = Field(min_length=3, max_length=150)
     parameters: Optional[dict] = None
     frequency: Frequency = 'daily'
     next_run_at: Optional[datetime] = None
     status: Optional[StatusValue] = None
+
+    @field_validator('parameters')
+    @classmethod
+    def _limit_parameters(cls, value: Optional[dict]) -> Optional[dict]:
+        return _check_serialized_size(value)
 
 
 class ScheduledReportCreate(ScheduledReportData):
@@ -56,7 +72,7 @@ class ScheduledReportUpdate(ScheduledReportData):
     frequency: Optional[Frequency] = None
 
 
-class AutomationRuleData(BaseModel):
+class AutomationRuleData(NormalizedModel):
     code: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=3, max_length=150)
     description: Optional[str] = Field(default=None, max_length=2000)
@@ -64,6 +80,11 @@ class AutomationRuleData(BaseModel):
     action: Optional[dict] = None
     severity: Severity = 'info'
     status: Optional[StatusValue] = None
+
+    @field_validator('condition', 'action')
+    @classmethod
+    def _limit_payload(cls, value: Optional[dict]) -> Optional[dict]:
+        return _check_serialized_size(value)
 
 
 class AutomationRuleCreate(AutomationRuleData):
@@ -75,7 +96,7 @@ class AutomationRuleUpdate(AutomationRuleData):
     name: Optional[str] = Field(default=None, min_length=3, max_length=150)
 
 
-class KpiSnapshotCreate(BaseModel):
+class KpiSnapshotCreate(NormalizedModel):
     kpi_code: KpiCode
     period_start: str = Field(min_length=10, max_length=10)
     period_end: str = Field(min_length=10, max_length=10)
