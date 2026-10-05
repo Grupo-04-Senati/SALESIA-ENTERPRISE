@@ -1,5 +1,17 @@
-import { useEffect, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useEffect, useState, type ReactNode } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { Download, FileText, Printer, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -17,6 +29,7 @@ import {
   downloadCsv,
   generateReport,
   getMonthlySummary,
+  getTicketDistribution,
 } from '../services/reportService'
 import type { Report, ReportType } from '../services/reportService'
 
@@ -28,6 +41,34 @@ import type { Report, ReportType } from '../services/reportService'
  * TODO(Fase 05): el backend generará los archivos finales
  * (POST /api/v1/reports y /reports/{id}/export).
  */
+
+const TOOLTIP_STYLE = {
+  background: '#FFFFFF',
+  border: `1px solid ${CHART_GRID}`,
+  borderRadius: 8,
+  fontSize: 12,
+}
+
+const PIE_COLORS = ['#1E3A8A', '#06B6D4', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6']
+
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="card no-print">
+      <h3 className="text-h4 text-gray-800">{title}</h3>
+      <div className="mt-4 h-56">{children}</div>
+    </div>
+  )
+}
+
+/** Conteo de clientes por segmento para el gráfico de torta. */
+function segmentsOf(report: Report): Array<{ name: string; value: number }> {
+  const counts = new Map<string, number>()
+  for (const row of report.rows) {
+    const segment = String(row.segmento ?? '—')
+    counts.set(segment, (counts.get(segment) ?? 0) + 1)
+  }
+  return [...counts].map(([name, value]) => ({ name, value }))
+}
 
 export default function ReportsPage() {
   const toast = useToast()
@@ -216,13 +257,119 @@ export default function ReportsPage() {
                       <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="mes" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
                       <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(value: number) => `${Math.round(value / 1000)}k`} />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={TOOLTIP_STYLE} />
                       <Bar dataKey="ingresos" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             ))}
+
+          {report.type === 'estadistico' &&
+            (getTicketDistribution().every((bin) => bin.frecuencia === 0) ? (
+              <div className="card no-print">
+                <h3 className="text-h4 text-gray-800">
+                  {t('analytics.frecuencias-por-rango-de-ticket-promedio-txt-62-histogram')}
+                </h3>
+                <EmptyState
+                  title={t('reports.sin-ventas-en-el-periodo')}
+                  description={t('reports.este-reporte-no-tiene-registros-porque-todavia-no-hay-datos-en-el-sistema')}
+                />
+              </div>
+            ) : (
+              <ChartCard title={t('analytics.frecuencias-por-rango-de-ticket-promedio-txt-62-histogram')}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getTicketDistribution()} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                    <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                    <XAxis
+                      dataKey="rango"
+                      tick={{ fill: CHART_AXIS, fontSize: 12 }}
+                      axisLine={{ stroke: CHART_GRID }}
+                      tickLine={false}
+                      interval={0}
+                      angle={-25}
+                      textAnchor="end"
+                      height={56}
+                    />
+                    <YAxis allowDecimals={false} tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(value) => [formatNumber(Number(value)), 'Ventas con ese rango de ticket']} contentStyle={TOOLTIP_STYLE} />
+                    <Bar dataKey="frecuencia" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            ))}
+
+          {report.type === 'productos' && report.rows.length > 0 && (
+            <ChartCard title="Stock por producto">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={report.rows.map((row) => ({
+                    producto: String(row.producto),
+                    stock: Number(row.stock),
+                  }))}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+                >
+                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                  <XAxis
+                    dataKey="producto"
+                    tick={{ fill: CHART_AXIS, fontSize: 12 }}
+                    axisLine={{ stroke: CHART_GRID }}
+                    tickLine={false}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={56}
+                  />
+                  <YAxis allowDecimals={false} tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(value) => [`${formatNumber(Number(value))} uds`, t('reports.col-stock')]} contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="stock" fill="#1E3A8A" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+
+          {report.type === 'clientes' && report.rows.length > 0 && (
+            <ChartCard title="Clientes por segmento">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={segmentsOf(report)}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={48}
+                    outerRadius={84}
+                    paddingAngle={2}
+                  >
+                    {segmentsOf(report).map((entry, index) => (
+                      <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value) => `${formatNumber(Number(value))} ${t('reports.clientes')}`} contentStyle={TOOLTIP_STYLE} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+
+          {report.type === 'vendedores' && report.rows.length > 0 && (
+            <ChartCard title="Ingresos por vendedor">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={report.rows.map((row) => ({
+                    vendedor: String(row.vendedor),
+                    ingresos: Number(row.ingresos),
+                  }))}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+                >
+                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                  <XAxis dataKey="vendedor" tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
+                  <YAxis tick={{ fill: CHART_AXIS, fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="ingresos" fill="#10B981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
 
           {report.rows.length === 0 ? (
             <div className="card no-print">
@@ -243,15 +390,39 @@ export default function ReportsPage() {
                 <TableRow key={index}>
                   {report.columns.map((column) => {
                     const value = row[column.key]
+                    // Unidad explícita (reporte estadístico): 'uds' y '%' no
+                    // son dinero, aunque la clave de la columna sea "valor".
+                    const unidad = typeof row.unidad === 'string' ? row.unidad : ''
+                    let display: string | number
+                    if (typeof value !== 'number') {
+                      display = value
+                    } else if (unidad === 'uds' || unidad === '%') {
+                      display = formatNumber(value)
+                    } else if (unidad === 'S/') {
+                      display = formatCurrency(value)
+                    } else if (
+                      column.key.includes('total') ||
+                      column.key.includes('ingreso') ||
+                      column.key.includes('costo') ||
+                      column.key.includes('precio') ||
+                      column.key.includes('ticket') ||
+                      column.key.includes('impuesto') ||
+                      column.key.includes('descuento') ||
+                      column.key.includes('saldo') ||
+                      column.key.includes('media') ||
+                      column.key.includes('mediana') ||
+                      column.key.includes('diferencia') ||
+                      column.key.includes('minimo') ||
+                      column.key.includes('maximo') ||
+                      column.key === 'valor'
+                    ) {
+                      display = formatCurrency(value)
+                    } else {
+                      display = formatNumber(value)
+                    }
                     return (
                       <TableCell key={column.key} className={column.align === 'right' ? 'text-right' : undefined}>
-                        {typeof value === 'number'
-                          ? column.key.includes('total') || column.key.includes('ingreso') || column.key.includes('costo') || column.key.includes('precio') || column.key.includes('ticket') || column.key.includes('impuesto') || column.key.includes('descuento') || column.key.includes('saldo')
-                            ? formatCurrency(value)
-                            : column.key.includes('media') || column.key.includes('mediana') || column.key.includes('diferencia') || column.key.includes('minimo') || column.key.includes('maximo') || column.key === 'valor'
-                              ? formatCurrency(value)
-                              : formatNumber(value)
-                          : value}
+                        {display}
                       </TableCell>
                     )
                   })}

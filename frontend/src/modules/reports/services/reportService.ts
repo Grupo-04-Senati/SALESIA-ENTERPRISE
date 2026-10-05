@@ -103,12 +103,28 @@ export async function generateReport(type: ReportType, t: Translator): Promise<R
     const dataset = getTicketDataset({ months: 12, seller: '', category: '' })
     const compare = compareMeanMedian(dataset)
     const sinVentas = dataset.length === 0
+    // Moda: ticket que más se repite; si todos son distintos → "Sin repetición".
+    const frecuencias = new Map<number, number>()
+    for (const ticket of dataset) {
+      const key = round2(ticket)
+      frecuencias.set(key, (frecuencias.get(key) ?? 0) + 1)
+    }
+    let modaValue: number | string = '—'
+    let modaCount = 0
+    frecuencias.forEach((count, value) => {
+      if (count > modaCount) {
+        modaCount = count
+        modaValue = value
+      }
+    })
+    if (!sinVentas && modaCount < 2) modaValue = 'Sin repetición'
     const rows: ReportRow[] = [
       { indicador: t('reports.ind-ingresos-periodo'), valor: kpis.ingresos, unidad: 'S/' },
       { indicador: t('reports.ind-transacciones'), valor: kpis.transacciones, unidad: 'uds' },
       { indicador: t('reports.ind-ticket-promedio'), valor: kpis.ticketPromedio, unidad: 'S/' },
       { indicador: t('reports.ind-media-tickets'), valor: sinVentas ? '—' : round2(compare.mean), unidad: 'S/' },
       { indicador: t('reports.ind-mediana-tickets'), valor: sinVentas ? '—' : round2(compare.median), unidad: 'S/' },
+      { indicador: 'Moda de tickets', valor: modaValue, unidad: typeof modaValue === 'number' ? 'S/' : '—' },
       { indicador: t('reports.ind-diferencia-media-mediana'), valor: sinVentas ? '—' : compare.difference, unidad: 'S/' },
       { indicador: t('reports.ind-variacion-mensual'), valor: kpis.variacionMensual, unidad: '%' },
       { indicador: t('reports.ind-minimo-ticket'), valor: sinVentas ? '—' : Math.min(...dataset), unidad: 'S/' },
