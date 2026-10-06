@@ -71,10 +71,13 @@ def test_store_quote_requiere_contacto(client):
     assert response.status_code == 422
 
 
-def test_store_quote_crea_cotizacion_real(client, admin_headers):
-    products = client.get('/api/v1/store/products?page_size=2').json()['items']
-    assert len(products) >= 1
-    target = products[0]
+def test_store_quote_crea_cotizacion_y_venta_con_stock(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    assert products
+    target = max(products, key=lambda row: row['current_stock'])
+    assert target['current_stock'] >= 1, 'el seed debe dejar stock disponible'
+    qty = min(2, target['current_stock'])
+    stock_before = target['current_stock']
 
     response = client.post('/api/v1/store/quotes', json={
         'customer': {
@@ -82,7 +85,7 @@ def test_store_quote_crea_cotizacion_real(client, admin_headers):
             'phone': '999888777',
             'email': 'tienda.web@example.com',
         },
-        'items': [{'product_id': target['id'], 'quantity': 2}],
+        'items': [{'product_id': target['id'], 'quantity': qty}],
         'notes': 'Prueba automatizada del storefront',
     })
     assert response.status_code == 201, response.text
@@ -91,20 +94,62 @@ def test_store_quote_crea_cotizacion_real(client, admin_headers):
     assert quote['customer_name'] == 'Cliente Tienda Web'
     assert quote['item_count'] == 1
     assert quote['tax'] == 0
-    assert quote['subtotal'] == round(target['sale_price'] * 2, 2)
+    assert quote['subtotal'] == round(target['sale_price'] * qty, 2)
     assert quote['total'] == quote['subtotal']
+
+    # El pedido queda convertido en venta automática (stock descontado + kardex).
+    assert quote['status'] == 'converted'
+    assert quote['sale_number'].startswith('V-')
+
+    stock_after = client.get(
+        f"/api/v1/store/products/{target['id']}"
+    ).json()['current_stock']
+    assert stock_after == stock_before - qty, 'la compra de la tienda debe descontar stock'
+
+    sales = client.get('/api/v1/sales?page_size=100', headers=admin_headers).json()['items']
+    venta = next((row for row in sales if row['sale_number'] == quote['sale_number']), None)
+    assert venta is not None, 'la venta debe aparecer en /sales (alimenta estadísticas)'
+    assert venta['status'] == 'pending'
 
     # El precio se recalcula en servidor con el catálogo vigente (RN-11).
     detail = client.get(
         f"/api/v1/quotes/{quote['id']}", headers=admin_headers
     ).json()
     assert detail['items'][0]['unit_price'] == target['sale_price']
+    assert detail['status'] == 'converted'
 
-    # Limpieza: solo se pueden borrar las cotizaciones en borrador.
-    deleted = client.delete(
-        f"/api/v1/quotes/{quote['id']}", headers=admin_headers
+    # Limpieza: anular la venta devuelve el stock.
+    cancelled = client.post(
+        f"/api/v1/sales/{quote['sale_id']}/cancel",
+        json={'reason': 'limpieza del test de storefront'},
+        headers=admin_headers,
     )
-    assert deleted.status_code == 200
+    assert cancelled.status_code == 200, cancelled.text
+    restored = client.get(
+        f"/api/v1/store/products/{target['id']}"
+    ).json()['current_stock']
+    assert restored == stock_before
+
+
+def test_store_quote_sin_stock_se_rechaza(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    assert products
+    target = min(products, key=lambda row: row['current_stock'])
+    qty = target['current_stock'] + 1
+
+    response = client.post('/api/v1/store/quotes', json={
+        'customer': {'name': 'Cliente Sin Stock', 'phone': '999000111'},
+        'items': [{'product_id': target['id'], 'quantity': qty}],
+    })
+    assert response.status_code == 400, response.text
+    body = response.json()
+    assert 'Stock insuficiente' in body['message']
+    assert str(target['current_stock']) in body['message']
+
+    # No queda cotización huérfana cuando se rechaza por stock.
+    quotes = client.get('/api/v1/quotes?page_size=100', headers=admin_headers).json()['items']
+    leftovers = [row for row in quotes if row['customer_name'] == 'Cliente Sin Stock']
+    assert leftovers == [], 'la cotización rechazada no debe persistir'
 
 
 def test_store_quote_producto_inexistente(client):

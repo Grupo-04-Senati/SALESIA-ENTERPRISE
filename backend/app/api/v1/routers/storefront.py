@@ -17,12 +17,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import client_ip
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import NotFound
+from app.core.exceptions import AppError, BusinessRuleError, NotFound
 from app.models.company import Company
 from app.models.customer import Customer
+from app.models.inventory import Inventory
 from app.models.product import Product
+from app.models.quote import Quote
 from app.schemas.customer import CustomerCreate
-from app.schemas.quotes import QuoteCreate, QuoteItemInput
+from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
 from app.schemas.storefront import StoreQuoteCreate
 from app.services import customer_service, product_service, quote_service
 
@@ -173,12 +175,44 @@ def _find_or_create_customer(db: Session, company_id: int, payload: StoreQuoteCr
     return db.get(Customer, created['id'])
 
 
+def _validate_store_stock(db: Session, company_id: int, payload: StoreQuoteCreate, by_id: dict) -> None:
+    """RN-10 en la tienda: no se confirma un pedido con menos stock del pedido."""
+    stock_rows = db.execute(
+        select(Inventory.product_id, Inventory.stock).where(
+            Inventory.product_id.in_([item.product_id for item in payload.items])
+        )
+    ).all()
+    available_map = {row[0]: row[1] for row in stock_rows}
+    for item in payload.items:
+        available = available_map.get(item.product_id, 0)
+        if item.quantity > available:
+            raise BusinessRuleError(
+                f'Stock insuficiente de {by_id[item.product_id].name}: '
+                f'pediste {item.quantity} y hay {available} disponibles.'
+            )
+
+
+def _discard_unconverted_quote(db: Session, company_id: int, quote_id: int) -> None:
+    """Elimina la cotización si la conversión a venta falló (no dejar huérfanos)."""
+    try:
+        row = db.get(Quote, quote_id)
+        if row is None or row.status == 'converted':
+            return
+        row.status = 'draft'
+        db.commit()
+        quote_service.delete_quote(db, company_id, quote_id, actor=None)
+    except Exception:  # noqa: BLE001 - la limpieza no debe enmascarar el error original
+        db.rollback()
+
+
 @router.post('/quotes', status_code=status.HTTP_201_CREATED)
 def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depends(get_db)):
-    """Crea una cotización real en SalesIA desde el carrito de la tienda.
+    """Registra el pedido de la tienda: cotización + venta automática en SalesIA.
 
-    Los precios se recalculan en servidor con el catálogo vigente (RN-11) y
-    ``tax_rate=0`` para que coincida con el subtotal mostrado en la tienda.
+    Los precios se recalculan en servidor con el catálogo vigente (RN-11),
+    ``tax_rate=0`` para coincidir con el subtotal mostrado en la tienda y la
+    cotización se convierte de inmediato en venta: valida stock (RN-10),
+    lo descuenta con kardex y la venta queda en ``ventas`` para estadísticas.
     """
     company_id = _company_id(db)
     ip = client_ip(request)
@@ -217,4 +251,21 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
         actor=None,
         ip=ip,
     )
-    return quote
+
+    try:
+        _validate_store_stock(db, company_id, payload, by_id)
+        quote_service.update_quote_status(
+            db, company_id, quote['id'], QuoteStatusUpdate(status='approved'), actor=None, ip=ip
+        )
+        converted = quote_service.convert_quote(db, company_id, quote['id'], actor=None, ip=ip)
+    except AppError:
+        db.rollback()
+        _discard_unconverted_quote(db, company_id, quote['id'])
+        raise
+
+    return {
+        **quote,
+        'status': 'converted',
+        'sale_id': converted['sale_id'],
+        'sale_number': converted['sale_number'],
+    }

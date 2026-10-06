@@ -298,12 +298,15 @@ def convert_quote(
     ).scalars().all()
 
     # RN-07: el vendedor del usuario actual (empleados.user_id) o el primero activo.
-    seller = db.execute(
-        select(Employee).where(
-            Employee.company_id == company_id,
-            Employee.user_id == (actor.id if actor else None),
-        )
-    ).scalar_one_or_none()
+    actor_user_id = actor.id if actor else None
+    seller = None
+    if actor_user_id is not None:
+        seller = db.execute(
+            select(Employee).where(
+                Employee.company_id == company_id,
+                Employee.user_id == actor_user_id,
+            )
+        ).scalar_one_or_none()
     if seller is None:
         seller = db.execute(
             select(Employee)
