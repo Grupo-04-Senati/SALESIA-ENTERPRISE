@@ -38,3 +38,13 @@ class StoreQuoteCreate(NormalizedModel):
     customer: StoreCustomer
     items: List[StoreQuoteItem] = Field(min_length=1, max_length=50)
     notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class StoreContactCreate(NormalizedModel):
+    """Mensaje del formulario de contacto público de la tienda."""
+
+    letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
+    name: str = Field(min_length=3, max_length=80)
+    email: EmailStr = Field(max_length=50)
+    phone: str = Field(max_length=15, pattern=r'^\d{7,15}$')
+    message: str = Field(min_length=10, max_length=2000)

@@ -25,8 +25,10 @@ from app.models.product import Product
 from app.models.quote import Quote
 from app.schemas.customer import CustomerCreate
 from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
-from app.schemas.storefront import StoreQuoteCreate
-from app.services import customer_service, product_service, quote_service
+from app.schemas.storefront import StoreContactCreate, StoreQuoteCreate
+from app.schemas.system import NotificationCreate
+from app.services import customer_service, product_service, quote_service, system_service
+from app.services.event_service import log_app_event
 
 router = APIRouter(prefix='/store', tags=['storefront'])
 
@@ -269,3 +271,47 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
         'sale_id': converted['sale_id'],
         'sale_number': converted['sale_number'],
     }
+
+
+@router.post('/contact', status_code=status.HTTP_201_CREATED)
+def store_contact(payload: StoreContactCreate, request: Request, db: Session = Depends(get_db)):
+    """Recibe el formulario de contacto de la tienda y lo registra en SalesIA.
+
+    Crea una notificación para los administradores (campana del sistema) y
+    deja el evento en auditoría; la tienda solo muestra éxito si esto responde 201.
+    """
+    company_id = _company_id(db)
+    ip = client_ip(request)
+    message = payload.message.strip()
+    summary = message if len(message) <= 180 else f'{message[:177]}…'
+
+    system_service.create_notification(
+        db,
+        company_id,
+        NotificationCreate(
+            title=f'Mensaje de la tienda · {payload.name.strip()}',
+            message=f'{summary} · Correo: {payload.email} · Tel: {payload.phone}',
+            level='info',
+            module='tienda',
+            target_role='Admin',
+            detail={
+                'source': 'storefront',
+                'name': payload.name.strip(),
+                'email': payload.email,
+                'phone': payload.phone,
+                'message': message,
+            },
+        ),
+        actor=None,
+        ip=ip,
+    )
+    log_app_event(
+        db,
+        event_type='store.contact',
+        company_id=company_id,
+        entity='contacto',
+        entity_id=0,
+        payload={'name': payload.name.strip(), 'email': payload.email, 'phone': payload.phone},
+    )
+    db.commit()
+    return {'status': 'ok', 'message': 'Mensaje recibido. Te contactaremos pronto.'}

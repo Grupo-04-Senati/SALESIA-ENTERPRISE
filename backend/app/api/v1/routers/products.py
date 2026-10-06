@@ -124,6 +124,25 @@ async def upload_product_image(
 
 # ---------------------------------------------------------------- categorÃ­as
 
+@router.post('/categories/image', status_code=status.HTTP_201_CREATED)
+async def upload_category_image(
+    file: UploadFile = File(...),
+    actor: User = Depends(admin_only),
+):
+    """Sube una imagen de categoría a Supabase Storage (carpeta `categories`)."""
+    import uuid as _uuid
+    from pathlib import Path as _Path
+
+    stem = _Path(file.filename or '').stem or 'categoria'
+    url = storage_service.upload_image(
+        await file.read(),
+        folder='categories',
+        name=f'{stem}-{_uuid.uuid4().hex[:8]}',
+        content_type=file.content_type or '',
+    )
+    return {'url': url}
+
+
 @router.get('/categories')
 def list_categories(
     db: Session = Depends(get_db),

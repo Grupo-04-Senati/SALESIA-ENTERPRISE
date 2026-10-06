@@ -158,3 +158,31 @@ def test_store_quote_producto_inexistente(client):
         'items': [{'product_id': 999999999, 'quantity': 1}],
     })
     assert response.status_code == 404
+
+
+def test_store_contact_registra_notificacion(client, admin_headers):
+    response = client.post('/api/v1/store/contact', json={
+        'name': 'Cliente Contacto Web',
+        'email': 'contacto.web@example.com',
+        'phone': '988777666',
+        'message': 'Hola, quiero información sobre precios de mayoreo.',
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()['status'] == 'ok'
+
+    notifications = client.get(
+        '/api/v1/notifications?page_size=50', headers=admin_headers
+    ).json()['items']
+    found = [row for row in notifications if 'Cliente Contacto Web' in row.get('title', '')]
+    assert found, 'el mensaje de contacto debe generar una notificación en SalesIA'
+    assert 'contacto.web@example.com' in found[0].get('message', '')
+
+
+def test_store_contact_valida_datos(client):
+    response = client.post('/api/v1/store/contact', json={
+        'name': 'AB',
+        'email': 'no-es-correo',
+        'phone': '123',
+        'message': 'corto',
+    })
+    assert response.status_code == 422
