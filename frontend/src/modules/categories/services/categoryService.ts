@@ -1,5 +1,5 @@
 import type { Category, CategoryInput } from '@/types/product'
-import { apiFetch } from '@/services/api'
+import { ApiError, apiFetch, API_BASE, getToken } from '@/services/api'
 import { ENDPOINTS } from '@/services/endpoints'
 import { hydrateStore } from '@/services/hydrate'
 
@@ -40,4 +40,31 @@ export async function updateCategory(id: number, input: CategoryInput): Promise<
 export async function deleteCategory(id: number): Promise<void> {
   await apiFetch(`${ENDPOINTS.categories}/${id}`, { method: 'DELETE' })
   await hydrateStore(['categories'])
+}
+
+/** Sube una imagen de categoría a Supabase Storage (POST /categories/image). */
+export async function uploadCategoryImage(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${ENDPOINTS.categories}/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+      body: form,
+    })
+  } catch {
+    throw new ApiError('Error de red al subir la imagen', 0, 'NETWORK_ERROR')
+  }
+
+  const body = (await response.json().catch(() => null)) as { url?: string; message?: string; code?: string } | null
+  if (!response.ok || !body?.url) {
+    throw new ApiError(
+      body?.message ?? 'No se pudo subir la imagen',
+      response.status,
+      body?.code ?? 'INTERNAL_ERROR',
+    )
+  }
+  return body.url
 }

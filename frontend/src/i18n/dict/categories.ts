@@ -44,6 +44,13 @@ export const dictCategories: ModuleDict = {
     'categories.eliminar-la-categoria': '¿Eliminar la categoría ',
     'categories.solo-es-posible-si-ningun-producto-la-esta-usando':
       '? Solo es posible si ningún producto la está usando.',
+    'categories.imagen': 'Imagen',
+    'categories.subir-imagen': 'Subir imagen',
+    'categories.subiendo-imagen': 'Subiendo…',
+    'categories.quitar-imagen': 'Quitar imagen',
+    'categories.no-se-pudo-subir-la-imagen': 'No se pudo subir la imagen',
+    'categories.la-imagen-se-mostrara-en-la-tienda':
+      'Opcional. Esta imagen se muestra en el catálogo de la tienda web.',
   },
   en: {
     'categories.no-se-pudieron-cargar-las-categorias': 'Could not load categories',
@@ -87,5 +94,12 @@ export const dictCategories: ModuleDict = {
     'categories.eliminar-la-categoria': 'Delete the category ',
     'categories.solo-es-posible-si-ningun-producto-la-esta-usando':
       '? This is only possible if no product is using it.',
+    'categories.imagen': 'Image',
+    'categories.subir-imagen': 'Upload image',
+    'categories.subiendo-imagen': 'Uploading…',
+    'categories.quitar-imagen': 'Remove image',
+    'categories.no-se-pudo-subir-la-imagen': 'Could not upload the image',
+    'categories.la-imagen-se-mostrara-en-la-tienda':
+      'Optional. This image is shown in the web store catalog.',
   },
 }

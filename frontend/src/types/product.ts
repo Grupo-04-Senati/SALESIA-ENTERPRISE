@@ -7,12 +7,14 @@ export interface Category {
   name: string
   description?: string | null
   status?: 'active' | 'inactive'
+  image_url?: string | null
 }
 
 /** Datos para crear/editar categoría (POST/PUT /api/v1/categories). */
 export interface CategoryInput {
   name: string
   description?: string | null
+  image_url?: string | null
 }
 
 export interface Product {

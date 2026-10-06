@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { Image as ImageIcon, Pencil, Plus, Tags, Trash2, Upload, X } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -10,7 +10,13 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useToast } from '@/components/ui/Toast'
 import { useDataVersion } from '@/data/DataProvider'
-import { createCategory, deleteCategory, listCategories, updateCategory } from '../services/categoryService'
+import {
+  createCategory,
+  deleteCategory,
+  listCategories,
+  updateCategory,
+  uploadCategoryImage,
+} from '../services/categoryService'
 import type { Category, CategoryInput } from '@/types/product'
 import { cleanText, hasLetter, maxLength, minLength } from '@/utils/validators'
 import { useLang } from '@/i18n/i18n'
@@ -37,6 +43,10 @@ export default function CategoriesPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [formImage, setFormImage] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const imageRef = useRef<HTMLInputElement>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Category | null>(null)
@@ -75,6 +85,8 @@ export default function CategoriesPage() {
   const openCreate = () => {
     setEditing(null)
     setForm(EMPTY_FORM)
+    setFormImage(null)
+    setImageError(null)
     setFormError(null)
     setFormOpen(true)
   }
@@ -82,8 +94,29 @@ export default function CategoriesPage() {
   const openEdit = (category: Category) => {
     setEditing(category)
     setForm({ name: category.name, description: category.description ?? '' })
+    setFormImage(category.image_url ?? null)
+    setImageError(null)
     setFormError(null)
     setFormOpen(true)
+  }
+
+  const handleImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setImageError(null)
+    setUploadingImage(true)
+    try {
+      setFormImage(await uploadCategoryImage(file))
+    } catch (reason) {
+      setImageError(
+        reason instanceof Error && reason.message
+          ? `${t('categories.no-se-pudo-subir-la-imagen')}: ${reason.message}`
+          : t('categories.no-se-pudo-subir-la-imagen'),
+      )
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -96,7 +129,11 @@ export default function CategoriesPage() {
       setFormError(nameError)
       return
     }
-    const input: CategoryInput = { name, description: cleanText(form.description) || null }
+    const input: CategoryInput = {
+      name,
+      description: cleanText(form.description) || null,
+      image_url: formImage,
+    }
     setSaving(true)
     try {
       if (editing) {
@@ -199,7 +236,18 @@ export default function CategoriesPage() {
           >
             {visible.map((category) => (
               <TableRow key={category.id}>
-                <TableCell className="font-medium text-gray-900">{category.name}</TableCell>
+                <TableCell className="font-medium text-gray-900">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+                      {category.image_url ? (
+                        <img src={category.image_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon aria-hidden="true" className="h-4 w-4 text-gray-400" />
+                      )}
+                    </span>
+                    {category.name}
+                  </div>
+                </TableCell>
                 <TableCell className="text-gray-600">{category.description ?? '—'}</TableCell>
                 <TableCell>
                   <Badge variant={category.status === 'inactive' ? 'neutral' : 'success'}>
@@ -271,6 +319,54 @@ export default function CategoriesPage() {
             onChange={(event) => setForm({ ...form, description: event.target.value })}
             placeholder={t('categories.ej-bebidas-frias-y-gaseosas')}
           />
+          <div>
+            <span className="mb-1.5 block text-sm font-medium text-gray-700">{t('categories.imagen')}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                {formImage ? (
+                  <img src={formImage} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon aria-hidden="true" className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+              <input
+                ref={imageRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                onChange={handleImageFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => imageRef.current?.click()}
+                disabled={uploadingImage}
+                loading={uploadingImage}
+              >
+                <Upload aria-hidden="true" className="h-4 w-4" />
+                {uploadingImage ? t('categories.subiendo-imagen') : t('categories.subir-imagen')}
+              </Button>
+              {formImage && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setFormImage(null)
+                    setImageError(null)
+                  }}
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                  {t('categories.quitar-imagen')}
+                </Button>
+              )}
+            </div>
+            <p className="mt-1.5 text-caption text-gray-500">{t('categories.la-imagen-se-mostrara-en-la-tienda')}</p>
+            {imageError && (
+              <p className="mt-1 rounded-md bg-error-bg px-2 py-1 text-caption text-error-fg">{imageError}</p>
+            )}
+          </div>
         </div>
       </Modal>
 
