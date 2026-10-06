@@ -33,6 +33,7 @@ from app.api.v1.routers import (
     shipments,
     statistics,
     stock_counts,
+    storefront,
     suppliers,
     units,
     users,
@@ -77,5 +78,8 @@ api_router.include_router(data_exports.router)
 api_router.include_router(scheduled_reports.router)
 api_router.include_router(automation_rules.router)
 api_router.include_router(kpi_snapshots.router)
+
+# Tienda web (endpoints públicos: catálogo y cotizaciones sin JWT).
+api_router.include_router(storefront.router)
 
 __all__ = ['api_router']

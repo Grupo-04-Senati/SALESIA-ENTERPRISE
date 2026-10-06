@@ -1,5 +1,5 @@
 import type { Category, Product, ProductInput } from '@/types/product'
-import { apiFetch } from '@/services/api'
+import { ApiError, apiFetch, API_BASE, getToken } from '@/services/api'
 import { ENDPOINTS } from '@/services/endpoints'
 import { hydrateStore } from '@/services/hydrate'
 import { getState } from '@/data/store'
@@ -64,6 +64,33 @@ export async function updateProduct(id: number, input: ProductInput): Promise<Pr
   })
   await hydrateStore(['products'])
   return product
+}
+
+/** Sube una imagen de producto a Supabase Storage (POST /products/image). */
+export async function uploadProductImage(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${ENDPOINTS.products}/image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+      body: form,
+    })
+  } catch {
+    throw new ApiError('Error de red al subir la imagen', 0, 'NETWORK_ERROR')
+  }
+
+  const body = (await response.json().catch(() => null)) as { url?: string; message?: string; code?: string } | null
+  if (!response.ok || !body?.url) {
+    throw new ApiError(
+      body?.message ?? 'No se pudo subir la imagen',
+      response.status,
+      body?.code ?? 'INTERNAL_ERROR',
+    )
+  }
+  return body.url
 }
 
 /** Activar / desactivar (PATCH /products/{id}/status). */

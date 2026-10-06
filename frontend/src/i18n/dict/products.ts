@@ -70,6 +70,21 @@ export const dictProducts: ModuleDict = {
     'products.el-stock-minimo-no-puede-ser-negativo': 'El stock mínimo no puede ser negativo',
     'products.el-precio-de-venta-no-puede-ser-menor-al-costo':
       'El precio de venta no puede ser menor al costo.',
+    'products.precio-mayorista': 'Precio mayorista (S/)',
+    'products.el-precio-mayorista-no-puede-ser-mayor':
+      'El precio mayorista no puede ser mayor al precio de venta.',
+    'products.marca': 'Marca',
+    'products.descripcion': 'Descripción',
+    'products.destacado-en-la-tienda': 'Destacado en la tienda',
+    'products.imagen': 'Imagen',
+    'products.subir-imagen': 'Subir imagen',
+    'products.cambiando-imagen': 'Subiendo imagen…',
+    'products.quitar-imagen': 'Quitar imagen',
+    'products.no-se-pudo-subir-la-imagen': 'No se pudo subir la imagen',
+    'products.formato-no-soportado': 'Formato no soportado: usa PNG, JPG, WEBP, GIF o SVG (máx. 2 MB).',
+    'products.vacio-consultar-precio-mayorista':
+      'Si lo dejas vacío, el asesor cotiza el precio al por mayor.',
+    'products.mayorista': 'mayorista',
   },
   en: {
     'products.sin-stock': 'Out of stock',
@@ -138,5 +153,20 @@ export const dictProducts: ModuleDict = {
     'products.el-stock-minimo-no-puede-ser-negativo': 'Minimum stock cannot be negative',
     'products.el-precio-de-venta-no-puede-ser-menor-al-costo':
       'Sale price cannot be lower than the cost.',
+    'products.precio-mayorista': 'Wholesale price (S/)',
+    'products.el-precio-mayorista-no-puede-ser-mayor':
+      'Wholesale price cannot be higher than the sale price.',
+    'products.marca': 'Brand',
+    'products.descripcion': 'Description',
+    'products.destacado-en-la-tienda': 'Featured in the store',
+    'products.imagen': 'Image',
+    'products.subir-imagen': 'Upload image',
+    'products.cambiando-imagen': 'Uploading image…',
+    'products.quitar-imagen': 'Remove image',
+    'products.no-se-pudo-subir-la-imagen': 'Could not upload the image',
+    'products.formato-no-soportado': 'Unsupported format: use PNG, JPG, WEBP, GIF or SVG (max 2 MB).',
+    'products.vacio-consultar-precio-mayorista':
+      'Leave it empty and the sales rep will quote wholesale pricing.',
+    'products.mayorista': 'wholesale',
   },
 }

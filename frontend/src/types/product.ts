@@ -20,8 +20,13 @@ export interface Product {
   sku: string
   name: string
   category: Pick<Category, 'id' | 'name'>
+  description?: string | null
   cost_price: number
   sale_price: number
+  wholesale_price?: number | null
+  brand?: string | null
+  image_url?: string | null
+  is_featured?: boolean
   min_stock: number
   current_stock: number
   unit: string
@@ -34,8 +39,13 @@ export interface ProductInput {
   sku: string
   name: string
   category_id: number
+  description?: string | null
   cost_price: number
   sale_price: number
+  wholesale_price?: number | null
+  brand?: string | null
+  image_url?: string | null
+  is_featured?: boolean
   min_stock: number
   unit: string
 }

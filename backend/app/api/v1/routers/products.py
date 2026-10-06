@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import client_ip, company_id_of, require_role
@@ -17,7 +17,7 @@ from app.schemas.product import (
     ProductStatusPatch,
     ProductUpdate,
 )
-from app.services import product_service
+from app.services import product_service, storage_service
 
 router = APIRouter(tags=['products'])
 
@@ -101,6 +101,25 @@ def delete_product(
     return product_service.set_product_status(
         db, company_id_of(actor), product_id, 'inactive', actor=actor, ip=client_ip(request)
     )
+
+
+@router.post('/products/image', status_code=status.HTTP_201_CREATED)
+async def upload_product_image(
+    file: UploadFile = File(...),
+    actor: User = Depends(admin_only),
+):
+    """Sube una imagen de producto a Supabase Storage y devuelve su URL pública."""
+    import uuid as _uuid
+    from pathlib import Path as _Path
+
+    stem = _Path(file.filename or '').stem or 'imagen'
+    url = storage_service.upload_image(
+        await file.read(),
+        folder='products',
+        name=f'{stem}-{_uuid.uuid4().hex[:8]}',
+        content_type=file.content_type or '',
+    )
+    return {'url': url}
 
 
 # ---------------------------------------------------------------- categorÃ­as

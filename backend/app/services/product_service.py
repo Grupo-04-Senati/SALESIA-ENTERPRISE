@@ -34,6 +34,10 @@ def _serialize(product: Product, stock: Optional[Inventory]) -> dict:
         'category_id': product.category_id,
         'cost_price': float(product.cost_price),
         'sale_price': float(product.price),
+        'wholesale_price': float(product.wholesale_price) if product.wholesale_price is not None else None,
+        'brand': product.brand,
+        'image_url': product.image_url,
+        'is_featured': bool(product.is_featured),
         'min_stock': product.min_stock,
         'current_stock': stock.stock if stock else 0,
         'unit': product.unit,
@@ -66,7 +70,11 @@ def list_products(
     if q:
         term = f'%{q.strip()}%'
         statement = statement.where(
-            or_(Product.name.ilike(term), Product.sku.ilike(term))
+            or_(
+                Product.name.ilike(term),
+                Product.sku.ilike(term),
+                Product.brand.ilike(term),
+            )
         )
 
     products = db.execute(statement.order_by(Product.name)).scalars().all()
@@ -94,6 +102,8 @@ def get_product(db: Session, company_id: int, product_id: int) -> dict:
 def _validate(payload: ProductCreate | ProductUpdate) -> None:
     if payload.sale_price < payload.cost_price:
         raise ValidationAppError('El precio de venta no puede ser menor al costo (RN-05).')
+    if payload.wholesale_price is not None and payload.wholesale_price > payload.sale_price:
+        raise ValidationAppError('El precio mayorista no puede ser mayor al precio de venta.')
 
 
 def create_product(
@@ -107,6 +117,8 @@ def create_product(
         raise Conflict('Ya existe un producto con ese SKU (RN-03).')
 
     data = payload.model_dump()
+    wholesale = data.pop('wholesale_price')
+    brand = data.pop('brand')
     product = Product(
         company_id=company_id,
         sku=data.pop('sku'),
@@ -114,6 +126,10 @@ def create_product(
         category_id=data.pop('category_id'),
         cost_price=Decimal(str(data.pop('cost_price'))),
         price=Decimal(str(data.pop('sale_price'))),
+        wholesale_price=Decimal(str(wholesale)) if wholesale is not None else None,
+        brand=(brand or '').strip() or None,
+        image_url=data.pop('image_url') or None,
+        is_featured=data.pop('is_featured'),
         min_stock=data.pop('min_stock'),
         unit=data.pop('unit'),
         description=data.pop('description', None),
@@ -163,6 +179,12 @@ def update_product(
     product.category_id = payload.category_id
     product.cost_price = Decimal(str(payload.cost_price))
     product.price = Decimal(str(payload.sale_price))
+    product.wholesale_price = (
+        Decimal(str(payload.wholesale_price)) if payload.wholesale_price is not None else None
+    )
+    product.brand = (payload.brand or '').strip() or None
+    product.image_url = payload.image_url or None
+    product.is_featured = payload.is_featured
     product.min_stock = payload.min_stock
     product.unit = payload.unit
     product.description = payload.description
@@ -214,6 +236,7 @@ def list_categories(db: Session, company_id: int) -> dict:
     ).scalars().all()
     items = [
         {'id': row.id, 'name': row.name, 'description': row.description,
+         'image_url': row.image_url,
          'status': 'active' if row.is_active else 'inactive'}
         for row in rows
     ]
@@ -237,7 +260,8 @@ def create_category(
         ip_address=ip,
     )
     db.commit()
-    return {'id': row.id, 'name': row.name, 'description': row.description, 'status': 'active'}
+    return {'id': row.id, 'name': row.name, 'description': row.description,
+            'image_url': row.image_url, 'status': 'active'}
 
 
 def update_category(
@@ -251,12 +275,14 @@ def update_category(
         raise NotFound('Categoría no encontrada.')
     row.name = payload.name
     row.description = payload.description
+    row.image_url = payload.image_url or None
     write_audit(
         db, user=actor, action='category.update', entity='categories', entity_id=row.id,
         ip_address=ip,
     )
     db.commit()
-    return {'id': row.id, 'name': row.name, 'description': row.description, 'status': 'active'}
+    return {'id': row.id, 'name': row.name, 'description': row.description,
+            'image_url': row.image_url, 'status': 'active'}
 
 
 def delete_category(

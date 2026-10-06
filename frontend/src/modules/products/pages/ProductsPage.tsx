@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Power } from 'lucide-react'
+import { Package, Pencil, Plus, Power, Star } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
@@ -264,8 +264,35 @@ export default function ProductsPage() {
               return (
                 <TableRow key={product.id}>
                   <TableCell>
-                    <div className="font-medium text-gray-900">{product.name}</div>
-                    <div className="font-mono text-caption text-gray-500">{product.sku}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt=""
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Package aria-hidden="true" className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 font-medium text-gray-900">
+                          <span className="truncate">{product.name}</span>
+                          {product.is_featured && (
+                            <Star
+                              aria-label={t('products.destacado-en-la-tienda')}
+                              className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400"
+                            />
+                          )}
+                        </div>
+                        <div className="font-mono text-caption text-gray-500">
+                          {product.sku}
+                          {product.brand ? ` · ${product.brand}` : ''}
+                        </div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="primary">{product.category.name}</Badge>
@@ -275,6 +302,11 @@ export default function ProductsPage() {
                     <div className="text-caption text-gray-500">
                       {t('products.costo')} {formatCurrency(product.cost_price)}
                     </div>
+                    {product.wholesale_price !== null && product.wholesale_price !== undefined && (
+                      <div className="text-caption text-gray-500">
+                        {t('products.mayorista')} {formatCurrency(product.wholesale_price)}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">

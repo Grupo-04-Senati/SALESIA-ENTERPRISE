@@ -31,9 +31,13 @@ class Product(IDMixin, UpdatedAtMixin, Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal('0.00'))
     cost_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal('0.00'))
+    wholesale_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     unit: Mapped[str] = mapped_column(String(20), default='UND')
     min_stock: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
 
     category: Mapped[Optional['Category']] = relationship('Category', lazy='joined')
     company: Mapped['Company'] = relationship('Company', lazy='selectin')

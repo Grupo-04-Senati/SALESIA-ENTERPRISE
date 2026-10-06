@@ -16,6 +16,7 @@ class CategoryData(NormalizedModel):
     letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: str = Field(min_length=2, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=400_000)
 
 
 class CategoryCreate(CategoryData):
@@ -41,6 +42,10 @@ class ProductData(NormalizedModel):
     category_id: Optional[int] = Field(default=None, ge=1)
     cost_price: float = Field(default=0, ge=0, le=100_000_000)
     sale_price: float = Field(default=0, ge=0, le=100_000_000)
+    wholesale_price: Optional[float] = Field(default=None, ge=0, le=100_000_000)
+    brand: Optional[str] = Field(default=None, max_length=100)
+    image_url: Optional[str] = Field(default=None, max_length=400_000)
+    is_featured: bool = False
     min_stock: int = Field(default=0, ge=0, le=9_999_999)
     unit: str = Field(default='UND', max_length=20)
     description: Optional[str] = Field(default=None, max_length=500)

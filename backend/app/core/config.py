@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     api_base_url: str = 'http://localhost:8000'
     vite_api_base_url: str = 'http://localhost:8000/api/v1'
 
+    # Empresa dueña del storefront público (tienda web); si no existe se usa la primera.
+    storefront_company_id: int = 1
+
     supabase_url: str = ''
     supabase_anon_key: str = ''
     supabase_service_role_key: str = ''

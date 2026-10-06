@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import { Image as ImageIcon, Upload, X } from 'lucide-react'
 import type { Product, ProductInput } from '@/types/product'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Input, Select } from '@/components/ui/form'
+import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form'
 import {
   cleanText,
   code,
@@ -18,7 +19,7 @@ import {
   validateForm,
 } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
-import { getProductCategories } from '../services/productService'
+import { getProductCategories, uploadProductImage } from '../services/productService'
 import { useLang } from '@/i18n/i18n'
 
 /**
@@ -38,8 +39,11 @@ interface FormValues extends Record<string, string> {
   sku: string
   name: string
   category_id: string
+  description: string
   cost_price: string
   sale_price: string
+  wholesale_price: string
+  brand: string
   min_stock: string
   unit: string
 }
@@ -48,8 +52,11 @@ const EMPTY: FormValues = {
   sku: '',
   name: '',
   category_id: '',
+  description: '',
   cost_price: '',
   sale_price: '',
+  wholesale_price: '',
+  brand: '',
   min_stock: '10',
   unit: 'UND',
 }
@@ -59,24 +66,57 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [errors, setErrors] = useState<FormErrors<FormValues>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [featured, setFeatured] = useState(false)
+  const imageRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!open) return
     setErrors({})
+    setImageError(null)
     setValues(
       product
         ? {
             sku: product.sku,
             name: product.name,
             category_id: String(product.category.id),
+            description: product.description ?? '',
             cost_price: String(product.cost_price),
             sale_price: String(product.sale_price),
+            wholesale_price:
+              product.wholesale_price === null || product.wholesale_price === undefined
+                ? ''
+                : String(product.wholesale_price),
+            brand: product.brand ?? '',
             min_stock: String(product.min_stock),
             unit: product.unit,
           }
         : { ...EMPTY, category_id: String(getProductCategories()[0]?.id ?? '') },
     )
+    setImageUrl(product?.image_url ?? null)
+    setFeatured(product?.is_featured ?? false)
   }, [open, product])
+
+  const handleImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setImageError(null)
+    setUploadingImage(true)
+    try {
+      setImageUrl(await uploadProductImage(file))
+    } catch (error) {
+      setImageError(
+        error instanceof Error && error.message
+          ? `${t('products.no-se-pudo-subir-la-imagen')}: ${error.message}`
+          : t('products.no-se-pudo-subir-la-imagen'),
+      )
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   const categories = getProductCategories()
 
@@ -109,6 +149,14 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
       minNumber(0, t('products.el-precio-no-puede-ser-negativo'))(value) ??
       maxDecimals(2)(value) ??
       numberRange(0, 100000000)(value),
+    wholesale_price: (value) =>
+      value.trim() === ''
+        ? null
+        : minNumber(0, t('products.el-precio-no-puede-ser-negativo'))(value) ??
+          maxDecimals(2)(value) ??
+          numberRange(0, 100000000)(value),
+    brand: (value) => (value.trim() === '' ? null : maxLength(100)(value)),
+    description: (value) => (value.trim() === '' ? null : maxLength(500)(value)),
     min_stock: (value) =>
       required(t('products.este-campo-es-obligatorio'))(value) ??
       minNumber(0, t('products.el-stock-minimo-no-puede-ser-negativo'))(value) ??
@@ -123,6 +171,15 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
     if (!found.sale_price && !found.cost_price && Number(values.sale_price) < Number(values.cost_price)) {
       found.sale_price = t('products.el-precio-de-venta-no-puede-ser-menor-al-costo')
     }
+    // El precio mayorista nunca puede superar al precio de venta.
+    if (
+      !found.wholesale_price &&
+      !found.sale_price &&
+      values.wholesale_price.trim() !== '' &&
+      Number(values.wholesale_price) > Number(values.sale_price)
+    ) {
+      found.wholesale_price = t('products.el-precio-mayorista-no-puede-ser-mayor')
+    }
     setErrors(found)
     if (Object.keys(found).length > 0) return
 
@@ -132,8 +189,14 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         sku: values.sku.trim(),
         name: cleanText(values.name),
         category_id: Number(values.category_id),
+        description: values.description.trim() || null,
         cost_price: Number(values.cost_price),
         sale_price: Number(values.sale_price),
+        wholesale_price:
+          values.wholesale_price.trim() === '' ? null : Number(values.wholesale_price),
+        brand: values.brand.trim() || null,
+        image_url: imageUrl,
+        is_featured: featured,
         min_stock: Number(values.min_stock),
         unit: values.unit.trim(),
       })
@@ -211,6 +274,23 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         />
 
         <Input
+          label={t('products.marca')}
+          maxLength={100}
+          placeholder="Truper"
+          value={values.brand}
+          onChange={setValue('brand')}
+          error={errors.brand}
+        />
+
+        <div className="flex items-end pb-1">
+          <Checkbox
+            label={t('products.destacado-en-la-tienda')}
+            checked={featured}
+            onChange={(event) => setFeatured(event.target.checked)}
+          />
+        </div>
+
+        <Input
           label={t('products.precio-de-costo')}
           required
           type="number"
@@ -237,6 +317,20 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         />
 
         <Input
+          label={t('products.precio-mayorista')}
+          type="number"
+          min="0"
+          max="100000000"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="—"
+          value={values.wholesale_price}
+          onChange={setValue('wholesale_price')}
+          error={errors.wholesale_price}
+          hint={t('products.vacio-consultar-precio-mayorista')}
+        />
+
+        <Input
           label={t('products.stock-minimo')}
           required
           type="number"
@@ -248,6 +342,63 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
           onChange={setValue('min_stock')}
           error={errors.min_stock}
         />
+
+        <div className="sm:col-span-2">
+          <Textarea
+            label={t('products.descripcion')}
+            maxLength={500}
+            placeholder={t('products.gaseosa-500ml')}
+            value={values.description}
+            onChange={setValue('description')}
+            error={errors.description}
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <Field label={t('products.imagen')} error={imageError ?? undefined}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                {imageUrl ? (
+                  <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageIcon aria-hidden="true" className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+              <input
+                ref={imageRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                onChange={handleImageFile}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => imageRef.current?.click()}
+                disabled={uploadingImage}
+                loading={uploadingImage}
+              >
+                <Upload aria-hidden="true" className="h-4 w-4" />
+                {uploadingImage ? t('products.cambiando-imagen') : t('products.subir-imagen')}
+              </Button>
+              {imageUrl && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setImageUrl(null)
+                    setImageError(null)
+                  }}
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                  {t('products.quitar-imagen')}
+                </Button>
+              )}
+            </div>
+          </Field>
+        </div>
       </form>
     </Modal>
   )
