@@ -39,7 +39,7 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     .filter(
       (product) =>
         (!filters.status || product.status === filters.status) &&
-        (!filters.category_id || product.category.id === filters.category_id) &&
+        (!filters.category_id || product.category?.id === filters.category_id) &&
         (!filters.low_stock || product.current_stock <= product.min_stock) &&
         (term === '' ||
           product.name.toLowerCase().includes(term) ||

@@ -159,7 +159,7 @@ export async function generateReport(type: ReportType, t: Translator): Promise<R
     const rows: ReportRow[] = products.map((product) => ({
       sku: product.sku,
       producto: product.name,
-      categoria: product.category.name,
+      categoria: product.category?.name ?? '—',
       costo: product.cost_price,
       precio: product.sale_price,
       margen: round2(((product.sale_price - product.cost_price) / Math.max(product.sale_price, 1)) * 100),

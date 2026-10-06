@@ -52,7 +52,7 @@ export function selectSales(filters: Partial<AnalyticsFilters> = {}): Sale[] {
       if (seller && sale.seller.name !== seller) return false
       if (category) {
         const productIds = new Set(
-          state.products.filter((product) => product.category.name === category).map((product) => product.id),
+          state.products.filter((product) => product.category?.name === category).map((product) => product.id),
         )
         if (!sale.items.some((item) => productIds.has(item.product_id))) return false
       }
@@ -195,7 +195,7 @@ export function getByCategory(filters: Partial<AnalyticsFilters> = {}): Category
     .filter((category) => !filters.category || category.name === filters.category)
     .map((category, index) => {
       const productIds = new Set(
-        state.products.filter((product) => product.category.id === category.id).map((product) => product.id),
+        state.products.filter((product) => product.category?.id === category.id).map((product) => product.id),
       )
       const ingresos = sales
         .filter((sale) => sale.items.some((item) => productIds.has(item.product_id)))
@@ -539,7 +539,7 @@ export function getBayesScenarios(): BayesScenario[] {
       .map((customer) => customer.id),
   )
   const bebidas = new Set(
-    state.products.filter((product) => product.category.name === 'Bebidas').map((product) => product.id),
+    state.products.filter((product) => product.category?.name === 'Bebidas').map((product) => product.id),
   )
   const topSeller = [...new Set(ventas.map((sale) => sale.seller.name))].sort(
     (a, b) =>
@@ -667,7 +667,7 @@ export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Arr
     quantitative('probability.var-precio-unitario', lines.map((item) => item.unit_price)),
     qualitative('probability.var-categoria-producto', lines.map((item) => {
       const product = state.products.find((entry) => entry.id === item.product_id)
-      return product?.category.name ?? 'probability.sin-categoria'
+      return product?.category?.name ?? 'probability.sin-categoria'
     })),
     qualitative('probability.var-vendedor', sales.map((sale) => sale.seller.name)),
     qualitative('probability.var-estado-venta', state.sales.map((sale) => sale.status)),

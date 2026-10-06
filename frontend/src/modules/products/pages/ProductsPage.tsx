@@ -295,7 +295,7 @@ export default function ProductsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="primary">{product.category.name}</Badge>
+                    <Badge variant="primary">{product.category?.name ?? '—'}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{formatCurrency(product.sale_price)}</div>

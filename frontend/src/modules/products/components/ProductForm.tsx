@@ -81,7 +81,7 @@ export default function ProductForm({ open, onClose, product, onSubmit }: Produc
         ? {
             sku: product.sku,
             name: product.name,
-            category_id: String(product.category.id),
+            category_id: product.category ? String(product.category.id) : '',
             description: product.description ?? '',
             cost_price: String(product.cost_price),
             sale_price: String(product.sale_price),
