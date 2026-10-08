@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useNavigation } from 'react-router-dom'
-import { ArrowLeft, Languages, Menu, Moon, Search, Sun } from 'lucide-react'
+import { ArrowLeft, Ghost, Languages, Menu, Moon, Search, Sun } from 'lucide-react'
 import { PATH_TITLES, PATH_TITLES_EN } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
 import NotificationsMenu from '@/components/ui/NotificationsMenu'
 import { useAuth } from '@/hooks/useAuth'
 import { useLang } from '@/i18n/i18n'
+import { usePrank } from '@/prank/PrankContext'
 
 /**
  * Topbar (Diseño E): 56px, fondo claro, borde inferior fino.
@@ -28,6 +29,7 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
   const navigation = useNavigation()
   const { user } = useAuth()
   const { lang, toggleLang, t } = useLang()
+  const { armed, setArmed } = usePrank()
   const [theme, setTheme] = useState<Theme>(() => getTheme())
   const titles = lang === 'en' ? PATH_TITLES_EN : PATH_TITLES
   const title = titles[pathname] ?? 'SalesIA Enterprise'
@@ -112,6 +114,22 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
       >
         <Languages aria-hidden="true" className="h-[18px] w-[18px]" />
         <span className="text-[11px] font-semibold uppercase">{lang}</span>
+      </button>
+
+      {/* Broma: arma/desarma el modo árabe (tecla A) */}
+      <button
+        type="button"
+        aria-label={armed ? t('topbar.prankOff') : t('topbar.prank')}
+        title={armed ? t('topbar.prankOff') : t('topbar.prank')}
+        aria-pressed={armed}
+        onClick={() => setArmed(!armed)}
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+          armed
+            ? 'bg-primary text-white shadow-sm'
+            : 'bg-gray-100 text-gray-500 hover:bg-primary hover:text-white'
+        }`}
+      >
+        <Ghost aria-hidden="true" className="h-[18px] w-[18px]" />
       </button>
 
       {/* Acciones */}

@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { DataProvider } from '@/data/DataProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { LangProvider } from '@/i18n/i18n'
+import { PrankProvider } from '@/prank/PrankContext'
+import PrankOverlay from '@/prank/PrankOverlay'
 
 /**
  * Proveedor global de la aplicación.
@@ -11,9 +13,14 @@ import { LangProvider } from '@/i18n/i18n'
 export default function Providers({ children }: { children: ReactNode }) {
   return (
     <LangProvider>
-      <DataProvider>
-        <ToastProvider>{children}</ToastProvider>
-      </DataProvider>
+      <PrankProvider>
+        <DataProvider>
+          <ToastProvider>
+            {children}
+            <PrankOverlay />
+          </ToastProvider>
+        </DataProvider>
+      </PrankProvider>
     </LangProvider>
   )
 }
