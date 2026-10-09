@@ -59,6 +59,9 @@ const JUMP_SRC = '/eps/eps.jpeg'
 const JUMP_SND = '/jumps%20de%20jefree/Jumpscare%20Sound.mp3'
 
 const ALERT_MSGS = [
+  'ERROR: se ha perdido la conexion con el servicio de seguridad',
+  'ADVERTENCIA: Windows Update encontro un error 0x80070005',
+  'ERROR: se requiere permiso de administrador para continuar',
   'ALERTA: una presencia desconocida se conecto a su equipo',
   'ALERTA: su camara se activo sin permiso',
   'ADVERTENCIA: no apague el equipo, ella lo sabra',
@@ -119,15 +122,17 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win__close{flex:none;width:20px;height:20px;padding:0;border:0;border-radius:5px;background:#ef4444;color:#fff;font-size:12px;line-height:20px;text-align:center;cursor:pointer}
 .prank-win__close:hover{background:#dc2626}
 .prank-win--ad{background:#000;border:0;cursor:pointer}
-.prank-win--alert{width:min(430px,92vw);background:#1c1010;border:1px solid #7f1d1d}
-.prank-win--alert .prank-win__bar{background:#7f1d1d}
-.prank-win--alert .prank-win__title{color:#fecaca;font-weight:700}
-.prank-alert__body{display:flex;gap:12px;padding:16px 16px 8px}
-.prank-alert__icon{flex:none;font-size:28px;line-height:1;color:#ef4444;animation:prank-blink .6s steps(2,start) infinite}
-.prank-alert__msg{margin:0;color:#fee2e2;font-size:15px;line-height:1.45;font-family:system-ui,-apple-system,sans-serif}
-.prank-alert__actions{display:flex;justify-content:center;padding:6px 16px 14px}
-.prank-alert__ok{min-width:110px;padding:7px 20px;border:1px solid #b91c1c;border-radius:6px;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
-.prank-alert__ok:hover{background:#dc2626}
+.prank-win--alert{width:min(430px,92vw);background:#f2f2f2;border:1px solid #b0b0b0;border-radius:8px;box-shadow:0 18px 44px rgba(0,0,0,.45);cursor:default}
+.prank-win--alert .prank-win__bar{background:#f2f2f2;border-bottom:1px solid #d8d8d8;padding:8px 10px}
+.prank-win--alert .prank-win__title{color:#262626;font-weight:600;font-size:12px}
+.prank-win--alert .prank-win__close{background:transparent;color:#444;border-radius:4px}
+.prank-win--alert .prank-win__close:hover{background:#e81123;color:#fff}
+.prank-alert__body{display:flex;gap:12px;padding:18px 18px 10px}
+.prank-alert__icon{flex:none;font-size:30px;line-height:1;color:#d97706}
+.prank-alert__msg{margin:0;color:#1b1b1b;font-size:14.5px;line-height:1.5;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+.prank-alert__actions{display:flex;justify-content:flex-end;padding:8px 18px 16px}
+.prank-alert__ok{min-width:96px;padding:7px 18px;border:1px solid #adadad;border-radius:4px;background:#e1e1e1;color:#111;font-size:13.5px;cursor:pointer}
+.prank-alert__ok:hover{background:#e9f3fc;border-color:#0078d4}
 .prank-win__img{display:block;width:100%;height:220px;object-fit:contain;background:#000;pointer-events:none}
 .prank-win--cmd .prank-win__bar{background:#27272a;cursor:default}
 .prank-win--cmd1{left:max(12px,3vw);top:6vh;width:min(620px,94vw)}
@@ -395,6 +400,24 @@ export default function PrankOverlay() {
   }, [phase])
 
   useEffect(() => {
+    const push = (idx: number) =>
+      setAlerts((prev) => (prev.includes(idx) ? prev : prev.concat(idx)))
+    if (phase === 'aviso') {
+      const id = window.setTimeout(() => push(0), 800)
+      return () => window.clearTimeout(id)
+    }
+    if (phase === 'green') {
+      const id1 = window.setTimeout(() => push(1), 1500)
+      const id2 = window.setTimeout(() => push(2), 4200)
+      return () => {
+        window.clearTimeout(id1)
+        window.clearTimeout(id2)
+      }
+    }
+    return undefined
+  }, [phase])
+
+  useEffect(() => {
     if (active && phase === 'green') {
       musicStart.current = Date.now()
       startSound()
@@ -438,7 +461,8 @@ export default function PrankOverlay() {
       const ai = alertIdx.current
       if (ai < ALERT_AT_MS.length && elapsed >= TIMING.GREEN_MS + ALERT_AT_MS[ai]) {
         alertIdx.current = ai + 1
-        setAlerts((prev) => prev.concat(ai))
+        const id = 3 + ai
+        setAlerts((prev) => (prev.includes(id) ? prev : prev.concat(id)))
       }
       if (remaining <= TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
       if (remaining <= TIMING.JUMPSCARE_LEAD_MS) setJump(true)
@@ -624,7 +648,7 @@ export default function PrankOverlay() {
             }}
           >
             <div className="prank-win__bar">
-              <span className="prank-win__title">Alerta del sistema</span>
+              <span className="prank-win__title">Advertencia del sistema</span>
               <button
                 type="button"
                 className="prank-win__close"
