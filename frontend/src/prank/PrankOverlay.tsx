@@ -113,8 +113,7 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-notepad__body{padding:16px 18px;min-height:170px;background:#fff;color:#101010;font-family:'Lucida Console',Consolas,monospace;font-size:clamp(16px,2.6vw,24px);line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .prank-jumpscare{position:fixed;inset:0;margin:0;padding:0;line-height:0;background:#000;border:0;overflow:hidden}
 .prank-jumpscare--scare{animation:prank-jump-shake .1s step-end infinite}
-.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 0%;filter:contrast(1.35) saturate(1.25)}
-.prank-jumpscare--scare img{animation:prank-jump-zoom .5s ease-in-out infinite alternate}
+.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:contain;filter:contrast(1.35) saturate(1.25)}
 .prank-jumpscare::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 26%,rgba(130,0,0,.62))}
 .prank-jumpscare--scare::after{animation:prank-jump-pulse .3s steps(2,start) infinite}
 .prank-jumpscare--f1 img{filter:invert(1) contrast(1.7)}
@@ -159,7 +158,6 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-core{from{transform:translate(-50%,-50%) scale(.96) rotate(-2deg)}to{transform:translate(-50%,-50%) scale(1.05) rotate(2deg)}}
 @keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}
 @keyframes prank-jump-shake{0%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}50%{transform:translate(8px,-7px)}75%{transform:translate(-7px,-5px)}100%{transform:translate(6px,8px)}}
-@keyframes prank-jump-zoom{from{transform:scale(1.02)}to{transform:scale(1.08)}}
 @keyframes prank-jump-pulse{50%{opacity:.3}}`
 
 export default function PrankOverlay() {
@@ -477,7 +475,7 @@ export default function PrankOverlay() {
       idx = (idx + 1) % 4
       setFlick(idx)
       const since = Date.now() - t0
-      timer = window.setTimeout(step, since < 2000 ? 140 : since < 3000 ? 70 : 35)
+      timer = window.setTimeout(step, since < 1200 ? 90 : since < 2600 ? 50 : 30)
     }
     timer = window.setTimeout(step, 140)
     return () => {
