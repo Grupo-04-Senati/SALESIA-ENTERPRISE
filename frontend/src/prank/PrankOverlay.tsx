@@ -13,6 +13,7 @@ interface Win {
   x: number
   y: number
   z: number
+  w: number
 }
 
 const WIN_W = 300
@@ -26,6 +27,22 @@ const GRID_ROW_H = 230
 const SPAWN_MAX = 60
 
 const SPAWN_MS: Record<number, number> = { 1: 8000, 2: 4500, 3: 2000, 4: 550 }
+
+const SPAWN_W: Record<number, number> = { 1: 340, 2: 470, 3: 600, 4: 720 }
+
+const SPAWN_COUNT: Record<number, number> = { 1: 2, 2: 3, 3: 4 }
+
+const SEED_COUNT = 8
+
+const GREEN_MSGS = [
+  'Windows Update: instalando actualizaciones 13 de 48',
+  'Preparando Windows... no apague el equipo',
+  'Configurando dispositivos: teclado y mouse',
+  'Verificando el disco C: 84% completado',
+  'Microsoft Defender: analizando el sistema',
+  'Aplicando la configuracion de seguridad del equipo',
+  'Windows terminara de configurarse en unos segundos',
+]
 
 const MAP_EMBED = 'https://maps.google.com/maps?q=-11.846935%2C-77.100032&z=17&t=k&output=embed'
 
@@ -74,11 +91,17 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--cmd1{left:max(12px,3vw);top:6vh;width:min(620px,94vw)}
 .prank-win--cmd2{right:max(12px,3vw);top:5vh;width:min(480px,92vw)}
 .prank-win--cmd3{left:max(16px,18vw);bottom:4vh;width:min(560px,92vw)}
+.prank-win--cmd4{left:24vw;top:30vh;width:min(520px,92vw)}
+.prank-win--cmd5{right:22vw;top:38vh;width:min(470px,92vw)}
+.prank-win--cmd6{left:5vw;top:46vh;width:min(500px,92vw)}
+.prank-win--cmd7{right:5vw;top:12vh;width:min(460px,92vw)}
 .prank-win--map{right:max(12px,3vw);bottom:5vh;width:min(400px,92vw)}
 .prank-win--map .prank-win__bar{background:#14532d;cursor:default}
 .prank-console{height:330px;overflow-y:auto;background:#0c0c0c;padding:10px 12px;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:13px;line-height:1.5;color:#4ade80;white-space:pre-wrap;word-break:break-word}
 .prank-win--cmd2 .prank-console{height:240px}
 .prank-win--cmd3 .prank-console{height:260px}
+.prank-win--cmd4 .prank-console,.prank-win--cmd6 .prank-console{height:240px}
+.prank-win--cmd5 .prank-console,.prank-win--cmd7 .prank-console{height:220px}
 .prank-console__line{min-height:19px}
 .prank-cursor{display:inline-block;width:9px;height:15px;background:#4ade80;vertical-align:-2px;animation:prank-blink 1s steps(2,start) infinite}
 .prank-map{display:block;width:100%;height:300px;border:0;background:#0c0c0c}
@@ -94,6 +117,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-terror{position:fixed;inset:0;pointer-events:none;overflow:hidden;background:repeating-linear-gradient(45deg,rgba(0,0,0,.42) 0 60px,rgba(70,0,0,.36) 60px 120px);font-family:'Segoe UI',system-ui,sans-serif}
 .prank-terror--lite{background:repeating-linear-gradient(45deg,rgba(0,0,0,.26) 0 60px,rgba(70,0,0,.2) 60px 120px)}
 .prank-terror--lite .prank-terror__word{font-size:clamp(18px,3vw,38px);animation:prank-pulse-lite 2.2s ease-in-out infinite alternate}
+.prank-terror--early{background:repeating-linear-gradient(45deg,rgba(0,0,0,.16) 0 60px,rgba(70,0,0,.12) 60px 120px)}
+.prank-terror--early .prank-terror__word{font-size:clamp(15px,2.4vw,30px);animation:prank-pulse-lite 3s ease-in-out infinite alternate}
 .prank-terror__flash{position:absolute;inset:0;background:rgba(130,0,0,.5);animation:prank-strobe .24s step-end infinite}
 .prank-terror__word{position:absolute;font-size:clamp(22px,4vw,52px);font-weight:900;color:#ff3b30;text-shadow:0 0 14px rgba(255,0,0,.85),0 0 44px rgba(255,0,0,.5);white-space:nowrap;transform:rotate(-7deg);animation:prank-pulse 1.1s ease-in-out infinite alternate}
 .prank-terror__core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:clamp(44px,11vw,150px);font-weight:900;color:#00ff88;text-shadow:0 0 22px rgba(0,255,120,.9),0 0 60px rgba(0,255,120,.5);white-space:nowrap;animation:prank-blink .5s steps(2,start) infinite,prank-core 1.6s ease-in-out infinite alternate}
@@ -115,6 +140,7 @@ export default function PrankOverlay() {
   const [phase, setPhaseState] = useState<Phase>('idle')
   const [stage, setStage] = useState(0)
   const [coreIdx, setCoreIdx] = useState(0)
+  const [msgIdx, setMsgIdx] = useState(0)
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
   const zTop = useRef(9998)
@@ -129,25 +155,31 @@ export default function PrankOverlay() {
     setPhaseState(value)
   }
 
-  const makeWin = (file: string, url: string, x: number, y: number): Win => {
+  const makeWin = (file: string, url: string, x: number, y: number, w = WIN_W): Win => {
     nextId.current += 1
     zTop.current += 1
-    return { id: nextId.current, file, url, x, y, z: zTop.current }
+    return { id: nextId.current, file, url, x, y, z: zTop.current, w }
   }
 
-  const senarGrid = (): Win[] => {
+  const senarSeed = (): Win[] => {
     const cols = Math.max(1, Math.ceil(window.innerWidth / GRID_COL_W))
     const rows = Math.max(1, Math.ceil(window.innerHeight / GRID_ROW_H))
     const cellW = window.innerWidth / cols
     const cellH = window.innerHeight / rows
-    const items: Win[] = []
+    const cells: { x: number; y: number }[] = []
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
-        const file = SENAR_IMAGES[(row * cols + col) % SENAR_IMAGES.length]
-        items.push(makeWin(file, senarUrl(file), Math.round(col * cellW), Math.round(row * cellH)))
+        cells.push({ x: Math.round(col * cellW), y: Math.round(row * cellH) })
       }
     }
-    return items
+    for (let i = cells.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[cells[i], cells[j]] = [cells[j], cells[i]]
+    }
+    return cells.slice(0, SEED_COUNT).map((cell, index) => {
+      const file = SENAR_IMAGES[index % SENAR_IMAGES.length]
+      return makeWin(file, senarUrl(file), cell.x, cell.y)
+    })
   }
 
   const spawn = () => {
@@ -165,8 +197,8 @@ export default function PrankOverlay() {
     setWins(items)
   }
 
-  const spawnExtras = (count: number) => {
-    const maxX = Math.max(0, window.innerWidth - WIN_W)
+  const spawnExtras = (count: number, w: number) => {
+    const maxX = Math.max(0, window.innerWidth - w)
     const maxY = Math.max(0, window.innerHeight - WIN_H)
     const useSala = Math.random() < 0.5
     const pool = useSala ? SALA_IMAGES : SENAR_IMAGES
@@ -180,6 +212,7 @@ export default function PrankOverlay() {
           url,
           Math.floor(Math.random() * (maxX + 1)),
           Math.floor(Math.random() * (maxY + 1)),
+          w,
         ),
       )
     }
@@ -188,7 +221,7 @@ export default function PrankOverlay() {
 
   const enterHack = () => {
     setPhase('hack')
-    setWins((prev) => [...senarGrid(), ...prev])
+    setWins((prev) => [...senarSeed(), ...prev])
   }
 
   const stopSound = () => {
@@ -309,19 +342,21 @@ export default function PrankOverlay() {
   useEffect(() => {
     if (phase !== 'hack' || stage < 1) return undefined
     const ms = SPAWN_MS[stage] ?? 6000
+    const w = SPAWN_W[stage] ?? WIN_W
     const id = window.setInterval(() => {
-      const count =
-        stage === 1
-          ? 1
-          : stage === 2
-            ? 1 + Math.floor(Math.random() * 2)
-            : stage === 3
-              ? 2 + Math.floor(Math.random() * 2)
-              : 1 + Math.floor(Math.random() * 3)
-      spawnExtras(count)
+      const count = stage === 4 ? 2 + Math.floor(Math.random() * 3) : (SPAWN_COUNT[stage] ?? 1)
+      spawnExtras(count, w)
     }, ms)
     return () => window.clearInterval(id)
   }, [phase, stage])
+
+  useEffect(() => {
+    if (phase !== 'green') return undefined
+    const id = window.setInterval(() => {
+      setMsgIdx((idx) => (idx + 1) % GREEN_MSGS.length)
+    }, 1600)
+    return () => window.clearInterval(id)
+  }, [phase])
 
   useEffect(() => {
     if (stage !== 4) return undefined
@@ -359,7 +394,7 @@ export default function PrankOverlay() {
           dir="ltr"
           data-prank-ui
           className={'prank-win' + quake}
-          style={{ left: win.x, top: win.y, zIndex: win.z }}
+          style={{ left: win.x, top: win.y, zIndex: win.z, width: win.w }}
           onPointerDown={() => bringFront(win.id)}
         >
           <div
@@ -374,7 +409,7 @@ export default function PrankOverlay() {
               if (current === null || current.id !== win.id) return
               const x = Math.min(
                 Math.max(event.clientX - current.dx, 0),
-                Math.max(0, window.innerWidth - WIN_W),
+                Math.max(0, window.innerWidth - win.w),
               )
               const y = Math.min(
                 Math.max(event.clientY - current.dy, 0),
@@ -399,7 +434,13 @@ export default function PrankOverlay() {
               ✕
             </button>
           </div>
-          <img className="prank-win__img" src={win.url} alt="" draggable={false} />
+          <img
+            className="prank-win__img"
+            src={win.url}
+            alt=""
+            draggable={false}
+            style={{ height: Math.round(win.w * 0.73) }}
+          />
         </div>
       ))}
       {phase === 'hack' && (
@@ -486,15 +527,108 @@ export default function PrankOverlay() {
               referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
+          {stage >= 1 && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd4' + quake}
+              style={{ zIndex: 10996 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">
+                  C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+                </span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de PowerShell"
+                  onClick={abortHack}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="sys" delay={400} stage={stage} />
+            </div>
+          )}
+          {stage >= 2 && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd5' + quake}
+              style={{ zIndex: 10995 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">C:\Windows\system32\cmd.exe — sfc /scannow</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de reparacion"
+                  onClick={abortHack}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="sys" delay={900} stage={stage} />
+            </div>
+          )}
           {stage >= 3 && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd6' + quake}
+              style={{ zIndex: 10994 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">
+                  C:\Windows\system32\cmd.exe — DISM /RestoreHealth
+                </span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de mantenimiento"
+                  onClick={abortHack}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="sys" delay={1300} stage={stage} />
+            </div>
+          )}
+          {stage >= 4 && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd7' + quake}
+              style={{ zIndex: 10993 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">
+                  C:\Windows\system32\cmd.exe — recuperacion de errores
+                </span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de recuperacion"
+                  onClick={abortHack}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="sys" delay={600} stage={stage} />
+            </div>
+          )}
+          {stage >= 2 && (
             <div
               dir="rtl"
               data-prank-ui
-              className={'prank-terror' + (stage === 3 ? ' prank-terror--lite' : '')}
-              style={{ zIndex: stage === 3 ? 12500 : 13000 }}
+              className={
+                'prank-terror' +
+                (stage === 2 ? ' prank-terror--early' : stage === 3 ? ' prank-terror--lite' : '')
+              }
+              style={{ zIndex: stage === 2 ? 12400 : stage === 3 ? 12500 : 13000 }}
             >
               {stage === 4 && <div className="prank-terror__flash" />}
-              {TERROR_SPOTS.map((spot, index) => (
+              {TERROR_SPOTS.slice(0, stage === 2 ? 4 : stage === 3 ? 8 : 12).map((spot, index) => (
                 <span
                   key={spot.text}
                   className="prank-terror__word"
@@ -512,7 +646,7 @@ export default function PrankOverlay() {
         <div dir="ltr" data-prank-ui className="prank-aviso" style={{ zIndex: 12000 }}>
           <div className="prank-aviso__box">
             <p className="prank-aviso__title">ROBANDO DATOS DE SENATI</p>
-            <p className="prank-aviso__sub">CARGANDO UNA PANTALLA VERDE Y EL MENSAJE GRANDE</p>
+            <p className="prank-aviso__sub">PREPARANDO EL SISTEMA - NO CIERRE ESTA VENTANA</p>
           </div>
         </div>
       )}
@@ -522,7 +656,7 @@ export default function PrankOverlay() {
           <div className="prank-green__track">
             <span className="prank-green__fill" />
           </div>
-          <p className="prank-green__sub">CARGANDO PANTALLA VERDE…</p>
+          <p className="prank-green__sub">{GREEN_MSGS[msgIdx]}</p>
         </div>
       )}
     </>

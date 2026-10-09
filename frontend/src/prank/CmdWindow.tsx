@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BASE_LINES, STAGE_LINES, fillerBlock } from './cmdLines'
 
-type Variant = 'main' | 'net' | 'dump'
+type Variant = 'main' | 'net' | 'dump' | 'sys'
 
 const ARABIC = /[\u0600-\u06FF]/
 

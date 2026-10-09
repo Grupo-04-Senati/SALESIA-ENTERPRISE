@@ -1,4 +1,4 @@
-type Variant = 'main' | 'net' | 'dump'
+type Variant = 'main' | 'net' | 'dump' | 'sys'
 
 const HEX = '0123456789ABCDEF'
 
@@ -76,6 +76,30 @@ export const BASE_LINES: Record<Variant, string[]> = {
     'C:\\Windows\\system32> copy ventas_dump.sql \\\\192.168.1.107\\c$\\',
     '        1 archivo(s) copiado(s).',
     '[*] SUBIENDO COPIA A UN SERVIDOR EXTRANJERO ...... [OK]',
+  ],
+  sys: [
+    'Microsoft Windows [Version 10.0.22631.7218]',
+    '',
+    'C:\\Windows\\system32> sfc /scannow',
+    'Fase de verificacion del recurso: 100%',
+    'Proteccion de recursos: 100%',
+    'Se encontraron archivos corruptos y no se pudieron reparar.',
+    '[AVISO] El sistema no puede repararse solo',
+    '',
+    'C:\\Windows\\system32> DISM /Online /Cleanup-Image /RestoreHealth',
+    '[ERR] 0x800f081f - La fuente de la imagen no se encuentra',
+    '',
+    '[!] Servicio detenido: wuauserv',
+    '[!] Servicio detenido: WinDefend',
+    '[!] Servicio detenido: Spooler',
+    'C:\\Windows\\system32> tasklist',
+    '  svchost.exe   1204   Servicios detenidos',
+    '[!] El sistema encontró un error y debe reiniciarse',
+    '',
+    '[*] RECUPERANDO ARCHIVOS DEL SISTEMA ............. [OK]',
+    '[*] RECONSTRUYENDO TABLA DE PROCESOS ............. [OK]',
+    '[+] MEMORIA NO VOLATIL LIBERADA: 2.4 GB',
+    '[*] RESTAURANDO CONFIGURACION DEL EQUIPO ......... [OK]',
   ],
 }
 
@@ -163,8 +187,22 @@ const fillerDump = (): string[] => {
   ]
 }
 
+const fillerSys = (): string[] => {
+  const percent = rnd(90) + 10
+  return [
+    `[ERR] 0x80070005 - Acceso denegado (intento ${rnd(9) + 1})`,
+    `[!] PROCESO ${hex(4)}: ${rnd(99)}% de CPU`,
+    `[+] ARCHIVO reparado_${rnd(9)}.tmp ${bar(percent)} ${percent}%`,
+    'C:\\Windows\\system32> chkdsk C: /f',
+    `  Etapa ${rnd(4) + 1} de 5 completada`,
+    `[!] Escritura bloqueada en el sector ${hex(6)}`,
+    '',
+  ]
+}
+
 export const fillerBlock = (variant: Variant): string[] => {
   if (variant === 'net') return fillerNet()
   if (variant === 'dump') return fillerDump()
+  if (variant === 'sys') return fillerSys()
   return fillerMain()
 }
