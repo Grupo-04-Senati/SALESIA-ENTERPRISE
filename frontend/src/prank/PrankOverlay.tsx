@@ -115,9 +115,12 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--notepad .prank-win__title{color:#1f2328;font-weight:600}
 .prank-notepad__menu{display:flex;gap:16px;padding:5px 12px;background:#f6f7f8;border-bottom:1px solid #d6d9dd;color:#1f2328;font-size:12px}
 .prank-notepad__body{padding:16px 18px;min-height:170px;background:#fff;color:#101010;font-family:'Lucida Console',Consolas,monospace;font-size:clamp(16px,2.6vw,24px);line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.prank-jumpscare{position:fixed;inset:0;margin:0;padding:0;line-height:0;background:#000;border:0;overflow:hidden;animation:prank-jump-shake .1s step-end infinite}
-.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 0%;filter:contrast(1.35) saturate(1.25);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
-.prank-jumpscare::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 26%,rgba(130,0,0,.62));animation:prank-jump-pulse .3s steps(2,start) infinite}
+.prank-jumpscare{position:fixed;inset:0;margin:0;padding:0;line-height:0;background:#000;border:0;overflow:hidden}
+.prank-jumpscare--scare{animation:prank-jump-shake .1s step-end infinite}
+.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 0%;filter:contrast(1.35) saturate(1.25)}
+.prank-jumpscare--scare img{animation:prank-jump-zoom .5s ease-in-out infinite alternate}
+.prank-jumpscare::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 26%,rgba(130,0,0,.62))}
+.prank-jumpscare--scare::after{animation:prank-jump-pulse .3s steps(2,start) infinite}
 .prank-jumpscare--f1 img{filter:invert(1) contrast(1.7)}
 .prank-jumpscare--f2{background:#000}
 .prank-jumpscare--f2 img{opacity:0}
@@ -160,7 +163,7 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-core{from{transform:translate(-50%,-50%) scale(.96) rotate(-2deg)}to{transform:translate(-50%,-50%) scale(1.05) rotate(2deg)}}
 @keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}
 @keyframes prank-jump-shake{0%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}50%{transform:translate(8px,-7px)}75%{transform:translate(-7px,-5px)}100%{transform:translate(6px,8px)}}
-@keyframes prank-jump-zoom{from{transform:scale(1.05)}to{transform:scale(1.18)}}
+@keyframes prank-jump-zoom{from{transform:scale(1.02)}to{transform:scale(1.08)}}
 @keyframes prank-jump-pulse{50%{opacity:.3}}`
 
 export default function PrankOverlay() {
@@ -173,6 +176,7 @@ export default function PrankOverlay() {
   const [closedFixed, setClosedFixed] = useState<string[]>([])
   const [notepad, setNotepad] = useState(false)
   const [jump, setJump] = useState(false)
+  const [scare, setScare] = useState(false)
   const [flick, setFlick] = useState(0)
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
@@ -225,6 +229,7 @@ export default function PrankOverlay() {
     stageRef.current = 0
     setNotepad(false)
     setJump(false)
+    setScare(false)
     setFlick(0)
     const items: Win[] = SALA_IMAGES.slice(0, INITIAL_COUNT).map((file) =>
       makeWin(
@@ -400,13 +405,14 @@ export default function PrankOverlay() {
         setStage(next)
       }
       if (remaining <= TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
-      if (remaining <= TIMING.JUMPSCARE_LEAD_MS) {
-        setJump(true)
+      if (remaining <= TIMING.JUMPSCARE_LEAD_MS) setJump(true)
+      if (remaining <= TIMING.SCREAM_LEAD_MS) {
+        setScare(true)
         if (jumpSnd.current === null) {
-          const scare = new Audio(JUMP_SND)
-          scare.volume = 0.9
-          jumpSnd.current = scare
-          scare.play().catch(() => {})
+          const scream = new Audio(JUMP_SND)
+          scream.volume = 0.9
+          jumpSnd.current = scream
+          scream.play().catch(() => {})
         }
       }
       if (remaining <= 60) {
@@ -465,7 +471,7 @@ export default function PrankOverlay() {
   }, [stage])
 
   useEffect(() => {
-    if (!active || !jump) return undefined
+    if (!active || !scare) return undefined
     const t0 = Date.now()
     let cancelled = false
     let idx = 0
@@ -482,7 +488,7 @@ export default function PrankOverlay() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [active, jump])
+  }, [active, scare])
 
   useEffect(() => stopSound, [])
 
@@ -813,7 +819,10 @@ export default function PrankOverlay() {
         <div
           dir="ltr"
           data-prank-ui
-          className={'prank-jumpscare prank-jumpscare--f' + flick}
+          className={
+            'prank-jumpscare' +
+            (scare ? ' prank-jumpscare--scare prank-jumpscare--f' + flick : '')
+          }
           style={{ zIndex: 14500 }}
         >
           <img src={JUMP_SRC} alt="" draggable={false} />
