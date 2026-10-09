@@ -58,6 +58,30 @@ const JUMP_SRC = '/eps/eps.jpeg'
 
 const JUMP_SND = '/jumps%20de%20jefree/Jumpscare%20Sound.mp3'
 
+const ALERT_MSGS = [
+  'ALERTA: una presencia desconocida se conecto a su equipo',
+  'ALERTA: su camara se activo sin permiso',
+  'ADVERTENCIA: no apague el equipo, ella lo sabra',
+  'ALERTA: alguien mas esta usando su sesion ahora mismo',
+  'ALERTA: se detecto movimiento detras de la pantalla',
+  'ADVERTENCIA: la sombra ya esta dentro del sistema',
+  'ALERTA: sus archivos estan siendo observados uno por uno',
+  'ERROR FATAL: la entidad alcanzo el nucleo',
+]
+
+const ALERT_AT_MS = [2000, 8000, 16000, 26000, 38000, 52000, 66000, 78000]
+
+const ALERT_POS = [
+  { left: '50%', top: '40%' },
+  { left: '26%', top: '30%' },
+  { left: '72%', top: '34%' },
+  { left: '44%', top: '60%' },
+  { left: '68%', top: '64%' },
+  { left: '30%', top: '62%' },
+  { left: '52%', top: '48%' },
+  { left: '40%', top: '36%' },
+]
+
 const TERROR_SPOTS = [
   { text: 'لا تنظر خلفك', left: '5%', top: '9%' },
   { text: 'أنت لست وحدك هنا', left: '58%', top: '7%' },
@@ -95,6 +119,15 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win__close{flex:none;width:20px;height:20px;padding:0;border:0;border-radius:5px;background:#ef4444;color:#fff;font-size:12px;line-height:20px;text-align:center;cursor:pointer}
 .prank-win__close:hover{background:#dc2626}
 .prank-win--ad{background:#000;border:0;cursor:pointer}
+.prank-win--alert{width:min(430px,92vw);background:#1c1010;border:1px solid #7f1d1d}
+.prank-win--alert .prank-win__bar{background:#7f1d1d}
+.prank-win--alert .prank-win__title{color:#fecaca;font-weight:700}
+.prank-alert__body{display:flex;gap:12px;padding:16px 16px 8px}
+.prank-alert__icon{flex:none;font-size:28px;line-height:1;color:#ef4444;animation:prank-blink .6s steps(2,start) infinite}
+.prank-alert__msg{margin:0;color:#fee2e2;font-size:15px;line-height:1.45;font-family:system-ui,-apple-system,sans-serif}
+.prank-alert__actions{display:flex;justify-content:center;padding:6px 16px 14px}
+.prank-alert__ok{min-width:110px;padding:7px 20px;border:1px solid #b91c1c;border-radius:6px;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+.prank-alert__ok:hover{background:#dc2626}
 .prank-win__img{display:block;width:100%;height:220px;object-fit:contain;background:#000;pointer-events:none}
 .prank-win--cmd .prank-win__bar{background:#27272a;cursor:default}
 .prank-win--cmd1{left:max(12px,3vw);top:6vh;width:min(620px,94vw)}
@@ -172,6 +205,7 @@ export default function PrankOverlay() {
   const [jump, setJump] = useState(false)
   const [scare, setScare] = useState(false)
   const [flick, setFlick] = useState(0)
+  const [alerts, setAlerts] = useState<number[]>([])
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
   const zTop = useRef(9998)
@@ -180,6 +214,7 @@ export default function PrankOverlay() {
   const jumpSnd = useRef<HTMLAudioElement | null>(null)
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null)
   const clickStart = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const alertIdx = useRef(0)
   const stageRef = useRef(0)
   const musicStart = useRef<number | null>(null)
   const pending = useRef<Win[]>([])
@@ -225,6 +260,8 @@ export default function PrankOverlay() {
     setJump(false)
     setScare(false)
     setFlick(0)
+    setAlerts([])
+    alertIdx.current = 0
     const items: Win[] = SALA_IMAGES.slice(0, INITIAL_COUNT).map((file) =>
       makeWin(
         file,
@@ -391,12 +428,17 @@ export default function PrankOverlay() {
       const s4Start = total - TIMING.TERROR_LEAD_MS
       let next = 0
       if (elapsed >= s4Start) next = 4
-      else if (elapsed >= s4Start * 0.78) next = 3
-      else if (elapsed >= s4Start * 0.55) next = 2
-      else if (elapsed >= s4Start * 0.3) next = 1
+      else if (elapsed >= s4Start * 0.76) next = 3
+      else if (elapsed >= s4Start * 0.4) next = 2
+      else if (elapsed >= s4Start * 0.09) next = 1
       if (next !== stageRef.current) {
         stageRef.current = next
         setStage(next)
+      }
+      const ai = alertIdx.current
+      if (ai < ALERT_AT_MS.length && elapsed >= TIMING.GREEN_MS + ALERT_AT_MS[ai]) {
+        alertIdx.current = ai + 1
+        setAlerts((prev) => prev.concat(ai))
       }
       if (remaining <= TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
       if (remaining <= TIMING.JUMPSCARE_LEAD_MS) setJump(true)
@@ -565,6 +607,49 @@ export default function PrankOverlay() {
           />
         </div>
       ))}
+      {alerts.map((i) => {
+        if (closedFixed.includes('alert' + i)) return null
+        const pos = ALERT_POS[i % ALERT_POS.length]
+        return (
+          <div
+            key={i}
+            dir="ltr"
+            data-prank-ui
+            className="prank-win prank-win--alert"
+            style={{
+              left: pos.left,
+              top: pos.top,
+              transform: 'translate(-50%,-50%)',
+              zIndex: 13200,
+            }}
+          >
+            <div className="prank-win__bar">
+              <span className="prank-win__title">Alerta del sistema</span>
+              <button
+                type="button"
+                className="prank-win__close"
+                aria-label="Cerrar alerta"
+                onClick={() => hide('alert' + i)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="prank-alert__body">
+              <span className="prank-alert__icon">⚠</span>
+              <p className="prank-alert__msg">{ALERT_MSGS[i % ALERT_MSGS.length]}</p>
+            </div>
+            <div className="prank-alert__actions">
+              <button
+                type="button"
+                className="prank-alert__ok"
+                onClick={() => hide('alert' + i)}
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        )
+      })}
       {phase === 'hack' && (
         <>
           {!closedFixed.includes('cmd1') && (
