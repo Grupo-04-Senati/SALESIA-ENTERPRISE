@@ -94,11 +94,7 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win__title{color:#94a3b8;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prank-win__close{flex:none;width:20px;height:20px;padding:0;border:0;border-radius:5px;background:#ef4444;color:#fff;font-size:12px;line-height:20px;text-align:center;cursor:pointer}
 .prank-win__close:hover{background:#dc2626}
-.prank-win--ad{background:#0f172a;border:2px solid #facc15;cursor:pointer}
-.prank-win__adbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 9px;background:#facc15;color:#111827;cursor:grab;touch-action:none;user-select:none}
-.prank-win__adbar:active{cursor:grabbing}
-.prank-win__adtag{font-size:11px;font-weight:900;letter-spacing:2px;animation:prank-blink .7s steps(2,start) infinite}
-.prank-win__adhint{font-size:10px;font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prank-win--ad{background:#000;border:0;cursor:pointer}
 .prank-win__img{display:block;width:100%;height:220px;object-fit:contain;background:#000;pointer-events:none}
 .prank-win--cmd .prank-win__bar{background:#27272a;cursor:default}
 .prank-win--cmd1{left:max(12px,3vw);top:6vh;width:min(620px,94vw)}
@@ -526,48 +522,42 @@ export default function PrankOverlay() {
           onPointerDown={(event) => {
             bringFront(win.id)
             clickStart.current = { x: event.clientX, y: event.clientY, moved: false }
+            drag.current = { id: win.id, dx: event.clientX - win.x, dy: event.clientY - win.y }
+            event.currentTarget.setPointerCapture(event.pointerId)
           }}
           onPointerMove={(event) => {
             const start = clickStart.current
-            if (start === null || start.moved) return
-            if (Math.abs(event.clientX - start.x) > 6 || Math.abs(event.clientY - start.y) > 6) {
-              start.moved = true
+            if (start !== null && !start.moved) {
+              if (
+                Math.abs(event.clientX - start.x) > 6 ||
+                Math.abs(event.clientY - start.y) > 6
+              ) {
+                start.moved = true
+              }
             }
+            const current = drag.current
+            if (current === null || current.id !== win.id) return
+            const x = Math.min(
+              Math.max(event.clientX - current.dx, 0),
+              Math.max(0, window.innerWidth - win.w),
+            )
+            const y = Math.min(
+              Math.max(event.clientY - current.dy, 0),
+              Math.max(0, window.innerHeight - 40),
+            )
+            setWins((prev) => prev.map((item) => (item.id === win.id ? { ...item, x, y } : item)))
+          }}
+          onPointerUp={() => {
+            drag.current = null
+          }}
+          onPointerCancel={() => {
+            drag.current = null
           }}
           onClick={() => {
             const start = clickStart.current
             if (start === null || !start.moved) close(win.id)
           }}
         >
-          <div
-            className="prank-win__adbar"
-            onPointerDown={(event) => {
-              drag.current = { id: win.id, dx: event.clientX - win.x, dy: event.clientY - win.y }
-              event.currentTarget.setPointerCapture(event.pointerId)
-            }}
-            onPointerMove={(event) => {
-              const current = drag.current
-              if (current === null || current.id !== win.id) return
-              const x = Math.min(
-                Math.max(event.clientX - current.dx, 0),
-                Math.max(0, window.innerWidth - win.w),
-              )
-              const y = Math.min(
-                Math.max(event.clientY - current.dy, 0),
-                Math.max(0, window.innerHeight - 40),
-              )
-              setWins((prev) => prev.map((item) => (item.id === win.id ? { ...item, x, y } : item)))
-            }}
-            onPointerUp={() => {
-              drag.current = null
-            }}
-            onPointerCancel={() => {
-              drag.current = null
-            }}
-          >
-            <span className="prank-win__adtag">PUBLICIDAD</span>
-            <span className="prank-win__adhint">clic en la imagen para cerrar</span>
-          </div>
           <img
             className="prank-win__img"
             src={win.url}
