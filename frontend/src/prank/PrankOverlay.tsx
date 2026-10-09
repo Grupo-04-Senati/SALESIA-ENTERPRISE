@@ -46,6 +46,12 @@ const MAPS_TARGET = 'https://www.google.com/maps?q=Distrito+de+Independencia,+Li
 
 const SOUND_SRC = '/aud/ms.mp3'
 
+const NOTEPAD_MSG = 'EL TRABAJO A SIDO COMPLETADO'
+
+const JUMP_SRC = '/eps/eps.jpeg'
+
+const JUMP_SND = '/jumps%20de%20jefree/Jumpscare%20Sound.mp3'
+
 const TERROR_SPOTS = [
   { text: 'لا تنظر خلفك', left: '5%', top: '9%' },
   { text: 'أنت لست وحدك هنا', left: '58%', top: '7%' },
@@ -93,6 +99,13 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--cmd7{right:5vw;top:12vh;width:min(460px,92vw)}
 .prank-win--map{right:max(12px,3vw);bottom:5vh;width:min(400px,92vw)}
 .prank-win--map .prank-win__bar{background:#14532d;cursor:default}
+.prank-win--notepad{left:50%;top:42%;transform:translate(-50%,-50%);width:min(600px,92vw);background:#fff;border:1px solid #9a9a9a;box-shadow:0 26px 60px rgba(0,0,0,.5)}
+.prank-win--notepad .prank-win__bar{background:#e8eaed;cursor:default}
+.prank-win--notepad .prank-win__title{color:#1f2328;font-weight:600}
+.prank-notepad__menu{display:flex;gap:16px;padding:5px 12px;background:#f6f7f8;border-bottom:1px solid #d6d9dd;color:#1f2328;font-size:12px}
+.prank-notepad__body{padding:16px 18px;min-height:170px;background:#fff;color:#101010;font-family:'Lucida Console',Consolas,monospace;font-size:clamp(16px,2.6vw,24px);line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.prank-jumpscare{position:fixed;inset:0;background:#000;overflow:hidden;animation:prank-jump-shake .11s step-end infinite}
+.prank-jumpscare img{display:block;width:100%;height:100%;object-fit:cover;filter:contrast(1.3) saturate(1.15);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
 .prank-console{height:330px;overflow-y:auto;background:#0c0c0c;padding:10px 12px;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:13px;line-height:1.5;color:#4ade80;white-space:pre-wrap;word-break:break-word}
 .prank-win--cmd2 .prank-console{height:240px}
 .prank-win--cmd3 .prank-console{height:260px}
@@ -128,7 +141,9 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-pulse-lite{from{opacity:.2;transform:rotate(-7deg) scale(.96)}to{opacity:.7;transform:rotate(4deg) scale(1.02)}}
 @keyframes prank-tint-pulse{from{opacity:.55}to{opacity:1}}
 @keyframes prank-core{from{transform:translate(-50%,-50%) scale(.96) rotate(-2deg)}to{transform:translate(-50%,-50%) scale(1.05) rotate(2deg)}}
-@keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}`
+@keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}
+@keyframes prank-jump-shake{0%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}50%{transform:translate(8px,-7px)}75%{transform:translate(-7px,-5px)}100%{transform:translate(6px,8px)}}
+@keyframes prank-jump-zoom{from{transform:scale(1.05)}to{transform:scale(1.18)}}`
 
 export default function PrankOverlay() {
   const { active, setActive } = usePrank()
@@ -138,11 +153,14 @@ export default function PrankOverlay() {
   const [coreIdx, setCoreIdx] = useState(0)
   const [msgIdx, setMsgIdx] = useState(0)
   const [closedFixed, setClosedFixed] = useState<string[]>([])
+  const [notepad, setNotepad] = useState(false)
+  const [jump, setJump] = useState(false)
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
   const zTop = useRef(9998)
   const prevCount = useRef(-1)
   const audio = useRef<HTMLAudioElement | null>(null)
+  const jumpSnd = useRef<HTMLAudioElement | null>(null)
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null)
   const stageRef = useRef(0)
   const musicStart = useRef<number | null>(null)
@@ -185,6 +203,8 @@ export default function PrankOverlay() {
     setPhase('idle')
     setStage(0)
     stageRef.current = 0
+    setNotepad(false)
+    setJump(false)
     const items: Win[] = SALA_IMAGES.map((file) =>
       makeWin(
         file,
@@ -227,10 +247,17 @@ export default function PrankOverlay() {
 
   const stopSound = () => {
     const track = audio.current
-    if (track === null) return
-    track.pause()
-    track.currentTime = 0
-    audio.current = null
+    if (track !== null) {
+      track.pause()
+      track.currentTime = 0
+      audio.current = null
+    }
+    const scare = jumpSnd.current
+    if (scare !== null) {
+      scare.pause()
+      scare.currentTime = 0
+      jumpSnd.current = null
+    }
   }
 
   const startSound = () => {
@@ -340,6 +367,14 @@ export default function PrankOverlay() {
       if (next !== stageRef.current) {
         stageRef.current = next
         setStage(next)
+      }
+      if (elapsed >= total - TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
+      if (elapsed >= total - TIMING.JUMPSCARE_LEAD_MS && jumpSnd.current === null) {
+        setJump(true)
+        const scare = new Audio(JUMP_SND)
+        scare.volume = 0.9
+        jumpSnd.current = scare
+        scare.play().catch(() => {})
       }
       if (elapsed >= total - 60) {
         openMaps()
@@ -680,6 +715,42 @@ export default function PrankOverlay() {
             </div>
           )}
         </>
+      )}
+      {notepad && !closedFixed.includes('notepad') && (
+        <div
+          dir="ltr"
+          data-prank-ui
+          className="prank-win prank-win--notepad"
+          style={{ zIndex: 13500 }}
+        >
+          <div className="prank-win__bar">
+            <span className="prank-win__title">Sin titulo - Bloc de notas</span>
+            <button
+              type="button"
+              className="prank-win__close"
+              aria-label="Cerrar bloc de notas"
+              onClick={() => hide('notepad')}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="prank-notepad__menu">
+            <span>Archivo</span>
+            <span>Edicion</span>
+            <span>Formato</span>
+            <span>Ver</span>
+            <span>Ayuda</span>
+          </div>
+          <div className="prank-notepad__body">
+            {NOTEPAD_MSG}
+            <span className="prank-cursor" />
+          </div>
+        </div>
+      )}
+      {jump && (
+        <div dir="ltr" data-prank-ui className="prank-jumpscare" style={{ zIndex: 14500 }}>
+          <img src={JUMP_SRC} alt="" draggable={false} />
+        </div>
       )}
       {phase === 'aviso' && (
         <div dir="ltr" data-prank-ui className="prank-aviso" style={{ zIndex: 12000 }}>
