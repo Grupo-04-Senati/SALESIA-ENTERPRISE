@@ -24,9 +24,15 @@ const GRID_COL_W = 290
 
 const GRID_ROW_H = 230
 
-const SPAWN_MAX = 100
+const SPAWN_MAX = 50
 
 const SPAWN_FIRST_MS = 500
+
+const INITIAL_COUNT = 10
+
+const MID_COUNT = 30
+
+const END_COUNT = 50
 
 const SEED_COUNT = 8
 
@@ -88,6 +94,11 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win__title{color:#94a3b8;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prank-win__close{flex:none;width:20px;height:20px;padding:0;border:0;border-radius:5px;background:#ef4444;color:#fff;font-size:12px;line-height:20px;text-align:center;cursor:pointer}
 .prank-win__close:hover{background:#dc2626}
+.prank-win--ad{background:#0f172a;border:2px solid #facc15;cursor:pointer}
+.prank-win__adbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 9px;background:#facc15;color:#111827;cursor:grab;touch-action:none;user-select:none}
+.prank-win__adbar:active{cursor:grabbing}
+.prank-win__adtag{font-size:11px;font-weight:900;letter-spacing:2px;animation:prank-blink .7s steps(2,start) infinite}
+.prank-win__adhint{font-size:10px;font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prank-win__img{display:block;width:100%;height:220px;object-fit:contain;background:#000;pointer-events:none}
 .prank-win--cmd .prank-win__bar{background:#27272a;cursor:default}
 .prank-win--cmd1{left:max(12px,3vw);top:6vh;width:min(620px,94vw)}
@@ -105,7 +116,7 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-notepad__menu{display:flex;gap:16px;padding:5px 12px;background:#f6f7f8;border-bottom:1px solid #d6d9dd;color:#1f2328;font-size:12px}
 .prank-notepad__body{padding:16px 18px;min-height:170px;background:#fff;color:#101010;font-family:'Lucida Console',Consolas,monospace;font-size:clamp(16px,2.6vw,24px);line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .prank-jumpscare{position:fixed;inset:0;margin:0;padding:0;line-height:0;background:#000;border:0;overflow:hidden;animation:prank-jump-shake .1s step-end infinite}
-.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 15%;filter:contrast(1.35) saturate(1.25);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
+.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 0%;filter:contrast(1.35) saturate(1.25);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
 .prank-jumpscare::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 26%,rgba(130,0,0,.62));animation:prank-jump-pulse .3s steps(2,start) infinite}
 .prank-jumpscare--f1 img{filter:invert(1) contrast(1.7)}
 .prank-jumpscare--f2{background:#000}
@@ -170,6 +181,7 @@ export default function PrankOverlay() {
   const audio = useRef<HTMLAudioElement | null>(null)
   const jumpSnd = useRef<HTMLAudioElement | null>(null)
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null)
+  const clickStart = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const stageRef = useRef(0)
   const musicStart = useRef<number | null>(null)
   const pending = useRef<Win[]>([])
@@ -214,7 +226,7 @@ export default function PrankOverlay() {
     setNotepad(false)
     setJump(false)
     setFlick(0)
-    const items: Win[] = SALA_IMAGES.map((file) =>
+    const items: Win[] = SALA_IMAGES.slice(0, INITIAL_COUNT).map((file) =>
       makeWin(
         file,
         salaUrl(file),
@@ -227,13 +239,16 @@ export default function PrankOverlay() {
     setWins(items.length > 0 ? [items[0]] : [])
   }
 
-  const spawnExtras = (count: number, w: number) => {
+  const spawnTo = (target: number, w: number) => {
+    const current = Math.max(prevCount.current, 0)
+    const deficit = Math.min(target, SPAWN_MAX, current + 6) - current
+    if (deficit <= 0) return
     const maxX = Math.max(0, window.innerWidth - w)
     const maxY = Math.max(0, window.innerHeight - WIN_H)
     const useSala = Math.random() < 0.5
     const pool = useSala ? SALA_IMAGES : SENAR_IMAGES
     const extras: Win[] = []
-    for (let i = 0; i < count; i += 1) {
+    for (let i = 0; i < deficit; i += 1) {
       const file = pool[Math.floor(Math.random() * pool.length)]
       const url = useSala ? salaUrl(file) : senarUrl(file)
       extras.push(
@@ -246,7 +261,7 @@ export default function PrankOverlay() {
         ),
       )
     }
-    setWins((prev) => (prev.length >= SPAWN_MAX ? prev : [...prev, ...extras]))
+    setWins((prev) => [...prev, ...extras])
   }
 
   const enterHack = () => {
@@ -418,9 +433,12 @@ export default function PrankOverlay() {
       }
       const span = Math.max(1, total - TIMING.GREEN_MS)
       const p = Math.min(1, Math.max(0, (elapsed - TIMING.GREEN_MS) / span))
-      const count = 1 + Math.round(p * 6)
+      const target =
+        p < 0.5
+          ? INITIAL_COUNT + Math.round((p / 0.5) * (MID_COUNT - INITIAL_COUNT))
+          : MID_COUNT + Math.round(((p - 0.5) / 0.5) * (END_COUNT - MID_COUNT))
       const w = Math.round(340 + p * 430)
-      spawnExtras(count, w)
+      spawnTo(target, w)
       timer = window.setTimeout(step, Math.round(3800 * Math.pow(1 - p, 1.7) + 250))
     }
     timer = window.setTimeout(step, SPAWN_FIRST_MS)
@@ -497,14 +515,27 @@ export default function PrankOverlay() {
           key={win.id}
           dir="ltr"
           data-prank-ui
-          className={'prank-win' + quake}
+          className={'prank-win prank-win--ad' + quake}
           style={{ left: win.x, top: win.y, zIndex: win.z, width: win.w }}
-          onPointerDown={() => bringFront(win.id)}
+          onPointerDown={(event) => {
+            bringFront(win.id)
+            clickStart.current = { x: event.clientX, y: event.clientY, moved: false }
+          }}
+          onPointerMove={(event) => {
+            const start = clickStart.current
+            if (start === null || start.moved) return
+            if (Math.abs(event.clientX - start.x) > 6 || Math.abs(event.clientY - start.y) > 6) {
+              start.moved = true
+            }
+          }}
+          onClick={() => {
+            const start = clickStart.current
+            if (start === null || !start.moved) close(win.id)
+          }}
         >
           <div
-            className="prank-win__bar"
+            className="prank-win__adbar"
             onPointerDown={(event) => {
-              if ((event.target as HTMLElement).closest('button')) return
               drag.current = { id: win.id, dx: event.clientX - win.x, dy: event.clientY - win.y }
               event.currentTarget.setPointerCapture(event.pointerId)
             }}
@@ -528,15 +559,8 @@ export default function PrankOverlay() {
               drag.current = null
             }}
           >
-            <span className="prank-win__title">{win.file}</span>
-            <button
-              type="button"
-              className="prank-win__close"
-              aria-label="Cerrar ventana"
-              onClick={() => close(win.id)}
-            >
-              ✕
-            </button>
+            <span className="prank-win__adtag">PUBLICIDAD</span>
+            <span className="prank-win__adhint">clic en la imagen para cerrar</span>
           </div>
           <img
             className="prank-win__img"
