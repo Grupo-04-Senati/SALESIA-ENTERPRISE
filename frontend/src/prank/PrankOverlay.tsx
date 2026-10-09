@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SALA_IMAGES, salaUrl } from './salaImages'
+import { SALA_IMAGES, SENAR_IMAGES, salaUrl, senarUrl } from './salaImages'
 import { usePrank } from './PrankContext'
 import CmdWindow from './CmdWindow'
 import { TIMING } from './timings'
@@ -9,6 +9,7 @@ type Phase = 'idle' | 'aviso' | 'green' | 'hack'
 interface Win {
   id: number
   file: string
+  url: string
   x: number
   y: number
   z: number
@@ -18,7 +19,13 @@ const WIN_W = 300
 
 const WIN_H = 260
 
-const TERROR_MAX_WINS = 46
+const GRID_COL_W = 290
+
+const GRID_ROW_H = 230
+
+const SPAWN_MAX = 60
+
+const SPAWN_MS: Record<number, number> = { 1: 8000, 2: 4500, 3: 2000, 4: 550 }
 
 const MAP_EMBED = 'https://maps.google.com/maps?q=-11.846935%2C-77.100032&z=17&t=k&output=embed'
 
@@ -27,25 +34,35 @@ const MAPS_TARGET = 'https://www.google.com/maps?q=Distrito+de+Independencia,+Li
 const SOUND_SRC = '/aud/ms.mp3'
 
 const TERROR_SPOTS = [
-  { text: 'Ù„Ø§ ØªÙ†Ø¸Ø± Ø®Ù„ÙÙƒ', left: '5%', top: '9%' },
-  { text: 'Ø£Ù†Øª Ù„Ø³Øª ÙˆØ­Ø¯Ùƒ Ù‡Ù†Ø§', left: '58%', top: '7%' },
-  { text: 'Ø¹ÙŠÙ† ØªØ±Ø§Ù‚Ø¨Ùƒ Ø§Ù„Ø¢Ù†', left: '7%', top: '37%' },
-  { text: 'Ø®Ù„ÙÙƒ... Ø®Ù„ÙÙƒ...', left: '64%', top: '33%' },
-  { text: 'Ù„Ø§ ØªØ³ØªØ·ÙŠØ¹ Ø§Ù„Ù‡Ø±Ø¨', left: '5%', top: '70%' },
-  { text: 'Ø¨ÙŠØ§Ù†Ø§ØªÙƒ Ù„Ù†Ø§', left: '61%', top: '65%' },
-  { text: 'Ø³Ù†Ù„ØªÙ‚Ø·Ùƒ Ù‚Ø±ÙŠØ¨Ø§Ù‹', left: '32%', top: '19%' },
-  { text: 'Ø§Ù„Ù†Ù‡Ø§ÙŠØ© Ø§Ù‚ØªØ±Ø¨Øª', left: '37%', top: '77%' },
+  { text: 'لا تنظر خلفك', left: '5%', top: '9%' },
+  { text: 'أنت لست وحدك هنا', left: '58%', top: '7%' },
+  { text: 'عين تراقبك الآن', left: '7%', top: '37%' },
+  { text: 'خلفك... خلفك...', left: '64%', top: '33%' },
+  { text: 'لا تستطيع الهرب', left: '5%', top: '70%' },
+  { text: 'بياناتك لنا', left: '61%', top: '65%' },
+  { text: 'سنصل إليك قريباً', left: '32%', top: '19%' },
+  { text: 'النهاية اقتربت', left: '37%', top: '77%' },
+  { text: 'البرج يسقط', left: '22%', top: '52%' },
+  { text: 'دمار سيناتي بدأ', left: '74%', top: '52%' },
+  { text: 'أبراج سيناتي تشتعل', left: '46%', top: '4%' },
+  { text: 'المعهد في خطر', left: '44%', top: '87%' },
 ]
 
 const TERROR_CORE = [
-  'Ù„Ø§ Ù…Ø®Ø±Ø¬',
-  'Ø®Ù„ÙÙƒ!',
-  'Ø§Ù„Ø´ÙŠØ·Ø§Ù† Ù‡Ù†Ø§',
-  'Ø±ÙˆØ­Ùƒ ØªÙØ³Ø±Ù‚',
-  'Ù„Ø§ ØªØºÙ„Ù‚ Ø§Ù„Ø´Ø§Ø´Ø©',
+  'لا مخرج',
+  'خرج!',
+  'الشيطان هنا',
+  'روحك تُسرق',
+  'لا تغلق الشاشة',
+  'البرج يسقط الآن',
+  'الهدم يبدأ',
+  'سيناتي ستسقط',
 ]
 
 const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990;background:repeating-linear-gradient(45deg,rgba(196,12,12,.4) 0 70px,rgba(0,150,62,.4) 70px 140px)}
+.prank-tint--s2{animation:prank-tint-pulse 1.4s ease-in-out infinite alternate}
+.prank-tint--s3{background:repeating-linear-gradient(45deg,rgba(196,12,12,.55) 0 70px,rgba(0,150,62,.55) 70px 140px);animation:prank-tint-pulse .7s ease-in-out infinite alternate}
+.prank-tint--s4{background:repeating-linear-gradient(45deg,rgba(196,12,12,.62) 0 70px,rgba(0,150,62,.62) 70px 140px);animation:prank-tint-pulse .45s ease-in-out infinite alternate}
 .prank-win{position:fixed;display:flex;flex-direction:column;width:300px;max-width:92vw;background:#0b1220;border:1px solid #334155;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55);font-family:system-ui,-apple-system,sans-serif;animation:prank-pop .16s ease-out}
 .prank-win__bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:#1e293b;cursor:grab;touch-action:none;user-select:none}
 .prank-win__bar:active{cursor:grabbing}
@@ -75,6 +92,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-green__fill{display:block;width:45%;height:100%;background:#04210f;animation:prank-load 1.6s linear infinite}
 .prank-green__sub{margin:0;font-size:clamp(14px,3vw,26px);font-weight:700}
 .prank-terror{position:fixed;inset:0;pointer-events:none;overflow:hidden;background:repeating-linear-gradient(45deg,rgba(0,0,0,.42) 0 60px,rgba(70,0,0,.36) 60px 120px);font-family:'Segoe UI',system-ui,sans-serif}
+.prank-terror--lite{background:repeating-linear-gradient(45deg,rgba(0,0,0,.26) 0 60px,rgba(70,0,0,.2) 60px 120px)}
+.prank-terror--lite .prank-terror__word{font-size:clamp(18px,3vw,38px);animation:prank-pulse-lite 2.2s ease-in-out infinite alternate}
 .prank-terror__flash{position:absolute;inset:0;background:rgba(130,0,0,.5);animation:prank-strobe .24s step-end infinite}
 .prank-terror__word{position:absolute;font-size:clamp(22px,4vw,52px);font-weight:900;color:#ff3b30;text-shadow:0 0 14px rgba(255,0,0,.85),0 0 44px rgba(255,0,0,.5);white-space:nowrap;transform:rotate(-7deg);animation:prank-pulse 1.1s ease-in-out infinite alternate}
 .prank-terror__core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font-size:clamp(44px,11vw,150px);font-weight:900;color:#00ff88;text-shadow:0 0 22px rgba(0,255,120,.9),0 0 60px rgba(0,255,120,.5);white-space:nowrap;animation:prank-blink .5s steps(2,start) infinite,prank-core 1.6s ease-in-out infinite alternate}
@@ -85,6 +104,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-load{from{transform:translateX(-120%)}to{transform:translateX(340%)}}
 @keyframes prank-strobe{from{background:rgba(130,0,0,.52)}to{background:rgba(0,95,48,.46)}}
 @keyframes prank-pulse{from{opacity:.35;transform:rotate(-7deg) scale(.94)}to{opacity:1;transform:rotate(6deg) scale(1.06)}}
+@keyframes prank-pulse-lite{from{opacity:.2;transform:rotate(-7deg) scale(.96)}to{opacity:.7;transform:rotate(4deg) scale(1.02)}}
+@keyframes prank-tint-pulse{from{opacity:.55}to{opacity:1}}
 @keyframes prank-core{from{transform:translate(-50%,-50%) scale(.96) rotate(-2deg)}to{transform:translate(-50%,-50%) scale(1.05) rotate(2deg)}}
 @keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}`
 
@@ -92,7 +113,7 @@ export default function PrankOverlay() {
   const { active, setActive } = usePrank()
   const [wins, setWins] = useState<Win[]>([])
   const [phase, setPhaseState] = useState<Phase>('idle')
-  const [terror, setTerror] = useState(false)
+  const [stage, setStage] = useState(0)
   const [coreIdx, setCoreIdx] = useState(0)
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
@@ -100,7 +121,7 @@ export default function PrankOverlay() {
   const prevCount = useRef(-1)
   const audio = useRef<HTMLAudioElement | null>(null)
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null)
-  const terrorRef = useRef(false)
+  const stageRef = useRef(0)
   const musicStart = useRef<number | null>(null)
 
   const setPhase = (value: Phase) => {
@@ -108,22 +129,66 @@ export default function PrankOverlay() {
     setPhaseState(value)
   }
 
+  const makeWin = (file: string, url: string, x: number, y: number): Win => {
+    nextId.current += 1
+    zTop.current += 1
+    return { id: nextId.current, file, url, x, y, z: zTop.current }
+  }
+
+  const senarGrid = (): Win[] => {
+    const cols = Math.max(1, Math.ceil(window.innerWidth / GRID_COL_W))
+    const rows = Math.max(1, Math.ceil(window.innerHeight / GRID_ROW_H))
+    const cellW = window.innerWidth / cols
+    const cellH = window.innerHeight / rows
+    const items: Win[] = []
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const file = SENAR_IMAGES[(row * cols + col) % SENAR_IMAGES.length]
+        items.push(makeWin(file, senarUrl(file), Math.round(col * cellW), Math.round(row * cellH)))
+      }
+    }
+    return items
+  }
+
   const spawn = () => {
     setPhase('idle')
-    setTerror(false)
-    terrorRef.current = false
-    const items: Win[] = SALA_IMAGES.map((file) => {
-      nextId.current += 1
-      zTop.current += 1
-      return {
-        id: nextId.current,
+    setStage(0)
+    stageRef.current = 0
+    const items: Win[] = SALA_IMAGES.map((file) =>
+      makeWin(
         file,
-        x: Math.floor(Math.random() * (Math.max(0, window.innerWidth - WIN_W) + 1)),
-        y: Math.floor(Math.random() * (Math.max(0, window.innerHeight - WIN_H) + 1)),
-        z: zTop.current,
-      }
-    })
+        salaUrl(file),
+        Math.floor(Math.random() * (Math.max(0, window.innerWidth - WIN_W) + 1)),
+        Math.floor(Math.random() * (Math.max(0, window.innerHeight - WIN_H) + 1)),
+      ),
+    )
     setWins(items)
+  }
+
+  const spawnExtras = (count: number) => {
+    const maxX = Math.max(0, window.innerWidth - WIN_W)
+    const maxY = Math.max(0, window.innerHeight - WIN_H)
+    const useSala = Math.random() < 0.5
+    const pool = useSala ? SALA_IMAGES : SENAR_IMAGES
+    const extras: Win[] = []
+    for (let i = 0; i < count; i += 1) {
+      const file = pool[Math.floor(Math.random() * pool.length)]
+      const url = useSala ? salaUrl(file) : senarUrl(file)
+      extras.push(
+        makeWin(
+          file,
+          url,
+          Math.floor(Math.random() * (maxX + 1)),
+          Math.floor(Math.random() * (maxY + 1)),
+        ),
+      )
+    }
+    setWins((prev) => (prev.length >= SPAWN_MAX ? prev : [...prev, ...extras]))
+  }
+
+  const enterHack = () => {
+    setPhase('hack')
+    setWins((prev) => [...senarGrid(), ...prev])
   }
 
   const stopSound = () => {
@@ -157,8 +222,8 @@ export default function PrankOverlay() {
   const openMaps = useCallback(() => {
     stopSound()
     setPhase('idle')
-    setTerror(false)
-    terrorRef.current = false
+    setStage(0)
+    stageRef.current = 0
     setWins([])
     setActive(false)
     window.location.href = MAPS_TARGET
@@ -193,7 +258,7 @@ export default function PrankOverlay() {
       return () => window.clearTimeout(id)
     }
     if (phase === 'green') {
-      const id = window.setTimeout(() => setPhase('hack'), TIMING.GREEN_MS)
+      const id = window.setTimeout(() => enterHack(), TIMING.GREEN_MS)
       return () => window.clearTimeout(id)
     }
     return undefined
@@ -223,9 +288,15 @@ export default function PrankOverlay() {
       if (track !== null && Number.isFinite(track.duration) && track.duration > 1) {
         total = track.duration * 1000
       }
-      if (!terrorRef.current && elapsed >= total - TIMING.TERROR_LEAD_MS) {
-        terrorRef.current = true
-        setTerror(true)
+      const s4Start = total - TIMING.TERROR_LEAD_MS
+      let next = 0
+      if (elapsed >= s4Start) next = 4
+      else if (elapsed >= s4Start * 0.78) next = 3
+      else if (elapsed >= s4Start * 0.55) next = 2
+      else if (elapsed >= s4Start * 0.3) next = 1
+      if (next !== stageRef.current) {
+        stageRef.current = next
+        setStage(next)
       }
       if (elapsed >= total - 60) {
         openMaps()
@@ -236,35 +307,29 @@ export default function PrankOverlay() {
   }, [phase, openMaps])
 
   useEffect(() => {
-    if (phase !== 'hack' || !terror) return undefined
+    if (phase !== 'hack' || stage < 1) return undefined
+    const ms = SPAWN_MS[stage] ?? 6000
     const id = window.setInterval(() => {
-      const count = 1 + Math.floor(Math.random() * 3)
-      const maxX = Math.max(0, window.innerWidth - WIN_W)
-      const maxY = Math.max(0, window.innerHeight - WIN_H)
-      const extras: Win[] = []
-      for (let i = 0; i < count; i += 1) {
-        nextId.current += 1
-        zTop.current += 1
-        extras.push({
-          id: nextId.current,
-          file: SALA_IMAGES[Math.floor(Math.random() * SALA_IMAGES.length)],
-          x: Math.floor(Math.random() * (maxX + 1)),
-          y: Math.floor(Math.random() * (maxY + 1)),
-          z: zTop.current,
-        })
-      }
-      setWins((prev) => (prev.length >= TERROR_MAX_WINS ? prev : [...prev, ...extras]))
-    }, 550)
+      const count =
+        stage === 1
+          ? 1
+          : stage === 2
+            ? 1 + Math.floor(Math.random() * 2)
+            : stage === 3
+              ? 2 + Math.floor(Math.random() * 2)
+              : 1 + Math.floor(Math.random() * 3)
+      spawnExtras(count)
+    }, ms)
     return () => window.clearInterval(id)
-  }, [phase, terror])
+  }, [phase, stage])
 
   useEffect(() => {
-    if (!terror) return undefined
+    if (stage !== 4) return undefined
     const id = window.setInterval(() => {
       setCoreIdx((idx) => (idx + 1) % TERROR_CORE.length)
     }, 900)
     return () => window.clearInterval(id)
-  }, [terror])
+  }, [stage])
 
   useEffect(() => stopSound, [])
 
@@ -281,12 +346,13 @@ export default function PrankOverlay() {
 
   if (!active) return null
 
-  const quake = terror ? ' prank-win--quake' : ''
+  const quake = stage >= 3 ? ' prank-win--quake' : ''
+  const tintClass = stage >= 2 ? ` prank-tint--s${stage}` : ''
 
   return (
     <>
       <style>{CSS}</style>
-      <div data-prank-ui className="prank-tint" />
+      <div data-prank-ui className={'prank-tint' + tintClass} />
       {wins.map((win) => (
         <div
           key={win.id}
@@ -330,10 +396,10 @@ export default function PrankOverlay() {
               aria-label="Cerrar ventana"
               onClick={() => close(win.id)}
             >
-              âœ•
+              ✕
             </button>
           </div>
-          <img className="prank-win__img" src={salaUrl(win.file)} alt="" draggable={false} />
+          <img className="prank-win__img" src={win.url} alt="" draggable={false} />
         </div>
       ))}
       {phase === 'hack' && (
@@ -352,10 +418,10 @@ export default function PrankOverlay() {
                 aria-label="Cerrar consola"
                 onClick={abortHack}
               >
-                âœ•
+                ✕
               </button>
             </div>
-            <CmdWindow variant="main" terror={terror} />
+            <CmdWindow variant="main" stage={stage} />
           </div>
           <div
             dir="ltr"
@@ -364,19 +430,17 @@ export default function PrankOverlay() {
             style={{ zIndex: 10998 }}
           >
             <div className="prank-win__bar">
-              <span className="prank-win__title">
-                C:\Windows\system32\cmd.exe â€” sesion de red
-              </span>
+              <span className="prank-win__title">C:\Windows\system32\cmd.exe — sesion de red</span>
               <button
                 type="button"
                 className="prank-win__close"
                 aria-label="Cerrar consola de red"
                 onClick={abortHack}
               >
-                âœ•
+                ✕
               </button>
             </div>
-            <CmdWindow variant="net" delay={700} terror={terror} />
+            <CmdWindow variant="net" delay={700} stage={stage} />
           </div>
           <div
             dir="ltr"
@@ -392,10 +456,10 @@ export default function PrankOverlay() {
                 aria-label="Cerrar consola de base de datos"
                 onClick={abortHack}
               >
-                âœ•
+                ✕
               </button>
             </div>
-            <CmdWindow variant="dump" delay={1500} terror={terror} />
+            <CmdWindow variant="dump" delay={1500} stage={stage} />
           </div>
           <div
             dir="ltr"
@@ -411,7 +475,7 @@ export default function PrankOverlay() {
                 aria-label="Cerrar mapa"
                 onClick={abortHack}
               >
-                âœ•
+                ✕
               </button>
             </div>
             <iframe
@@ -422,9 +486,14 @@ export default function PrankOverlay() {
               referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
-          {terror && (
-            <div dir="rtl" data-prank-ui className="prank-terror" style={{ zIndex: 13000 }}>
-              <div className="prank-terror__flash" />
+          {stage >= 3 && (
+            <div
+              dir="rtl"
+              data-prank-ui
+              className={'prank-terror' + (stage === 3 ? ' prank-terror--lite' : '')}
+              style={{ zIndex: stage === 3 ? 12500 : 13000 }}
+            >
+              {stage === 4 && <div className="prank-terror__flash" />}
               {TERROR_SPOTS.map((spot, index) => (
                 <span
                   key={spot.text}
@@ -434,7 +503,7 @@ export default function PrankOverlay() {
                   {spot.text}
                 </span>
               ))}
-              <p className="prank-terror__core">{TERROR_CORE[coreIdx]}</p>
+              {stage === 4 && <p className="prank-terror__core">{TERROR_CORE[coreIdx]}</p>}
             </div>
           )}
         </>
@@ -453,7 +522,7 @@ export default function PrankOverlay() {
           <div className="prank-green__track">
             <span className="prank-green__fill" />
           </div>
-          <p className="prank-green__sub">CARGANDO PANTALLA VERDEâ€¦</p>
+          <p className="prank-green__sub">CARGANDO PANTALLA VERDE…</p>
         </div>
       )}
     </>

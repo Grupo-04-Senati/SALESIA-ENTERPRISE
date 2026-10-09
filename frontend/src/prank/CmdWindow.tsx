@@ -1,22 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
-import { BASE_LINES, HORROR_LINES, fillerBlock } from './cmdLines'
+import { BASE_LINES, STAGE_LINES, fillerBlock } from './cmdLines'
 
 type Variant = 'main' | 'net' | 'dump'
+
+const ARABIC = /[\u0600-\u06FF]/
+
+const SPEED = [1, 0.9, 0.78, 0.65, 0.55]
 
 interface CmdWindowProps {
   variant: Variant
   delay?: number
-  terror?: boolean
+  stage?: number
 }
 
-export default function CmdWindow({ variant, delay = 0, terror = false }: CmdWindowProps) {
+export default function CmdWindow({ variant, delay = 0, stage = 0 }: CmdWindowProps) {
   const [shown, setShown] = useState<string[]>([])
   const boxRef = useRef<HTMLDivElement>(null)
   const queueRef = useRef<string[]>([])
+  const stageRef = useRef(stage)
 
   useEffect(() => {
-    if (terror) queueRef.current = [...HORROR_LINES, ...queueRef.current]
-  }, [terror])
+    const prev = stageRef.current
+    stageRef.current = stage
+    if (stage <= prev) return
+    const injected: string[] = []
+    for (let level = prev + 1; level <= stage; level += 1) {
+      injected.push(...(STAGE_LINES[level] ?? []), '')
+    }
+    if (injected.length > 1) queueRef.current = [...injected, ...queueRef.current]
+  }, [stage])
 
   useEffect(() => {
     queueRef.current = [...BASE_LINES[variant]]
@@ -24,17 +36,16 @@ export default function CmdWindow({ variant, delay = 0, terror = false }: CmdWin
     let timer = 0
     const tick = () => {
       if (cancelled) return
-      if (queueRef.current.length === 0) {
-        queueRef.current = ['', ...fillerBlock(variant)]
-      }
+      if (queueRef.current.length === 0) queueRef.current = ['', ...fillerBlock(variant)]
       const next = queueRef.current.shift() ?? ''
       setShown((prev) => [...prev, next])
-      const wait = HORROR_LINES.includes(next)
-        ? 420 + Math.random() * 380
-        : next === ''
+      const base =
+        next === ''
           ? 130
-          : 150 + Math.random() * 210
-      timer = window.setTimeout(tick, wait)
+          : ARABIC.test(next)
+            ? 430 + Math.random() * 370
+            : 150 + Math.random() * 210
+      timer = window.setTimeout(tick, base * (SPEED[stageRef.current] ?? 1))
     }
     timer = window.setTimeout(tick, delay + 260)
     return () => {
@@ -45,14 +56,14 @@ export default function CmdWindow({ variant, delay = 0, terror = false }: CmdWin
 
   useEffect(() => {
     const box = boxRef.current
-    if (box !== null) box.scrollTop = box.scrollHeight
+    if (box) box.scrollTop = box.scrollHeight
   }, [shown])
 
   return (
     <div ref={boxRef} dir="ltr" className="prank-console">
-      {shown.map((text, index) => (
+      {shown.map((line, index) => (
         <div key={index} className="prank-console__line">
-          {text === '' ? ' ' : text}
+          {line}
         </div>
       ))}
       <span className="prank-cursor" aria-hidden="true" />

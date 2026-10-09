@@ -25,3 +25,23 @@ export const SALA_IMAGES: string[] = [
 export function salaUrl(file: string): string {
   return '/sala/' + encodeURIComponent(file)
 }
+
+export const SENAR_IMAGES: string[] = [
+  '1 (1).png',
+  '1 (2).png',
+  '1 (3).png',
+  '1 (4).png',
+  '1 (5).png',
+  '1 (6).png',
+  '1 (7).png',
+  '1 (8).png',
+  '1 (9).png',
+  '1 (10).png',
+  '1 (11).png',
+  '1 (12).png',
+  '1 (13).png',
+]
+
+export function senarUrl(file: string): string {
+  return '/senar/' + encodeURIComponent(file)
+}

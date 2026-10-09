@@ -79,16 +79,43 @@ export const BASE_LINES: Record<Variant, string[]> = {
   ],
 }
 
-export const HORROR_LINES: string[] = [
-  '[!] رؤيتنا — ESTAMOS DETRAS DE TI',
-  '[!] الشيطان يكتب على هذه الشاشة',
-  '[+] روحك تُرسل الآن إلى SENATI',
-  '[!] لا تستطيع اغلاق هذه النافذة',
-  '[+] من يقرأ هذا لا يستطيع الهرب',
-  '[!] نظر خلفك... خلفك...',
-  '[+] سنتولى شاشتك بعد ثوانٍ',
-  '[!] عين تراقب هذه الشاشة الآن',
-]
+export const STAGE_LINES: Record<number, string[]> = {
+  1: [
+    '[*] ATACANDO TORRE SENATI - INDEPENDENCIA ......... [OK]',
+    '[+] EL INSTITUTO YA NOS DETECTO ...',
+    '[*] SCANEANDO TORRES DE COMUNICACIONES ............ [OK]',
+    'سلام عليكم',
+    'برج سيناتي تحت الهجوم',
+  ],
+  2: [
+    '[+] TORRE 1 - CAYENDO ............................. [OK]',
+    '[+] TORRE 2 - CAYENDO ............................. [OK]',
+    '[*] OBJETIVO: INSTITUTO NACIONAL - SEDE INDEPENDENCIA',
+    'الهدم يبدأ الآن',
+    'لا رحمة في هذا البرج',
+  ],
+  3: [
+    '[!] ALERTA GLOBAL: SUCURSALES SENATI EN MIRA',
+    '[*] ZAPALLAL / INDEPENDENCIA - SIN DEFENSA ........ [OK]',
+    '[+] EL INSTITUTO PIDE AYUDA ... NO LLEGA NADA',
+    'المعهد لن يصمد',
+    'سنقتلع المعهد من الخريطة',
+  ],
+  4: [
+    '[!] رؤيتنا — ESTAMOS DETRAS DE TI',
+    '[!] الشيطان يكتب على هذه الشاشة',
+    '[+] روحك تُرسل الآن إلى SENATI',
+    '[!] لا تستطيع اغلاق هذه النافذة',
+    '[+] من يقرأ هذا لا يستطيع الهرب',
+    '[!] نظر خلفك... خلفك...',
+    '[+] سنتولى شاشتك بعد ثوانٍ',
+    '[!] عين تراقب هذه الشاشة الآن',
+    'البرج يسقط الآن',
+    'دمار المعهد بدأ',
+    'كل مواقع سيناتي في خطر',
+    'وصلنا إلى مبنى المعهد',
+  ],
+}
 
 const fillerMain = (): string[] => {
   const percent = rnd(90) + 10
@@ -117,7 +144,7 @@ const fillerNet = (): string[] => {
     `  2    ${first} ms  10.10.0.1`,
     `  3    ${second} ms  190.42.148.22`,
     `[+] TUNEL ACTIVO ${hex(4)}-${hex(4)}`,
-    `[*] DNS FALSO: ${pick(['mail.senati.edu.pe', 'portal.senati.edu.pe', 'api.senati.edu.pe'])} -> ${ip()}`,
+    `[*] DNS ENMASCARADO: ${pick(['mail.senati.edu.pe', 'portal.senati.edu.pe', 'api.senati.edu.pe'])} -> ${ip()}`,
     '',
   ]
 }
