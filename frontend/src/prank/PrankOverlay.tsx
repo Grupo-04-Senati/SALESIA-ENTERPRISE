@@ -24,13 +24,9 @@ const GRID_COL_W = 290
 
 const GRID_ROW_H = 230
 
-const SPAWN_MAX = 60
+const SPAWN_MAX = 100
 
-const SPAWN_MS: Record<number, number> = { 1: 8000, 2: 4500, 3: 2000, 4: 550 }
-
-const SPAWN_W: Record<number, number> = { 1: 340, 2: 470, 3: 600, 4: 720 }
-
-const SPAWN_COUNT: Record<number, number> = { 1: 2, 2: 3, 3: 4 }
+const SPAWN_FIRST_MS = 500
 
 const SEED_COUNT = 8
 
@@ -141,6 +137,7 @@ export default function PrankOverlay() {
   const [stage, setStage] = useState(0)
   const [coreIdx, setCoreIdx] = useState(0)
   const [msgIdx, setMsgIdx] = useState(0)
+  const [closedFixed, setClosedFixed] = useState<string[]>([])
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
   const zTop = useRef(9998)
@@ -149,6 +146,8 @@ export default function PrankOverlay() {
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null)
   const stageRef = useRef(0)
   const musicStart = useRef<number | null>(null)
+  const pending = useRef<Win[]>([])
+  const loading = useRef(false)
 
   const setPhase = (value: Phase) => {
     phaseRef.current = value
@@ -194,7 +193,9 @@ export default function PrankOverlay() {
         Math.floor(Math.random() * (Math.max(0, window.innerHeight - WIN_H) + 1)),
       ),
     )
-    setWins(items)
+    pending.current = items.slice(1)
+    loading.current = items.length > 1
+    setWins(items.length > 0 ? [items[0]] : [])
   }
 
   const spawnExtras = (count: number, w: number) => {
@@ -247,11 +248,6 @@ export default function PrankOverlay() {
     })
   }
 
-  const abortHack = () => {
-    stopSound()
-    spawn()
-  }
-
   const openMaps = useCallback(() => {
     stopSound()
     setPhase('idle')
@@ -265,15 +261,29 @@ export default function PrankOverlay() {
   useEffect(() => {
     if (!active) {
       drag.current = null
+      pending.current = []
+      loading.current = false
+      setClosedFixed([])
       return
     }
     spawn()
   }, [active])
 
   useEffect(() => {
+    if (!active) return
+    const id = window.setInterval(() => {
+      if (pending.current.length === 0) return
+      const next = pending.current.splice(0, 2)
+      setWins((prev) => [...prev, ...next])
+      if (pending.current.length === 0) loading.current = false
+    }, 260)
+    return () => window.clearInterval(id)
+  }, [active])
+
+  useEffect(() => {
     const closedAll = prevCount.current > 0 && wins.length === 0
     prevCount.current = wins.length
-    if (active && closedAll && phaseRef.current === 'idle') setPhase('aviso')
+    if (active && closedAll && phaseRef.current === 'idle' && !loading.current) setPhase('aviso')
   }, [wins, active])
 
   useEffect(() => {
@@ -340,15 +350,32 @@ export default function PrankOverlay() {
   }, [phase, openMaps])
 
   useEffect(() => {
-    if (phase !== 'hack' || stage < 1) return undefined
-    const ms = SPAWN_MS[stage] ?? 6000
-    const w = SPAWN_W[stage] ?? WIN_W
-    const id = window.setInterval(() => {
-      const count = stage === 4 ? 2 + Math.floor(Math.random() * 3) : (SPAWN_COUNT[stage] ?? 1)
+    if (phase !== 'hack') return undefined
+    let timer = 0
+    let cancelled = false
+    const step = () => {
+      if (cancelled) return
+      const now = Date.now()
+      if (musicStart.current === null) musicStart.current = now
+      const elapsed = now - musicStart.current
+      let total = TIMING.MUSIC_MS
+      const track = audio.current
+      if (track !== null && Number.isFinite(track.duration) && track.duration > 1) {
+        total = track.duration * 1000
+      }
+      const span = Math.max(1, total - TIMING.GREEN_MS)
+      const p = Math.min(1, Math.max(0, (elapsed - TIMING.GREEN_MS) / span))
+      const count = 1 + Math.round(p * 6)
+      const w = Math.round(340 + p * 430)
       spawnExtras(count, w)
-    }, ms)
-    return () => window.clearInterval(id)
-  }, [phase, stage])
+      timer = window.setTimeout(step, Math.round(3800 * Math.pow(1 - p, 1.7) + 250))
+    }
+    timer = window.setTimeout(step, SPAWN_FIRST_MS)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [phase])
 
   useEffect(() => {
     if (phase !== 'green') return undefined
@@ -371,6 +398,10 @@ export default function PrankOverlay() {
   const close = (id: number) => {
     drag.current = null
     setWins((prev) => prev.filter((win) => win.id !== id))
+  }
+
+  const hide = (key: string) => {
+    setClosedFixed((prev) => (prev.includes(key) ? prev : prev.concat(key)))
   }
 
   const bringFront = (id: number) => {
@@ -445,89 +476,97 @@ export default function PrankOverlay() {
       ))}
       {phase === 'hack' && (
         <>
-          <div
-            dir="ltr"
-            data-prank-ui
-            className={'prank-win prank-win--cmd prank-win--cmd1' + quake}
-            style={{ zIndex: 11000 }}
-          >
-            <div className="prank-win__bar">
-              <span className="prank-win__title">C:\Windows\system32\cmd.exe</span>
-              <button
-                type="button"
-                className="prank-win__close"
-                aria-label="Cerrar consola"
-                onClick={abortHack}
-              >
-                ✕
-              </button>
+          {!closedFixed.includes('cmd1') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd1' + quake}
+              style={{ zIndex: 11000 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">C:\Windows\system32\cmd.exe</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola"
+                  onClick={() => hide('cmd1')}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="main" stage={stage} />
             </div>
-            <CmdWindow variant="main" stage={stage} />
-          </div>
-          <div
-            dir="ltr"
-            data-prank-ui
-            className={'prank-win prank-win--cmd prank-win--cmd2' + quake}
-            style={{ zIndex: 10998 }}
-          >
-            <div className="prank-win__bar">
-              <span className="prank-win__title">C:\Windows\system32\cmd.exe — sesion de red</span>
-              <button
-                type="button"
-                className="prank-win__close"
-                aria-label="Cerrar consola de red"
-                onClick={abortHack}
-              >
-                ✕
-              </button>
+          )}
+          {!closedFixed.includes('cmd2') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd2' + quake}
+              style={{ zIndex: 10998 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">C:\Windows\system32\cmd.exe — sesion de red</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de red"
+                  onClick={() => hide('cmd2')}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="net" delay={700} stage={stage} />
             </div>
-            <CmdWindow variant="net" delay={700} stage={stage} />
-          </div>
-          <div
-            dir="ltr"
-            data-prank-ui
-            className={'prank-win prank-win--cmd prank-win--cmd3' + quake}
-            style={{ zIndex: 10997 }}
-          >
-            <div className="prank-win__bar">
-              <span className="prank-win__title">sqlcmd -S SENATI-PROD -d ventas</span>
-              <button
-                type="button"
-                className="prank-win__close"
-                aria-label="Cerrar consola de base de datos"
-                onClick={abortHack}
-              >
-                ✕
-              </button>
+          )}
+          {!closedFixed.includes('cmd3') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd3' + quake}
+              style={{ zIndex: 10997 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">sqlcmd -S SENATI-PROD -d ventas</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de base de datos"
+                  onClick={() => hide('cmd3')}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="dump" delay={1500} stage={stage} />
             </div>
-            <CmdWindow variant="dump" delay={1500} stage={stage} />
-          </div>
-          <div
-            dir="ltr"
-            data-prank-ui
-            className={'prank-win prank-win--map' + quake}
-            style={{ zIndex: 10999 }}
-          >
-            <div className="prank-win__bar">
-              <span className="prank-win__title">SATELITE - ZAPALLAL, PUENTE PIEDRA</span>
-              <button
-                type="button"
-                className="prank-win__close"
-                aria-label="Cerrar mapa"
-                onClick={abortHack}
-              >
-                ✕
-              </button>
+          )}
+          {!closedFixed.includes('map') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--map' + quake}
+              style={{ zIndex: 10999 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">SATELITE - ZAPALLAL, PUENTE PIEDRA</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar mapa"
+                  onClick={() => hide('map')}
+                >
+                  ✕
+                </button>
+              </div>
+              <iframe
+                className="prank-map"
+                src={MAP_EMBED}
+                title="Ubicacion del objetivo"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
-            <iframe
-              className="prank-map"
-              src={MAP_EMBED}
-              title="Ubicacion del objetivo"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
-          {stage >= 1 && (
+          )}
+          {stage >= 1 && !closedFixed.includes('cmd4') && (
             <div
               dir="ltr"
               data-prank-ui
@@ -542,7 +581,7 @@ export default function PrankOverlay() {
                   type="button"
                   className="prank-win__close"
                   aria-label="Cerrar consola de PowerShell"
-                  onClick={abortHack}
+                  onClick={() => hide('cmd4')}
                 >
                   ✕
                 </button>
@@ -550,7 +589,7 @@ export default function PrankOverlay() {
               <CmdWindow variant="sys" delay={400} stage={stage} />
             </div>
           )}
-          {stage >= 2 && (
+          {stage >= 2 && !closedFixed.includes('cmd5') && (
             <div
               dir="ltr"
               data-prank-ui
@@ -563,7 +602,7 @@ export default function PrankOverlay() {
                   type="button"
                   className="prank-win__close"
                   aria-label="Cerrar consola de reparacion"
-                  onClick={abortHack}
+                  onClick={() => hide('cmd5')}
                 >
                   ✕
                 </button>
@@ -571,7 +610,7 @@ export default function PrankOverlay() {
               <CmdWindow variant="sys" delay={900} stage={stage} />
             </div>
           )}
-          {stage >= 3 && (
+          {stage >= 3 && !closedFixed.includes('cmd6') && (
             <div
               dir="ltr"
               data-prank-ui
@@ -586,7 +625,7 @@ export default function PrankOverlay() {
                   type="button"
                   className="prank-win__close"
                   aria-label="Cerrar consola de mantenimiento"
-                  onClick={abortHack}
+                  onClick={() => hide('cmd6')}
                 >
                   ✕
                 </button>
@@ -594,7 +633,7 @@ export default function PrankOverlay() {
               <CmdWindow variant="sys" delay={1300} stage={stage} />
             </div>
           )}
-          {stage >= 4 && (
+          {stage >= 4 && !closedFixed.includes('cmd7') && (
             <div
               dir="ltr"
               data-prank-ui
@@ -609,7 +648,7 @@ export default function PrankOverlay() {
                   type="button"
                   className="prank-win__close"
                   aria-label="Cerrar consola de recuperacion"
-                  onClick={abortHack}
+                  onClick={() => hide('cmd7')}
                 >
                   ✕
                 </button>
