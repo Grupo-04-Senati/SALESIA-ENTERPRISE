@@ -104,8 +104,14 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--notepad .prank-win__title{color:#1f2328;font-weight:600}
 .prank-notepad__menu{display:flex;gap:16px;padding:5px 12px;background:#f6f7f8;border-bottom:1px solid #d6d9dd;color:#1f2328;font-size:12px}
 .prank-notepad__body{padding:16px 18px;min-height:170px;background:#fff;color:#101010;font-family:'Lucida Console',Consolas,monospace;font-size:clamp(16px,2.6vw,24px);line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.prank-jumpscare{position:fixed;inset:0;background:#000;overflow:hidden;animation:prank-jump-shake .11s step-end infinite}
-.prank-jumpscare img{display:block;width:100%;height:100%;object-fit:cover;filter:contrast(1.3) saturate(1.15);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
+.prank-jumpscare{position:fixed;inset:0;margin:0;padding:0;line-height:0;background:#000;border:0;overflow:hidden;animation:prank-jump-shake .1s step-end infinite}
+.prank-jumpscare img{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;object-fit:cover;object-position:50% 15%;filter:contrast(1.35) saturate(1.25);animation:prank-jump-zoom .45s ease-in-out infinite alternate}
+.prank-jumpscare::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 26%,rgba(130,0,0,.62));animation:prank-jump-pulse .3s steps(2,start) infinite}
+.prank-jumpscare--f1 img{filter:invert(1) contrast(1.7)}
+.prank-jumpscare--f2{background:#000}
+.prank-jumpscare--f2 img{opacity:0}
+.prank-jumpscare--f3{background:#3d0000}
+.prank-jumpscare--f3 img{filter:sepia(.55) hue-rotate(300deg) saturate(4) contrast(1.55) brightness(1.1)}
 .prank-console{height:330px;overflow-y:auto;background:#0c0c0c;padding:10px 12px;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:13px;line-height:1.5;color:#4ade80;white-space:pre-wrap;word-break:break-word}
 .prank-win--cmd2 .prank-console{height:240px}
 .prank-win--cmd3 .prank-console{height:260px}
@@ -143,7 +149,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-core{from{transform:translate(-50%,-50%) scale(.96) rotate(-2deg)}to{transform:translate(-50%,-50%) scale(1.05) rotate(2deg)}}
 @keyframes prank-quake{0%{transform:translate(-3px,2px) rotate(.4deg)}50%{transform:translate(3px,-2px) rotate(-.4deg)}100%{transform:translate(-2px,-3px) rotate(.3deg)}}
 @keyframes prank-jump-shake{0%{transform:translate(0,0)}25%{transform:translate(-9px,6px)}50%{transform:translate(8px,-7px)}75%{transform:translate(-7px,-5px)}100%{transform:translate(6px,8px)}}
-@keyframes prank-jump-zoom{from{transform:scale(1.05)}to{transform:scale(1.18)}}`
+@keyframes prank-jump-zoom{from{transform:scale(1.05)}to{transform:scale(1.18)}}
+@keyframes prank-jump-pulse{50%{opacity:.3}}`
 
 export default function PrankOverlay() {
   const { active, setActive } = usePrank()
@@ -155,6 +162,7 @@ export default function PrankOverlay() {
   const [closedFixed, setClosedFixed] = useState<string[]>([])
   const [notepad, setNotepad] = useState(false)
   const [jump, setJump] = useState(false)
+  const [flick, setFlick] = useState(0)
   const phaseRef = useRef<Phase>('idle')
   const nextId = useRef(0)
   const zTop = useRef(9998)
@@ -205,6 +213,7 @@ export default function PrankOverlay() {
     stageRef.current = 0
     setNotepad(false)
     setJump(false)
+    setFlick(0)
     const items: Win[] = SALA_IMAGES.map((file) =>
       makeWin(
         file,
@@ -345,6 +354,8 @@ export default function PrankOverlay() {
 
   useEffect(() => {
     if (phase !== 'hack') return undefined
+    const pre = document.createElement('img')
+    pre.src = JUMP_SRC
     const id = window.setInterval(() => {
       const now = Date.now()
       if (musicStart.current === null) musicStart.current = now
@@ -358,6 +369,11 @@ export default function PrankOverlay() {
       if (track !== null && Number.isFinite(track.duration) && track.duration > 1) {
         total = track.duration * 1000
       }
+      let remaining = total - elapsed
+      if (track !== null && Number.isFinite(track.duration) && track.duration > 1) {
+        const audioLeft = (track.duration - track.currentTime) * 1000
+        if (Number.isFinite(audioLeft)) remaining = Math.min(remaining, audioLeft)
+      }
       const s4Start = total - TIMING.TERROR_LEAD_MS
       let next = 0
       if (elapsed >= s4Start) next = 4
@@ -368,15 +384,17 @@ export default function PrankOverlay() {
         stageRef.current = next
         setStage(next)
       }
-      if (elapsed >= total - TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
-      if (elapsed >= total - TIMING.JUMPSCARE_LEAD_MS && jumpSnd.current === null) {
+      if (remaining <= TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
+      if (remaining <= TIMING.JUMPSCARE_LEAD_MS) {
         setJump(true)
-        const scare = new Audio(JUMP_SND)
-        scare.volume = 0.9
-        jumpSnd.current = scare
-        scare.play().catch(() => {})
+        if (jumpSnd.current === null) {
+          const scare = new Audio(JUMP_SND)
+          scare.volume = 0.9
+          jumpSnd.current = scare
+          scare.play().catch(() => {})
+        }
       }
-      if (elapsed >= total - 60) {
+      if (remaining <= 60) {
         openMaps()
         window.clearInterval(id)
       }
@@ -427,6 +445,26 @@ export default function PrankOverlay() {
     }, 900)
     return () => window.clearInterval(id)
   }, [stage])
+
+  useEffect(() => {
+    if (!active || !jump) return undefined
+    const t0 = Date.now()
+    let cancelled = false
+    let idx = 0
+    let timer = 0
+    const step = () => {
+      if (cancelled) return
+      idx = (idx + 1) % 4
+      setFlick(idx)
+      const since = Date.now() - t0
+      timer = window.setTimeout(step, since < 2000 ? 140 : since < 3000 ? 70 : 35)
+    }
+    timer = window.setTimeout(step, 140)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [active, jump])
 
   useEffect(() => stopSound, [])
 
@@ -748,7 +786,12 @@ export default function PrankOverlay() {
         </div>
       )}
       {jump && (
-        <div dir="ltr" data-prank-ui className="prank-jumpscare" style={{ zIndex: 14500 }}>
+        <div
+          dir="ltr"
+          data-prank-ui
+          className={'prank-jumpscare prank-jumpscare--f' + flick}
+          style={{ zIndex: 14500 }}
+        >
           <img src={JUMP_SRC} alt="" draggable={false} />
         </div>
       )}
