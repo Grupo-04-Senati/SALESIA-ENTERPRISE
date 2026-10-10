@@ -21,7 +21,7 @@ from app.models.employee import Employee
 from app.models.inventory import Inventory
 from app.models.inventory_movement import InventoryMovement
 from app.models.payment import Payment
-from app.models.product import Product
+from app.models.product import Product, ProductKit
 from app.models.sale import Sale
 from app.models.sale_detail import SaleDetail
 from app.schemas.sale import PaymentCreate, SaleCreate
@@ -173,6 +173,63 @@ def _next_sale_number(db: Session, company_id: int) -> str:
     return f'V-{year}-{count + 1:06d}'
 
 
+def _resolve_customer(
+    db: Session, company_id: int, payload: SaleCreate, actor=None
+) -> Customer:
+    """Cliente por id, o alta/reuso automático con el payload inline (RF-03)."""
+    if payload.customer_id is not None:
+        customer = db.execute(
+            select(Customer).where(
+                Customer.id == payload.customer_id, Customer.company_id == company_id
+            )
+        ).scalar_one_or_none()
+        if customer is None:
+            raise NotFound('Cliente no encontrado.')
+        return customer
+
+    if payload.customer is None:
+        raise ValidationAppError('Indica un cliente existente o envía los datos para crearlo.')
+
+    existing = db.execute(
+        select(Customer).where(
+            Customer.company_id == company_id,
+            Customer.document_number == payload.customer.document_number,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    customer = Customer(
+        company_id=company_id,
+        document_type=payload.customer.document_type,
+        document_number=payload.customer.document_number,
+        name=payload.customer.name,
+        email=payload.customer.email,
+        phone=payload.customer.phone,
+        address=payload.customer.address,
+        segment=payload.customer.segment or 'Nuevo',
+        commercial_line=payload.customer.commercial_line,
+    )
+    db.add(customer)
+    db.flush()
+    write_audit(
+        db, user=actor, action='customer.create', entity='customers', entity_id=customer.id,
+        detail={'document_number': customer.document_number, 'source': 'sale'},
+        company_id=company_id,
+    )
+    return customer
+
+
+def _kit_map(db: Session, company_id: int) -> dict[int, list[ProductKit]]:
+    rows = db.execute(
+        select(ProductKit).where(ProductKit.company_id == company_id)
+    ).scalars().all()
+    grouped: dict[int, list[ProductKit]] = {}
+    for row in rows:
+        grouped.setdefault(row.product_id, []).append(row)
+    return grouped
+
+
 def create_sale(
     db: Session,
     company_id: int,
@@ -189,13 +246,11 @@ def create_sale(
     if not seller.is_active:
         raise BusinessRuleError('El vendedor debe estar activo para operar ventas (RN-07).')
 
-    customer = db.execute(
-        select(Customer).where(Customer.id == payload.customer_id, Customer.company_id == company_id)
-    ).scalar_one_or_none()
-    if customer is None:
-        raise NotFound('Cliente no encontrado.')
+    # --- Cliente: por id o alta/reuso inline (RF-03) ------------------------
+    customer = _resolve_customer(db, company_id, payload, actor=actor)
 
     # --- RN-10: validar stock antes de escribir ---------------------------
+    kits = _kit_map(db, company_id)
     for item in payload.items:
         product = db.execute(
             select(Product).where(Product.id == item.product_id, Product.company_id == company_id)
@@ -204,14 +259,30 @@ def create_sale(
             raise NotFound(f'Producto {item.product_id} no encontrado.')
         if not product.is_active:
             raise BusinessRuleError(f'El producto {product.name} no está activo (RN-04).')
-        stock = db.execute(
-            select(Inventory).where(Inventory.product_id == product.id)
-        ).scalar_one_or_none()
-        available = stock.stock if stock else 0
-        if item.quantity > available:
-            raise BusinessRuleError(
-                f'Stock insuficiente de {product.name} (disponible: {available}).'
-            )
+        components = kits.get(product.id, [])
+        if components:
+            # Kit: el stock se valida sobre los componentes, no sobre el kit.
+            for kit_row in components:
+                component = db.get(Product, kit_row.component_id)
+                needed = kit_row.quantity * item.quantity
+                stock = db.execute(
+                    select(Inventory).where(Inventory.product_id == component.id)
+                ).scalar_one_or_none()
+                available = stock.stock if stock else 0
+                if needed > available:
+                    raise BusinessRuleError(
+                        f'Stock insuficiente del componente {component.name} '
+                        f'(necesario: {needed}, disponible: {available}).'
+                    )
+        else:
+            stock = db.execute(
+                select(Inventory).where(Inventory.product_id == product.id)
+            ).scalar_one_or_none()
+            available = stock.stock if stock else 0
+            if item.quantity > available:
+                raise BusinessRuleError(
+                    f'Stock insuficiente de {product.name} (disponible: {available}).'
+                )
         # RN-13: el descuento por línea no supera su subtotal.
         if Decimal(str(item.discount)) > Decimal(str(item.quantity)) * Decimal(str(item.unit_price)):
             raise BusinessRuleError('El descuento de la línea supera su subtotal (RN-13).')
@@ -258,10 +329,7 @@ def create_sale(
     stock_steps = []
     for item in payload.items:
         product = db.get(Product, item.product_id)
-        stock = db.execute(
-            select(Inventory).where(Inventory.product_id == product.id)
-        ).scalar_one_or_none()
-        before = stock.stock if stock else 0
+        components = kits.get(product.id, [])
 
         line_discount = _money(item.discount)
         line_subtotal = _money(
@@ -278,6 +346,52 @@ def create_sale(
             )
         )
 
+        if components:
+            # Explosión del kit: el stock sale de cada componente.
+            for kit_row in components:
+                component = db.get(Product, kit_row.component_id)
+                stock = db.execute(
+                    select(Inventory).where(Inventory.product_id == component.id)
+                ).scalar_one_or_none()
+                if stock is None:
+                    stock = Inventory(product_id=component.id, stock=0, min_stock=component.min_stock)
+                    db.add(stock)
+                    db.flush()
+                before = stock.stock
+                consumed = kit_row.quantity * item.quantity
+                next_stock = before - consumed
+                if next_stock < 0:
+                    raise BusinessRuleError(
+                        f'Stock insuficiente del componente {component.name} (disponible: {before}).'
+                    )
+                stock.stock = next_stock
+                db.add(
+                    InventoryMovement(
+                        product_id=component.id,
+                        movement_type='out',
+                        quantity=consumed,
+                        reason=f'Venta {sale.sale_number} (kit {product.sku})',
+                        resulting_stock=next_stock,
+                        reference_id=sale.id,
+                        created_by=actor.id if actor else None,
+                    )
+                )
+                stock_steps.append(
+                    {
+                        'module': 'inventario',
+                        'label': f'{component.name} ({component.sku})',
+                        'detail': (
+                            f'stock {before} → {next_stock} {component.unit} · '
+                            f'kardex OUT registrado (kit {product.sku})'
+                        ),
+                    }
+                )
+            continue
+
+        stock = db.execute(
+            select(Inventory).where(Inventory.product_id == product.id)
+        ).scalar_one_or_none()
+        before = stock.stock if stock else 0
         if stock is None:
             stock = Inventory(product_id=product.id, stock=0, min_stock=product.min_stock)
             db.add(stock)
@@ -397,11 +511,38 @@ def cancel_sale(
     if sale.status == 'cancelled':
         raise BusinessRuleError('La venta ya está anulada.')
 
+    kits = _kit_map(db, company_id)
     for item in sale.items:
+        product = db.get(Product, item.product_id)
+        components = kits.get(item.product_id, [])
+        if components:
+            for kit_row in components:
+                component = db.get(Product, kit_row.component_id)
+                stock = db.execute(
+                    select(Inventory).where(Inventory.product_id == component.id)
+                ).scalar_one_or_none()
+                if stock is None:
+                    stock = Inventory(product_id=component.id, stock=0)
+                    db.add(stock)
+                    db.flush()
+                returned = kit_row.quantity * item.quantity
+                stock.stock = stock.stock + returned
+                db.add(
+                    InventoryMovement(
+                        product_id=component.id,
+                        movement_type='in',
+                        quantity=returned,
+                        reason=f'Anulación {sale.sale_number}: {reason.strip()} (kit {product.sku})',
+                        resulting_stock=stock.stock,
+                        reference_id=sale.id,
+                        created_by=actor.id if actor else None,
+                    )
+                )
+            continue
+
         stock = db.execute(
             select(Inventory).where(Inventory.product_id == item.product_id)
         ).scalar_one_or_none()
-        product = db.get(Product, item.product_id)
         if stock is None:
             stock = Inventory(product_id=item.product_id, stock=0)
             db.add(stock)

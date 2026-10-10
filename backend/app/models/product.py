@@ -41,3 +41,26 @@ class Product(IDMixin, UpdatedAtMixin, Base):
 
     category: Mapped[Optional['Category']] = relationship('Category', lazy='joined')
     company: Mapped['Company'] = relationship('Company', lazy='selectin')
+
+
+class ProductKit(IDMixin, UpdatedAtMixin, Base):
+    """Componentes de un kit/combo: `product_id` (kit) → `component_id` (insumo)."""
+
+    __tablename__ = 'kits_producto'
+    __table_args__ = (
+        UniqueConstraint('product_id', 'component_id', name='uq_kits_producto_product_component'),
+    )
+
+    company_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey('empresas.id', ondelete='CASCADE'), index=True
+    )
+    product_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey('productos.id', ondelete='CASCADE'), index=True
+    )
+    component_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey('productos.id', ondelete='CASCADE'), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+
+    product: Mapped['Product'] = relationship('Product', foreign_keys=[product_id], lazy='joined')
+    component: Mapped['Product'] = relationship('Product', foreign_keys=[component_id], lazy='joined')

@@ -104,3 +104,45 @@ export async function toggleProductStatus(id: number): Promise<Product> {
   await hydrateStore(['products'])
   return product
 }
+
+// ------------------------------------------------------------------ kits
+
+export interface KitComponent {
+  id: number
+  component_id: number
+  sku: string
+  name: string
+  unit: string
+  quantity: number
+}
+
+export interface KitComponentsResponse {
+  product_id: number
+  is_kit: boolean
+  components: KitComponent[]
+}
+
+/** Componentes del kit (GET /products/{id}/components). */
+export async function listKitComponents(productId: number): Promise<KitComponentsResponse> {
+  return apiFetch<KitComponentsResponse>(ENDPOINTS.productComponents(productId))
+}
+
+/** Añade o actualiza un componente del kit (POST /products/{id}/components). */
+export async function addKitComponent(
+  productId: number,
+  componentId: number,
+  quantity: number,
+): Promise<KitComponent> {
+  return apiFetch<KitComponent>(ENDPOINTS.productComponents(productId), {
+    method: 'POST',
+    body: JSON.stringify({ component_id: componentId, quantity }),
+  })
+}
+
+/** Quita un componente del kit (DELETE /products/{id}/components/{componentId}). */
+export async function removeKitComponent(productId: number, componentId: number): Promise<void> {
+  await apiFetch<{ deleted: boolean }>(
+    `${ENDPOINTS.productComponents(productId)}/${componentId}`,
+    { method: 'DELETE' },
+  )
+}

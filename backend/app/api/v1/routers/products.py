@@ -13,6 +13,7 @@ from app.models.user import User
 from app.schemas.product import (
     CategoryCreate,
     CategoryUpdate,
+    KitComponentCreate,
     ProductCreate,
     ProductStatusPatch,
     ProductUpdate,
@@ -100,6 +101,44 @@ def delete_product(
     """Baja lÃ³gica del producto (los productos con ventas nunca se borran)."""
     return product_service.set_product_status(
         db, company_id_of(actor), product_id, 'inactive', actor=actor, ip=client_ip(request)
+    )
+
+
+# ------------------------------------------------------------------ kits
+
+
+@router.get('/products/{product_id}/components')
+def list_kit_components(
+    product_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+):
+    return product_service.list_kit_components(db, company_id_of(user), product_id)
+
+
+@router.post('/products/{product_id}/components', status_code=status.HTTP_201_CREATED)
+def add_kit_component(
+    product_id: int,
+    payload: KitComponentCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    return product_service.add_kit_component(
+        db, company_id_of(actor), product_id, payload, actor=actor, ip=client_ip(request)
+    )
+
+
+@router.delete('/products/{product_id}/components/{component_id}')
+def remove_kit_component(
+    product_id: int,
+    component_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    return product_service.remove_kit_component(
+        db, company_id_of(actor), product_id, component_id, actor=actor, ip=client_ip(request)
     )
 
 

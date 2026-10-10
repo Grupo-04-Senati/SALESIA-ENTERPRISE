@@ -14,6 +14,8 @@ export interface Customer {
   address: string
   /** Segmento comercial (p. ej. "Recurrente"); valores según backend. */
   segment: string
+  /** Línea comercial / giro del cliente (p. ej. "Mayorista"). */
+  commercial_line?: string
   status: CustomerStatus
   created_at: string
   /** Compras registradas y monto acumulado (para ficha/historial). */

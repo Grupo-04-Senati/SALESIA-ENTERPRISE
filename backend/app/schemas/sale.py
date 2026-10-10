@@ -8,6 +8,7 @@ from typing import List, Literal, Optional
 from pydantic import Field
 
 from app.schemas.base import NormalizedModel
+from app.schemas.customer import CustomerInline
 
 PaymentMethod = Literal['cash', 'card', 'transfer', 'yape', 'plin']
 MovementKind = Literal['IN', 'OUT', 'RETURN', 'SHRINKAGE', 'ADJUSTMENT']
@@ -29,7 +30,8 @@ class PaymentInput(NormalizedModel):
 
 
 class SaleCreate(NormalizedModel):
-    customer_id: int = Field(ge=1)
+    customer_id: Optional[int] = Field(default=None, ge=1)
+    customer: Optional['CustomerInline'] = None
     seller_id: int = Field(ge=1)
     items: List[SaleItemInput] = Field(min_length=1)
     payment: Optional[PaymentInput] = None

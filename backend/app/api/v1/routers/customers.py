@@ -9,7 +9,7 @@ from app.api.deps import company_id_of, get_current_user, require_role
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.customer import CustomerCreate, CustomerUpdate
-from app.services import customer_service
+from app.services import customer_service, document_service
 
 router = APIRouter(prefix='/customers', tags=['customers'])
 
@@ -37,6 +37,16 @@ def list_customers(
     )
 
 
+@router.get('/lookup')
+def lookup_document(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+    document: str = Query(..., min_length=6, max_length=20),
+):
+    """Busca un DNI/RUC en la base local y, si hay token, en la API externa."""
+    return document_service.lookup_document(db, company_id_of(user), document)
+
+
 @router.get('/{customer_id}')
 def get_customer(
     customer_id: int,
@@ -53,6 +63,16 @@ def customer_history(
     user: User = Depends(require_role(*read_roles)),
 ):
     return customer_service.customer_history(db, company_id_of(user), customer_id)
+
+
+@router.get('/{customer_id}/account-statement')
+def customer_account_statement(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(*read_roles)),
+):
+    """Estado de cuenta: totales, aging de saldos y detalle por venta."""
+    return customer_service.customer_account_statement(db, company_id_of(user), customer_id)
 
 
 @router.post('', status_code=status.HTTP_201_CREATED)

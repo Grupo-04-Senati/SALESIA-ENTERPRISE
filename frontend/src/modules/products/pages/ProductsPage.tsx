@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Package, Pencil, Plus, Power, Star } from 'lucide-react'
+import { Layers, Package, Pencil, Plus, Power, Star } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
@@ -19,6 +19,7 @@ import {
 } from '../services/productService'
 import type { Product, ProductInput } from '@/types/product'
 import ProductForm from '../components/ProductForm'
+import KitModal from '../components/KitModal'
 import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 import { useLang } from '@/i18n/i18n'
@@ -56,6 +57,7 @@ export default function ProductsPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+  const [kitProduct, setKitProduct] = useState<Product | null>(null)
   const version = useDataVersion()
 
   useEffect(() => {
@@ -280,6 +282,9 @@ export default function ProductsPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 font-medium text-gray-900">
                           <span className="truncate">{product.name}</span>
+                          {product.is_kit && (
+                            <Badge variant="info">{t('products.kit')}</Badge>
+                          )}
                           {product.is_featured && (
                             <Star
                               aria-label={t('products.destacado-en-la-tienda')}
@@ -330,6 +335,17 @@ export default function ProductsPage() {
                     <div className="flex justify-end gap-1">
                       <button
                         type="button"
+                        onClick={() => setKitProduct(product)}
+                        aria-label={`${t('products.kit-de')} ${product.name}`}
+                        title={t('products.kit')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 ${
+                          product.is_kit ? 'text-primary' : 'text-gray-500 hover:text-primary'
+                        }`}
+                      >
+                        <Layers aria-hidden="true" className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openEdit(product)}
                         aria-label={`${t('products.editar')} ${product.name}`}
                         title={t('products.editar')}
@@ -373,6 +389,8 @@ export default function ProductsPage() {
         product={editing}
         onSubmit={handleSubmit}
       />
+
+      <KitModal product={kitProduct} onClose={() => setKitProduct(null)} />
     </div>
   )
 }

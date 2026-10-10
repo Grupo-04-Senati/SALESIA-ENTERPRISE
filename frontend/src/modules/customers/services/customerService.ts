@@ -94,3 +94,42 @@ export async function getCustomerHistory(customer: Customer): Promise<CustomerPu
   )
   return [...response.history].sort((a, b) => b.issued_at.localeCompare(a.issued_at))
 }
+
+export interface DocumentLookup {
+  found: boolean
+  source: 'local' | 'api' | 'none'
+  document_type: string
+  document_number: string
+  name: string
+  address: string
+}
+
+/** Consulta un DNI/RUC: primero en la base local, luego en la API externa. */
+export async function lookupDocument(document: string): Promise<DocumentLookup> {
+  const params = new URLSearchParams({ document: document.trim() })
+  return apiFetch<DocumentLookup>(`${ENDPOINTS.customerLookup}?${params}`)
+}
+
+export interface StatementSale {
+  sale_number: string
+  issued_at: string
+  total: number
+  paid: number
+  balance: number
+  days_overdue: number
+  aging_bucket: string
+}
+
+export interface AccountStatement {
+  customer: Customer
+  total_purchased: number
+  total_paid: number
+  balance: number
+  aging: Record<string, number>
+  sales: StatementSale[]
+}
+
+/** Estado de cuenta con aging de saldos (GET /customers/{id}/account-statement). */
+export async function getAccountStatement(customerId: number): Promise<AccountStatement> {
+  return apiFetch<AccountStatement>(ENDPOINTS.customerAccountStatement(customerId))
+}

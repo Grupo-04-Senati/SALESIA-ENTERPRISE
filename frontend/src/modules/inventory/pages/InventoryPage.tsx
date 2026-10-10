@@ -5,7 +5,7 @@ import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
-import { Checkbox, Input } from '@/components/ui/form'
+import { Checkbox, Input, Select } from '@/components/ui/form'
 import { Spinner } from '@/components/feedback/Loader'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { ErrorState } from '@/components/feedback/ErrorState'
@@ -62,6 +62,7 @@ export default function InventoryPage() {
 
   const [search, setSearch] = useState('')
   const [onlyAlerts, setOnlyAlerts] = useState(false)
+  const [movementProductId, setMovementProductId] = useState<number | ''>('')
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [tab, setTab] = useState('existencias')
@@ -103,6 +104,14 @@ export default function InventoryPage() {
         (term === '' || row.name.toLowerCase().includes(term) || row.sku.toLowerCase().includes(term)),
     )
   }, [stock, search, onlyAlerts])
+
+  // Kardex filtrado por producto: con filtro se muestran más filas.
+  const visibleMovements = useMemo(() => {
+    const rows = movementProductId
+      ? movements.filter((movement) => movement.product_id === movementProductId)
+      : movements
+    return rows.slice(0, movementProductId ? 30 : 8)
+  }, [movements, movementProductId])
 
   useEffect(() => {
     setPage(1)
@@ -272,7 +281,24 @@ export default function InventoryPage() {
           {/* Kardex */}
           <TabPanel tabId="movimientos" active={tab === 'movimientos'}>
             <div className="space-y-4">
-              <h2>{t('inventory.movimientos-recientes')}</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2>{t('inventory.movimientos-recientes')}</h2>
+                <Select
+                  aria-label={t('inventory.filtrar-por-producto')}
+                  value={movementProductId === '' ? '' : String(movementProductId)}
+                  onChange={(event) =>
+                    setMovementProductId(event.target.value ? Number(event.target.value) : '')
+                  }
+                  className="w-full sm:w-64"
+                >
+                  <option value="">{t('inventory.todos-los-productos')}</option>
+                  {stock.map((row) => (
+                    <option key={row.product_id} value={row.product_id}>
+                      {row.name} ({row.sku})
+                    </option>
+                  ))}
+                </Select>
+              </div>
               {movements.length === 0 ? (
                 <div className="card">
                   <EmptyState
@@ -284,6 +310,13 @@ export default function InventoryPage() {
                         {t('inventory.nuevo-movimiento')}
                       </Button>
                     }
+                  />
+                </div>
+              ) : visibleMovements.length === 0 ? (
+                <div className="card">
+                  <EmptyState
+                    title={t('inventory.sin-movimientos-de-este-producto')}
+                    description={t('inventory.selecciona-otro-producto-o-quita-el-filtro')}
                   />
                 </div>
               ) : (
@@ -298,7 +331,7 @@ export default function InventoryPage() {
                     t('inventory.usuario'),
                   ]}
                 >
-                  {movements.slice(0, 8).map((movement) => {
+                  {visibleMovements.map((movement) => {
                     const isIn = movement.type === 'IN' || movement.type === 'RETURN'
                     const Icon = isIn ? TrendingUp : TrendingDown
                     return (

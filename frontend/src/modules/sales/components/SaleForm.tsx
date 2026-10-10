@@ -9,6 +9,7 @@ import { useLang } from '@/i18n/i18n'
 import { integer, maxDecimals, minNumber, numberRange } from '@/utils/validators'
 import { formatCurrency } from '@/utils/formatters'
 import { useDataVersion } from '@/data/DataProvider'
+import { lookupDocument } from '@/modules/customers/services/customerService'
 import {
   DEFAULT_TAX_RATE,
   computeTotals,
@@ -62,6 +63,12 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Cliente nuevo (alta inline): el backend lo crea o reusa por documento.
+  const [newDocType, setNewDocType] = useState('DNI')
+  const [newDocNumber, setNewDocNumber] = useState('')
+  const [newName, setNewName] = useState('')
+  const [lookupHint, setLookupHint] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
 
   const effectiveSellerId = sellerId || (sellers[0] ? String(sellers[0].id) : '')
   const totals = computeTotals(items, DEFAULT_TAX_RATE)
@@ -76,6 +83,41 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
     setMethod('cash')
     setAmount('')
     setError(null)
+    setNewDocType('DNI')
+    setNewDocNumber('')
+    setNewName('')
+    setLookupHint('')
+    setLookingUp(false)
+  }
+
+  const isNewCustomer = customerId === 'new'
+
+  const handleLookup = async () => {
+    const document = newDocNumber.trim()
+    if (document.length < 6) {
+      setError(t('sales.ingresa-un-documento-valido'))
+      return
+    }
+    setLookingUp(true)
+    setLookupHint('')
+    try {
+      const result = await lookupDocument(document)
+      if (result.found && result.name) {
+        setNewName(result.name)
+        setNewDocType(result.document_type)
+        setLookupHint(
+          result.source === 'local'
+            ? t('sales.cliente-existente-se-reusara')
+            : t('sales.datos-completados-desde-la-api'),
+        )
+      } else {
+        setLookupHint(t('sales.documento-no-encontrado-completa-a-mano'))
+      }
+    } catch {
+      setLookupHint(t('sales.consulta-no-disponible-completa-a-mano'))
+    } finally {
+      setLookingUp(false)
+    }
   }
 
   const handleClose = () => {
@@ -147,6 +189,23 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
       setError(t('sales.selecciona-un-cliente-2'))
       return
     }
+    let inlineCustomer: SaleInput['customer'] | undefined
+    if (isNewCustomer) {
+      const document = newDocNumber.trim()
+      if (document.length < 6) {
+        setError(t('sales.ingresa-un-documento-valido'))
+        return
+      }
+      if (newName.trim().length < 3) {
+        setError(t('sales.ingresa-el-nombre-del-cliente'))
+        return
+      }
+      inlineCustomer = {
+        document_type: newDocType,
+        document_number: document,
+        name: newName.trim(),
+      }
+    }
     if (items.length === 0) {
       setError(t('sales.agrega-al-menos-un-producto-a-la-venta'))
       return
@@ -168,7 +227,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
     setSubmitting(true)
     try {
       await onSubmit({
-        customer_id: Number(customerId),
+        ...(inlineCustomer ? { customer: inlineCustomer } : { customer_id: Number(customerId) }),
         seller_id: Number(effectiveSellerId),
         items: items.map((item) => ({ ...item })),
         payment: { method, amount: payment },
@@ -204,7 +263,11 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             label={t('sales.cliente')}
             required
             value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
+            onChange={(event) => {
+              setCustomerId(event.target.value)
+              setLookupHint('')
+              setError(null)
+            }}
             hint={customers.length === 0 ? t('sales.crea-clientes-en-el-menu-clientes') : undefined}
           >
             <option value="">{t('sales.selecciona-un-cliente')}</option>
@@ -213,6 +276,7 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
                 {customer.name}
               </option>
             ))}
+            <option value="new">{t('sales.nuevo-cliente')}</option>
           </Select>
           <Select
             label={t('sales.vendedor')}
@@ -227,6 +291,51 @@ export default function SaleForm({ open, onClose, onSubmit }: SaleFormProps) {
             ))}
           </Select>
         </div>
+
+        {/* Alta rápida de cliente (se guarda en el listado al registrar la venta) */}
+        {isNewCustomer && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <p className="mb-3 text-body-sm font-semibold text-gray-700">
+              {t('sales.nuevo-cliente-rapido')}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-12">
+              <div className="sm:col-span-3">
+                <Select
+                  aria-label={t('sales.tipo-de-documento')}
+                  value={newDocType}
+                  onChange={(event) => setNewDocType(event.target.value)}
+                >
+                  <option value="DNI">DNI</option>
+                  <option value="RUC">RUC</option>
+                  <option value="CE">CE</option>
+                </Select>
+              </div>
+              <div className="sm:col-span-4">
+                <Input
+                  aria-label={t('sales.documento')}
+                  inputMode="numeric"
+                  placeholder={newDocType === 'RUC' ? '20123456789' : '12345678'}
+                  value={newDocNumber}
+                  onChange={(event) => setNewDocNumber(event.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-5">
+                <Input
+                  aria-label={t('sales.nombre-del-cliente')}
+                  placeholder={t('sales.nombre-del-cliente')}
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <Button type="button" variant="outline" onClick={handleLookup} loading={lookingUp}>
+                {t('sales.buscar-documento')}
+              </Button>
+              {lookupHint && <p className="text-caption text-gray-500">{lookupHint}</p>}
+            </div>
+          </div>
+        )}
 
         {/* Agregar producto */}
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">

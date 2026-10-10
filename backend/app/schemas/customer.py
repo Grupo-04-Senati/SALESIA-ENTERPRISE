@@ -22,6 +22,7 @@ class CustomerData(NormalizedModel):
     phone: Optional[str] = Field(default=None, max_length=20, pattern=r'^(\+?\d{7,15})?$')
     address: Optional[str] = Field(default=None, max_length=255)
     segment: str = Field(default='Nuevo', max_length=30)
+    commercial_line: Optional[str] = Field(default=None, max_length=80)
 
     @field_validator('email', mode='before')
     @classmethod
@@ -46,3 +47,35 @@ class CustomerResponse(CustomerData):
     created_at: datetime
     purchase_count: int = 0
     total_purchased: float = 0.0
+
+
+class CustomerInline(CustomerData):
+    """Cliente que llega junto a la venta para crearse/reusarse automáticamente."""
+
+
+class DocumentLookup(NormalizedModel):
+    found: bool = False
+    source: str = 'none'  # local | api | none
+    document_type: DocumentType = 'DNI'
+    document_number: str = ''
+    name: str = ''
+    address: str = ''
+
+
+class StatementSale(NormalizedModel):
+    sale_number: str
+    issued_at: datetime
+    total: float
+    paid: float
+    balance: float
+    days_overdue: int = 0
+    aging_bucket: str = 'vigente'  # vigente | 1-30 | 31-60 | 61-90 | 90+
+
+
+class AccountStatement(NormalizedModel):
+    customer: dict
+    total_purchased: float
+    total_paid: float
+    balance: float
+    aging: dict
+    sales: list[StatementSale] = []

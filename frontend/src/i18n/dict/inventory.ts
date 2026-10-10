@@ -236,6 +236,10 @@ export const dictInventory: ModuleDict = {
     'inventory.ej-01-234-5678': 'Ej. 01 234 5678',
     'inventory.eliminar-sucursal': 'Eliminar sucursal',
     'inventory.eliminar-la-sucursal': '¿Eliminar la sucursal',
+    'inventory.filtrar-por-producto': 'Filtrar por producto',
+    'inventory.todos-los-productos': 'Todos los productos',
+    'inventory.sin-movimientos-de-este-producto': 'Sin movimientos de este producto',
+    'inventory.selecciona-otro-producto-o-quita-el-filtro': 'Selecciona otro producto o quita el filtro.',
   },
   en: {
     'inventory.reintentar': 'Retry',
@@ -474,5 +478,9 @@ export const dictInventory: ModuleDict = {
     'inventory.ej-01-234-5678': 'E.g. 01 234 5678',
     'inventory.eliminar-sucursal': 'Delete branch',
     'inventory.eliminar-la-sucursal': 'Delete the branch',
+    'inventory.filtrar-por-producto': 'Filter by product',
+    'inventory.todos-los-productos': 'All products',
+    'inventory.sin-movimientos-de-este-producto': 'No movements for this product',
+    'inventory.selecciona-otro-producto-o-quita-el-filtro': 'Select another product or clear the filter.',
   },
 }

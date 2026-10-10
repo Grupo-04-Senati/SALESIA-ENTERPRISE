@@ -166,6 +166,7 @@ function ProveedoresTab() {
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | ''>('')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Supplier | null>(null)
@@ -205,11 +206,12 @@ function ProveedoresTab() {
     const term = search.trim().toLowerCase()
     return suppliers.filter(
       (supplier) =>
-        term === '' ||
-        supplier.name.toLowerCase().includes(term) ||
-        supplier.ruc.includes(term),
+        (!statusFilter || supplier.status === statusFilter) &&
+        (term === '' ||
+          supplier.name.toLowerCase().includes(term) ||
+          supplier.ruc.includes(term)),
     )
-  }, [suppliers, search])
+  }, [suppliers, search, statusFilter])
 
   const reload = () => setAttempt((value) => value + 1)
 
@@ -357,14 +359,27 @@ function ProveedoresTab() {
         </Button>
       </div>
 
-      <div className="card">
+      <div className="card flex flex-col gap-3 sm:flex-row sm:items-end">
         <Input
           type="search"
           aria-label={t('purchasing.buscar-proveedores')}
           placeholder={t('purchasing.buscar-nombre-o-ruc')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          className="sm:flex-1"
         />
+        <Select
+          aria-label={t('purchasing.filtrar-por-estado')}
+          value={statusFilter}
+          onChange={(event) =>
+            setStatusFilter(event.target.value as 'active' | 'inactive' | '')
+          }
+          className="sm:w-44"
+        >
+          <option value="">{t('purchasing.todos')}</option>
+          <option value="active">{t('purchasing.activos')}</option>
+          <option value="inactive">{t('purchasing.inactivos')}</option>
+        </Select>
       </div>
 
       {error ? (

@@ -163,6 +163,10 @@ export const dictPurchasing: ModuleDict = {
     'purchasing.eliminar-envio': 'Eliminar envío',
     'purchasing.eliminar-envio-prefijo': '¿Eliminar el envío de la venta',
     'purchasing.eliminar-envio-sufijo': 'Esta acción no se puede deshacer.',
+    'purchasing.filtrar-por-estado': 'Filtrar por estado',
+    'purchasing.todos': 'Todos',
+    'purchasing.activos': 'Activos',
+    'purchasing.inactivos': 'Inactivos',
   },
   en: {
     'purchasing.proveedores': 'Suppliers',
@@ -325,5 +329,9 @@ export const dictPurchasing: ModuleDict = {
     'purchasing.eliminar-envio': 'Delete shipment',
     'purchasing.eliminar-envio-prefijo': 'Delete the shipment for sale',
     'purchasing.eliminar-envio-sufijo': 'This action cannot be undone.',
+    'purchasing.filtrar-por-estado': 'Filter by status',
+    'purchasing.todos': 'All',
+    'purchasing.activos': 'Active',
+    'purchasing.inactivos': 'Inactive',
   },
 }

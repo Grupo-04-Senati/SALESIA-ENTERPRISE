@@ -1,4 +1,4 @@
-"""Importa los 54 modelos para que Alembic y las relaciones los registren."""
+"""Importa los modelos para que Alembic y las relaciones los registren."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from app.models.inventory_movement import InventoryMovement
 from app.models.observation import Observation
 from app.models.payment import Payment
 from app.models.pricing import PriceList, PriceListItem, ProductPromotion, Promotion, Unit
-from app.models.product import Product
+from app.models.product import Product, ProductKit
 from app.models.purchase import PurchaseOrder, PurchaseOrderDetail
 from app.models.quote import Quote, QuoteDetail
 from app.models.random_variable import RandomVariable
@@ -43,7 +43,7 @@ __all__ = [
     'Dataset', 'DatasetVariable', 'Employee', 'Insight', 'Inventory',
     'InventoryMovement', 'KpiSnapshot', 'LoginAttempt', 'Notification', 'Observation',
     'PasswordReset', 'Payment', 'Permission', 'PriceList', 'PriceListItem',
-    'Product', 'ProductPromotion', 'Promotion', 'PurchaseOrder', 'PurchaseOrderDetail',
+    'Product', 'ProductKit', 'ProductPromotion', 'Promotion', 'PurchaseOrder', 'PurchaseOrderDetail',
     'Quote', 'QuoteDetail', 'RandomVariable', 'RefreshToken', 'Report', 'Role',
     'RolePermission', 'Sale', 'SaleDetail', 'SalesReturn', 'SalesReturnDetail',
     'ScheduledReport', 'Shipment', 'StatisticalAnalysis', 'StatisticalResult',

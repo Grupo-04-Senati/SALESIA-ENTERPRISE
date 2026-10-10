@@ -26,10 +26,13 @@ export const ENDPOINTS = {
   // §2.3 Clientes
   customers: '/api/v1/customers',
   customerHistory: (id: number) => `/api/v1/customers/${id}/history`,
+  customerLookup: '/api/v1/customers/lookup',
+  customerAccountStatement: (id: number) => `/api/v1/customers/${id}/account-statement`,
 
   // §2.4 Productos y categorías
   products: '/api/v1/products',
   productStatus: (id: number) => `/api/v1/products/${id}/status`,
+  productComponents: (id: number) => `/api/v1/products/${id}/components`,
   categories: '/api/v1/categories',
 
   // §2.5 Vendedores

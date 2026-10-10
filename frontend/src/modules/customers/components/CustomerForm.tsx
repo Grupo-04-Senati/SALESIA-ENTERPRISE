@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/form'
 import { cleanText, digits, email, hasLetter, maxLength, minLength, phone, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules, Validator } from '@/utils/validators'
-import { CUSTOMER_SEGMENTS, SEGMENT_KEYS } from '../services/customerService'
+import { CUSTOMER_SEGMENTS, SEGMENT_KEYS, lookupDocument } from '../services/customerService'
 import { useLang } from '@/i18n/i18n'
 
 /**
@@ -31,6 +31,7 @@ interface FormValues extends Record<string, string> {
   phone: string
   address: string
   segment: string
+  commercial_line: string
 }
 
 const DOCUMENT_TYPES = ['DNI', 'RUC', 'CE']
@@ -43,6 +44,7 @@ const EMPTY: FormValues = {
   phone: '',
   address: '',
   segment: 'Nuevo',
+  commercial_line: '',
 }
 
 export default function CustomerForm({ open, onClose, customer, onSubmit }: CustomerFormProps) {
@@ -50,10 +52,13 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [errors, setErrors] = useState<FormErrors<FormValues>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [lookupHint, setLookupHint] = useState('')
 
   useEffect(() => {
     if (!open) return
     setErrors({})
+    setLookupHint('')
     setValues(
       customer
         ? {
@@ -64,10 +69,43 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
             phone: customer.phone,
             address: customer.address,
             segment: customer.segment,
+            commercial_line: customer.commercial_line ?? '',
           }
         : EMPTY,
     )
   }, [open, customer])
+
+  const handleLookup = async () => {
+    const document = values.document_number.trim()
+    if (document.length < 6) {
+      setLookupHint(t('customers.ingresa-un-documento-valido'))
+      return
+    }
+    setLookingUp(true)
+    setLookupHint('')
+    try {
+      const result = await lookupDocument(document)
+      if (result.found && result.name) {
+        setValues((previous) => ({
+          ...previous,
+          document_type: result.document_type || previous.document_type,
+          name: result.name,
+          address: result.address || previous.address,
+        }))
+        setLookupHint(
+          result.source === 'local'
+            ? t('customers.cliente-existente-en-la-base')
+            : t('customers.datos-completados-desde-la-api'),
+        )
+      } else {
+        setLookupHint(t('customers.documento-no-encontrado-completa-a-mano'))
+      }
+    } catch {
+      setLookupHint(t('customers.consulta-no-disponible-completa-a-mano'))
+    } finally {
+      setLookingUp(false)
+    }
+  }
 
   const setValue = (key: keyof FormValues) => (event: { target: { value: string } }) => {
     const value = event.target.value
@@ -102,6 +140,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
     phone: phone(t('customers.telefono-invalido')),
     address: maxLength(255),
     segment: required(t('customers.campo-obligatorio')),
+    commercial_line: maxLength(80),
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -120,6 +159,7 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
         phone: values.phone.trim(),
         address: cleanText(values.address),
         segment: values.segment,
+        commercial_line: values.commercial_line.trim() || undefined,
       })
     } finally {
       setSubmitting(false)
@@ -167,6 +207,13 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
           error={errors.document_number}
         />
 
+        <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+          <Button type="button" variant="outline" onClick={handleLookup} loading={lookingUp}>
+            {t('customers.buscar-documento')}
+          </Button>
+          {lookupHint && <p className="text-caption text-gray-500">{lookupHint}</p>}
+        </div>
+
         <div className="sm:col-span-2">
           <Input
             label={t('customers.nombre-o-razon-social')}
@@ -213,6 +260,17 @@ export default function CustomerForm({ open, onClose, customer, onSubmit }: Cust
               </option>
             ))}
           </Select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <Input
+            label={t('customers.linea-comercial')}
+            maxLength={80}
+            placeholder={t('customers.linea-comercial-ejemplo')}
+            value={values.commercial_line}
+            onChange={setValue('commercial_line')}
+            error={errors.commercial_line}
+          />
         </div>
 
         <div className="sm:col-span-2">

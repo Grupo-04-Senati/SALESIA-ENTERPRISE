@@ -59,7 +59,18 @@ export interface Sale {
 
 /** Payload para registrar venta (el backend recalcula totales, RN-11). */
 export interface SaleInput {
-  customer_id: number
+  customer_id?: number
+  /** Cliente nuevo que el backend crea/reusa automáticamente por documento. */
+  customer?: {
+    document_type: string
+    document_number: string
+    name: string
+    email?: string
+    phone?: string
+    address?: string
+    segment?: string
+    commercial_line?: string
+  }
   seller_id: number
   items: Array<{ product_id: number; quantity: number; unit_price: number; discount: number }>
   payment: { method: PaymentMethod; amount: number }

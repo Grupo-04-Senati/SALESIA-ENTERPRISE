@@ -69,5 +69,11 @@ class ProductResponse(ProductData):
     id: int = Field(ge=1)
     category: Optional[CategoryOut] = None
     current_stock: int = 0
+    is_kit: bool = False
     status: str = 'active'
     created_at: datetime
+
+
+class KitComponentCreate(NormalizedModel):
+    component_id: int = Field(ge=1)
+    quantity: int = Field(gt=0, le=9_999_999)

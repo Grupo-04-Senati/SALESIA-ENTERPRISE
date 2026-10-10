@@ -37,6 +37,7 @@ def _serialize(customer: Customer, stats: Dict[int, Tuple[int, float]]) -> dict:
         'phone': customer.phone or '',
         'address': customer.address or '',
         'segment': customer.segment,
+        'commercial_line': customer.commercial_line or '',
         'status': 'active' if customer.is_active else 'inactive',
         'created_at': customer.created_at,
         'purchase_count': count,
@@ -203,3 +204,74 @@ def customer_history(db: Session, company_id: int, customer_id: int) -> dict:
         for sale in sales
     ]
     return {'customer': _serialize(customer, _purchase_stats(db, company_id)), 'history': history}
+
+
+def _aging_bucket(days_overdue: int) -> str:
+    if days_overdue <= 0:
+        return 'vigente'
+    if days_overdue <= 30:
+        return '1-30'
+    if days_overdue <= 60:
+        return '31-60'
+    if days_overdue <= 90:
+        return '61-90'
+    return '90+'
+
+
+def customer_account_statement(db: Session, company_id: int, customer_id: int) -> dict:
+    """Estado de cuenta: saldos por venta y aging por antigüedad de la deuda."""
+    from datetime import datetime, timezone
+
+    customer = db.execute(
+        select(Customer).where(Customer.id == customer_id, Customer.company_id == company_id)
+    ).scalar_one_or_none()
+    if customer is None:
+        raise NotFound('Cliente no encontrado.')
+
+    sales = db.execute(
+        select(Sale)
+        .where(
+            Sale.company_id == company_id,
+            Sale.customer_id == customer_id,
+            Sale.status != 'cancelled',
+        )
+        .order_by(Sale.sold_at)
+    ).scalars().all()
+
+    now = datetime.now(timezone.utc)
+    aging = {'vigente': 0.0, '1-30': 0.0, '31-60': 0.0, '61-90': 0.0, '90+': 0.0}
+    rows = []
+    total_purchased = 0.0
+    total_paid = 0.0
+    for sale in sales:
+        paid = sum((payment.amount for payment in sale.payments), 0.0)
+        balance = round(float(sale.total) - paid, 2)
+        total_purchased += float(sale.total)
+        total_paid += paid
+        sold_at = sale.sold_at
+        if sold_at.tzinfo is None:
+            sold_at = sold_at.replace(tzinfo=timezone.utc)
+        days_overdue = (now - sold_at).days if balance > 0 else 0
+        bucket = _aging_bucket(days_overdue)
+        if balance > 0:
+            aging[bucket] = round(aging[bucket] + balance, 2)
+        rows.append(
+            {
+                'sale_number': sale.sale_number,
+                'issued_at': sale.sold_at,
+                'total': float(sale.total),
+                'paid': round(paid, 2),
+                'balance': balance,
+                'days_overdue': days_overdue if balance > 0 else 0,
+                'aging_bucket': bucket,
+            }
+        )
+
+    return {
+        'customer': _serialize(customer, _purchase_stats(db, company_id)),
+        'total_purchased': round(total_purchased, 2),
+        'total_paid': round(total_paid, 2),
+        'balance': round(total_purchased - total_paid, 2),
+        'aging': aging,
+        'sales': rows,
+    }

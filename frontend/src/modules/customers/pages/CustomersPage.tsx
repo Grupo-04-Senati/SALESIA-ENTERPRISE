@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { History, Pencil, Plus, Trash2 } from 'lucide-react'
+import { History, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
@@ -23,6 +23,7 @@ import {
 import type { Customer, CustomerInput } from '@/types/customer'
 import CustomerForm from '../components/CustomerForm'
 import CustomerHistoryModal from '../components/CustomerHistoryModal'
+import CustomerStatementModal from '../components/CustomerStatementModal'
 import SegmentsPanel from '../components/SegmentsPanel'
 import InteractionsPanel from '../components/InteractionsPanel'
 import { useDataVersion } from '@/data/DataProvider'
@@ -73,6 +74,7 @@ export default function CustomersPage() {
   const [editing, setEditing] = useState<Customer | null>(null)
   const version = useDataVersion()
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null)
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null)
   const [deleting, setDeleting] = useState<Customer | null>(null)
   const [deletingBusy, setDeletingBusy] = useState(false)
 
@@ -279,6 +281,9 @@ export default function CustomersPage() {
                   <TableCell>
                     <div className="font-medium text-gray-900">{customer.name}</div>
                     <div className="text-caption text-gray-500">{customer.email}</div>
+                    {customer.commercial_line && (
+                      <div className="text-caption text-gray-400">{customer.commercial_line}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-caption text-gray-500">{customer.document_type} </span>
@@ -298,6 +303,15 @@ export default function CustomersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setStatementCustomer(customer)}
+                        aria-label={`${t('customers.estado-de-cuenta-de')} ${customer.name}`}
+                        title={t('customers.estado-de-cuenta')}
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary"
+                      >
+                        <Receipt aria-hidden="true" className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => setHistoryCustomer(customer)}
@@ -365,6 +379,12 @@ export default function CustomersPage() {
 
       {/* Historial */}
       <CustomerHistoryModal customer={historyCustomer} onClose={() => setHistoryCustomer(null)} />
+
+      {/* Estado de cuenta */}
+      <CustomerStatementModal
+        customer={statementCustomer}
+        onClose={() => setStatementCustomer(null)}
+      />
 
       {/* Confirmación de baja */}
       <Modal

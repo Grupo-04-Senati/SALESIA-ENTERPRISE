@@ -29,6 +29,8 @@ export interface Product {
   brand?: string | null
   image_url?: string | null
   is_featured?: boolean
+  /** El producto tiene componentes de kit/combo en el backend. */
+  is_kit?: boolean
   min_stock: number
   current_stock: number
   unit: string
