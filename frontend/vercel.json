@@ -6,11 +6,7 @@
   "installCommand": "npm ci",
   "rewrites": [
     {
-      "source": "/assets/:path*",
-      "destination": "/__asset_inexistente__"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
   ]
