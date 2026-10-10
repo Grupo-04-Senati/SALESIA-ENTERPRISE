@@ -2,7 +2,7 @@ import { cn } from '@/utils/cn'
 import { useLang } from '@/i18n/i18n'
 
 /**
- * Loader de UI (txt §8): spinner y skeleton de carga.
+ * Loader de UI (txt §8): spinner de carga.
  */
 
 interface SpinnerProps {
@@ -33,9 +33,4 @@ export function Spinner({ size = 24, className }: SpinnerProps) {
       )}
     />
   )
-}
-
-/** Bloque de esqueleto para carga (txt §8: gris-200 con pulso). */
-export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-gray-200', className)} />
 }

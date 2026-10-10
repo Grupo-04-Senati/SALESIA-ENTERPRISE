@@ -12,15 +12,6 @@ import { hydrateStore } from '@/services/hydrate'
  * con POST /inventory/movements (RN-20 · RN-21 · RN-23).
  */
 
-/** Etiquetas en español de cada tipo de movimiento. */
-export const MOVEMENT_LABELS: Record<MovementType, string> = {
-  IN: 'Entrada',
-  OUT: 'Salida',
-  RETURN: 'Devolución',
-  SHRINKAGE: 'Merma',
-  ADJUSTMENT: 'Ajuste',
-}
-
 export type { ProcessTrace }
 
 /** Datos de un movimiento manual de inventario (POST /inventory/movements). */

@@ -1,15 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { wgslVitePlugin } from '@vgpu/wgsl/loader-vite'
 import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    // Convierte los imports de *.wgsl en módulos ShaderSource (oficial vgpu)
-    wgslVitePlugin(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -8,14 +8,6 @@ import { ENDPOINTS } from '@/services/endpoints'
 
 export type InteractionKind = 'note' | 'call' | 'email' | 'meeting' | 'visit'
 
-export const INTERACTION_LABELS: Record<InteractionKind, string> = {
-  note: 'Nota',
-  call: 'Llamada',
-  email: 'Correo',
-  meeting: 'Reunión',
-  visit: 'Visita',
-}
-
 export interface CustomerInteraction {
   id: number
   customer_id: number

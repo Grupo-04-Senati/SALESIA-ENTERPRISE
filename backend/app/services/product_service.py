@@ -430,19 +430,3 @@ def remove_kit_component(
     )
     db.commit()
     return {'component_id': component_id, 'deleted': True}
-
-
-def kit_components_for_sale(db: Session, company_id: int, product_ids: set[int]) -> dict[int, list]:
-    """Componentes (product_id → filas) para los kits incluidos en una venta."""
-    if not product_ids:
-        return {}
-    rows = db.execute(
-        select(ProductKit).where(
-            ProductKit.company_id == company_id,
-            ProductKit.product_id.in_(product_ids),
-        )
-    ).scalars().all()
-    grouped: dict[int, list] = {}
-    for row in rows:
-        grouped.setdefault(row.product_id, []).append(row)
-    return grouped

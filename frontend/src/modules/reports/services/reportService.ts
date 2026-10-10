@@ -2,7 +2,7 @@ import type { Sale } from '@/types/sale'
 import { listSales } from '@/modules/sales/services/saleService'
 import { listProducts } from '@/modules/products/services/productService'
 import { listCustomers } from '@/modules/customers/services/customerService'
-import { formatCurrency, formatDate, formatNumber, formatPercent } from '@/utils/formatters'
+import { formatCurrency, formatDate, formatNumber } from '@/utils/formatters'
 import { getBySeller, getDistribution, getKpis, getMonthly, getTicketDataset, compareMeanMedian } from '@/modules/analytics/services/statisticsService'
 
 /**
@@ -319,9 +319,6 @@ export function getMonthlySummary(): Array<{ mes: string; ingresos: number; tran
 export function getTicketDistribution() {
   return getDistribution({ months: 12, seller: '', category: '' })
 }
-
-/** Porcentaje formateado para las tablas de reporte. */
-export const formatPct = (value: number): string => formatPercent(value / 100)
 
 /** Tipo auxiliar para las ventas del reporte. */
 export type ReportSale = Sale

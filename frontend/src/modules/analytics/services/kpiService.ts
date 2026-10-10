@@ -9,14 +9,6 @@ import { ENDPOINTS } from '@/services/endpoints'
 
 export type KpiCode = 'revenue' | 'sales_count' | 'avg_ticket' | 'customers' | 'low_stock'
 
-export const KPI_LABELS: Record<KpiCode, string> = {
-  revenue: 'Ingresos',
-  sales_count: 'N.º de ventas',
-  avg_ticket: 'Ticket promedio',
-  customers: 'Clientes',
-  low_stock: 'Productos con stock bajo',
-}
-
 export interface KpiSnapshot {
   id: number
   kpi_code: KpiCode

@@ -341,13 +341,3 @@ export function SearchSelect({
     </Field>
   )
 }
-
-/** Radio de 18 px con color activo azul corporativo (txt §5.2). */
-export function Radio({ label, className, ...rest }: CheckboxProps) {
-  return (
-    <label className={cn('flex cursor-pointer items-center gap-2 text-body-sm text-gray-700', className)}>
-      <input type="radio" className="h-[18px] w-[18px] shrink-0 accent-primary" {...rest} />
-      {label && <span>{label}</span>}
-    </label>
-  )
-}

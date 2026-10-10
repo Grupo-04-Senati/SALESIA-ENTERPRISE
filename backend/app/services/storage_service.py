@@ -79,12 +79,3 @@ def upload_image(
     if response.status_code >= 400:
         raise ValidationAppError('No se pudo subir la imagen al almacenamiento.')
     return public_url(path)
-
-
-def delete_image(path: str) -> None:
-    base, headers = _client()
-    httpx.delete(
-        f'{base}/storage/v1/object/{BUCKET}/{path.strip("/")}',
-        headers=headers,
-        timeout=30,
-    )

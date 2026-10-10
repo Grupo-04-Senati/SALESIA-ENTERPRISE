@@ -5,14 +5,6 @@
 
 export type InsightSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL'
 
-/** Severidad en minúsculas para mapear al badge del sistema de diseño. */
-export const SEVERITY_LABELS: Record<InsightSeverity, string> = {
-  INFO: 'Informativo',
-  SUCCESS: 'Positivo',
-  WARNING: 'Alerta',
-  CRITICAL: 'Crítico',
-}
-
 export interface Insight {
   id: number
   title: string

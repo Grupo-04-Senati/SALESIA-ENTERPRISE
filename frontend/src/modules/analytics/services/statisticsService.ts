@@ -13,7 +13,6 @@ import { getState } from '@/data/store'
 
 export {
   CHART_AXIS,
-  CHART_COLORS,
   CHART_GRID,
   DEFAULT_FILTERS,
   compareMeanMedian,

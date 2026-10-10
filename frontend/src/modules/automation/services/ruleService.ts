@@ -9,12 +9,6 @@ import { ENDPOINTS } from '@/services/endpoints'
 
 export type RuleSeverity = 'info' | 'warning' | 'critical'
 
-export const SEVERITY_LABELS: Record<RuleSeverity, string> = {
-  info: 'Informativa',
-  warning: 'Advertencia',
-  critical: 'Crítica',
-}
-
 export interface SavedRule {
   id: number
   code: string

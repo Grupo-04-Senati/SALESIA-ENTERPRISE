@@ -9,13 +9,6 @@ import { ENDPOINTS } from '@/services/endpoints'
 
 export type NotificationLevel = 'info' | 'warning' | 'success' | 'error'
 
-export const NOTIFICATION_LEVEL_LABELS: Record<NotificationLevel, string> = {
-  info: 'Info',
-  warning: 'Advertencia',
-  success: 'Éxito',
-  error: 'Error',
-}
-
 export interface AppNotification {
   id: number
   level: NotificationLevel
@@ -63,15 +56,6 @@ export type ExportType = 'sales' | 'products' | 'customers' | 'inventory' | 'ret
 
 export type ExportFormat = 'csv' | 'xlsx' | 'json'
 
-export const EXPORT_TYPE_LABELS: Record<ExportType, string> = {
-  sales: 'Ventas',
-  products: 'Productos',
-  customers: 'Clientes',
-  inventory: 'Inventario',
-  returns: 'Devoluciones',
-  quotes: 'Cotizaciones',
-}
-
 export interface DataExport {
   id: number
   export_type: ExportType
@@ -89,21 +73,7 @@ export interface DataExportInput {
 
 export type ReportFrequency = 'daily' | 'weekly' | 'monthly'
 
-export const FREQUENCY_LABELS: Record<ReportFrequency, string> = {
-  daily: 'Diaria',
-  weekly: 'Semanal',
-  monthly: 'Mensual',
-}
-
 export type ReportType = 'ventas' | 'estadistico' | 'productos' | 'clientes' | 'vendedores'
-
-export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
-  ventas: 'Ventas',
-  estadistico: 'Estadístico',
-  productos: 'Productos',
-  clientes: 'Clientes',
-  vendedores: 'Vendedores',
-}
 
 export interface ScheduledReport {
   id: number

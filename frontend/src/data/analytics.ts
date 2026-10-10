@@ -298,8 +298,6 @@ export function compareMeanMedian(values: number[]): CompareResult {
 /** Nombres de vendedores y categorías para los filtros. */
 export const getSellerNames = (): string[] => getState().sellers.map((seller) => seller.name)
 export const getCategoryNames = (): string[] => getState().categories.map((category) => category.name)
-export const getTopProductNames = (limit = 8): string[] =>
-  getByProduct().slice(0, limit).map((product) => product.name)
 
 /* ------------------------------------------------------------------
    Alertas automáticas del sistema
@@ -391,62 +389,6 @@ export function getSystemAlerts(filters: Partial<AnalyticsFilters> = {}): System
   }
 
   return alerts
-}
-
-/**
- * Escenario de Bayes construido con datos reales del negocio:
- * A = cliente recurrente · B = compra con ticket sobre el promedio.
- * Devuelve las probabilidades observadas; el posterior lo calcula el
- * módulo de Probabilidad (teorema de Bayes).
- */
-export interface BusinessBayes {
-  /** Probabilidad previa P(A): clientes recurrentes sobre el total. */
-  prior: number
-  /** Verosimilitud P(B|A): compras altas entre recurrentes. */
-  likelihood: number
-  /** Evidencia P(B): compras altas sobre el total. */
-  evidence: number
-  detalle: {
-    recurrentes: number
-    clientes: number
-    ventasRecurrente: number
-    comprasAltas: number
-    ventasValidas: number
-    comprasAltasRecurrente: number
-    ticketPromedio: number
-  }
-}
-
-export function getBusinessBayes(): BusinessBayes {
-  const state = getState()
-  const recurrentes = state.customers.filter(
-    (customer) => customer.status === 'active' && ['Recurrente', 'Frecuente'].includes(customer.segment),
-  )
-  const clientes = state.customers.filter((customer) => customer.status === 'active')
-  const ventas = state.sales.filter((sale) => sale.status !== 'cancelled')
-  const ticketPromedio = ventas.length > 0 ? ventas.reduce((sum, sale) => sum + sale.total, 0) / ventas.length : 0
-
-  const idsRecurrentes = new Set(recurrentes.map((customer) => customer.id))
-  const ventasRecurrente = ventas.filter((sale) => idsRecurrentes.has(sale.customer.id))
-  const comprasAltas = ventas.filter((sale) => sale.total > ticketPromedio)
-  const comprasAltasRecurrente = comprasAltas.filter((sale) => idsRecurrentes.has(sale.customer.id))
-
-  const ratio = (part: number, totalCount: number): number => (totalCount > 0 ? part / totalCount : 0)
-
-  return {
-    prior: round2(ratio(recurrentes.length, clientes.length)),
-    likelihood: round2(ratio(comprasAltasRecurrente.length, ventasRecurrente.length)),
-    evidence: round2(ratio(comprasAltas.length, ventas.length)),
-    detalle: {
-      recurrentes: recurrentes.length,
-      clientes: clientes.length,
-      ventasRecurrente: ventasRecurrente.length,
-      comprasAltas: comprasAltas.length,
-      ventasValidas: ventas.length,
-      comprasAltasRecurrente: comprasAltasRecurrente.length,
-      ticketPromedio: round2(ticketPromedio),
-    },
-  }
 }
 
 /* ------------------------------------------------------------------
