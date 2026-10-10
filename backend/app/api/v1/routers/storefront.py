@@ -6,6 +6,7 @@ Endpoints abiertos (sin JWT): el aislamiento por empresa se resuelve con
 
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 from typing import Optional
@@ -31,6 +32,7 @@ from app.services import customer_service, product_service, quote_service, syste
 from app.services.event_service import log_app_event
 
 router = APIRouter(prefix='/store', tags=['storefront'])
+logger = logging.getLogger(__name__)
 
 
 def _slugify(value: str) -> str:
@@ -264,6 +266,37 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
         db.rollback()
         _discard_unconverted_quote(db, company_id, quote['id'])
         raise
+
+    try:
+        system_service.create_notification(
+            db,
+            company_id,
+            NotificationCreate(
+                title=f'Nuevo pedido de la tienda · {quote["quote_number"]}',
+                message=(
+                    f'Venta {converted["sale_number"]} · cliente {quote["customer_name"]} · '
+                    f'S/ {float(quote["total"]):.2f} · cotización {quote["quote_number"]} convertida. '
+                    'Registrar el pago para dar por atendido el pedido.'
+                ),
+                level='info',
+                module='ventas',
+                link=f'/ventas?sale={converted["sale_id"]}',
+                detail={
+                    'source': 'storefront',
+                    'quote_number': quote['quote_number'],
+                    'sale_number': converted['sale_number'],
+                    'sale_id': converted['sale_id'],
+                    'customer': quote['customer_name'],
+                    'total': float(quote['total']),
+                },
+            ),
+            actor=None,
+            ip=ip,
+        )
+    except Exception:
+        logger.exception(
+            'No se pudo crear la notificación del pedido %s', quote['quote_number']
+        )
 
     return {
         **quote,

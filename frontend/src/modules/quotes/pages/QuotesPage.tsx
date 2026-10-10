@@ -409,6 +409,7 @@ export default function QuotesPage() {
         t('quotes.no-se-pudo-convertir-la-cotizacion'),
         reason instanceof Error ? reason.message : t('quotes.error-inesperado'),
       )
+      reload()
     } finally {
       setConvertingId(null)
     }

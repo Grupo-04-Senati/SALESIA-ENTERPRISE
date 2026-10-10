@@ -49,6 +49,12 @@ const DETAIL_LABELS: Record<string, string> = {
   entity: 'Entidad',
   entity_id: 'Registro',
   actor: 'Autor',
+  source: 'Origen',
+  quote_number: 'Cotización',
+  sale_number: 'Venta',
+  sale_id: 'Id de venta',
+  customer: 'Cliente',
+  total: 'Total',
 }
 
 interface NotificationDetailModalProps {

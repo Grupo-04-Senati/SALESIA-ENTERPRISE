@@ -1,4 +1,4 @@
-import type { Sale, SaleCreated, SaleInput, SaleStatus } from '@/types/sale'
+import type { Sale, SaleCreated, SaleInput, SaleStatus, PaymentMethod } from '@/types/sale'
 import type { Customer } from '@/types/customer'
 import type { Seller } from '@/types/sale'
 import { apiFetch } from '@/services/api'
@@ -78,6 +78,27 @@ export async function listSales(filters: SaleFilters = {}): Promise<Sale[]> {
           sale.seller.name.toLowerCase().includes(term)),
     )
     .sort((a, b) => b.issued_at.localeCompare(a.issued_at))
+}
+
+/** Consulta el detalle de una venta por id (para deep links de notificaciones). */
+export async function getSale(id: number): Promise<Sale> {
+  return apiFetch<Sale>(`${ENDPOINTS.sales}/${id}`)
+}
+
+/**
+ * Registra un pago sobre la venta (RN-16: no supera el saldo) y devuelve la
+ * venta actualizada con el estado recalculado por el backend (RN-17).
+ */
+export async function registerPayment(
+  id: number,
+  input: { amount: number; method: PaymentMethod; reference?: string },
+): Promise<Sale> {
+  await apiFetch(`${ENDPOINTS.salePayments(id)}`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  await hydrateStore(['sales', 'products', 'movements'])
+  return getSale(id)
 }
 
 /** Registra la venta en el backend y devuelve el proceso ejecutado. */

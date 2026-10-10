@@ -131,6 +131,35 @@ def test_store_quote_crea_cotizacion_y_venta_con_stock(client, admin_headers):
     assert restored == stock_before
 
 
+def test_store_quote_genera_notificacion_de_pedido(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    target = max(products, key=lambda row: row['current_stock'])
+    assert target['current_stock'] >= 1
+
+    response = client.post('/api/v1/store/quotes', json={
+        'customer': {
+            'name': 'Cliente Pedido Web',
+            'phone': '911222333',
+            'email': 'pedido.web@example.com',
+        },
+        'items': [{'product_id': target['id'], 'quantity': 1}],
+    })
+    assert response.status_code == 201, response.text
+    quote = response.json()
+
+    notifications = client.get(
+        '/api/v1/notifications?page_size=50', headers=admin_headers
+    ).json()['items']
+    found = [row for row in notifications if 'Nuevo pedido de la tienda' in row.get('title', '')]
+    assert found, 'la compra de la tienda debe generar una notificación de pedido'
+    note = found[0]
+    assert quote['sale_number'] in note['message']
+    assert note['link'] == f"/ventas?sale={quote['sale_id']}"
+    assert note['module'] == 'ventas'
+    assert note['target_role'] is None, 'el pedido debe verse para todos los roles'
+    assert note['detail']['quote_number'] == quote['quote_number']
+
+
 def test_store_quote_sin_stock_se_rechaza(client, admin_headers):
     products = client.get('/api/v1/store/products?page_size=100').json()['items']
     assert products

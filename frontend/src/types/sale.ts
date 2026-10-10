@@ -76,6 +76,6 @@ export interface InventoryMovement {
   resulting_stock: number
   /** Obligatorio en SHRINKAGE y ADJUSTMENT (RN-21). */
   reason: string
-  user: { id: number; name: string }
+  user: { id: number; name: string } | null
   created_at: string
 }

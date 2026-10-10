@@ -319,7 +319,9 @@ export default function InventoryPage() {
                         </TableCell>
                         <TableCell>{movement.resulting_stock}</TableCell>
                         <TableCell className="max-w-56 truncate text-gray-600">{movement.reason}</TableCell>
-                        <TableCell className="text-gray-600">{movement.user.name}</TableCell>
+                        <TableCell className="text-gray-600">
+                          {movement.user?.name ?? t('inventory.sistema')}
+                        </TableCell>
                       </TableRow>
                     )
                   })}

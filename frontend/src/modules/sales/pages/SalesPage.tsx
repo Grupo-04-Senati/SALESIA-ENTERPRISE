@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Eye, Plus } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Pagination from '@/components/tables/Pagination'
@@ -14,7 +15,7 @@ import { formatCurrency, formatDateTime } from '@/utils/formatters'
 import type { Sale, SaleInput } from '@/types/sale'
 import { useSales } from '@/hooks/useSales'
 import ProcessTraceList from '@/components/ProcessTraceList'
-import { createSale } from '../services/saleService'
+import { createSale, getSale } from '../services/saleService'
 import SaleForm from '../components/SaleForm'
 import SaleDetailModal, { SALE_STATUS_LABELS } from '../components/SaleDetailModal'
 
@@ -29,6 +30,7 @@ const PAGE_SIZE = 10
 export default function SalesPage() {
   const toast = useToast()
   const { t } = useLang()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -44,6 +46,25 @@ export default function SalesPage() {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(timer)
   }, [search])
+
+  useEffect(() => {
+    const raw = searchParams.get('sale')
+    if (!raw) return
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id < 1) return
+    let cancelled = false
+    getSale(id)
+      .then((sale) => {
+        if (!cancelled) setSelected(sale)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setSearchParams({}, { replace: true })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     setPage(1)
@@ -238,7 +259,14 @@ export default function SalesPage() {
       )}
 
       <SaleForm open={formOpen} onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />
-      <SaleDetailModal sale={selected} onClose={() => setSelected(null)} />
+      <SaleDetailModal
+        sale={selected}
+        onClose={() => setSelected(null)}
+        onUpdated={(sale) => {
+          setSelected(sale)
+          reload()
+        }}
+      />
 
       {/* Trazabilidad: qué hizo el sistema al ejecutar cada operación */}
       <ProcessTraceList limit={3} title={t('sales.procesos-ejecutados-en-ventas')} />

@@ -1,12 +1,18 @@
+import { useState } from 'react'
+import { BadgeCheck } from 'lucide-react'
 import type { Sale } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Badge from '@/components/ui/Badge'
+import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
+import { registerPayment } from '../services/saleService'
 
 /**
  * Detalle de una venta (Fase 08 · RF-06): líneas, totales y pago.
+ * Per registrar el pago del saldo (RN-16/RN-17) para avanzar el pedido.
  */
 
 export const SALE_STATUS_LABELS: Record<
@@ -22,12 +28,39 @@ export const SALE_STATUS_LABELS: Record<
 interface SaleDetailModalProps {
   sale: Sale | null
   onClose: () => void
+  onUpdated?: (sale: Sale) => void
 }
 
-export default function SaleDetailModal({ sale, onClose }: SaleDetailModalProps) {
+export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetailModalProps) {
   const { t } = useLang()
+  const toast = useToast()
+  const [paying, setPaying] = useState(false)
   if (!sale) return null
   const status = SALE_STATUS_LABELS[sale.status]
+  const canPay = sale.status !== 'cancelled' && sale.balance > 0
+
+  const handlePayment = async () => {
+    if (paying || !sale) return
+    setPaying(true)
+    try {
+      const updated = await registerPayment(sale.id, {
+        amount: sale.balance,
+        method: 'cash',
+      })
+      toast.success(
+        t('sales.pago-registrado'),
+        `${updated.sale_number} · ${formatCurrency(updated.paid)} · ${t(updated.status === 'paid' ? 'sales.pagado' : 'sales.parcial')}`,
+      )
+      onUpdated?.(updated)
+    } catch (reason: unknown) {
+      toast.error(
+        t('sales.no-se-pudo-registrar-el-pago'),
+        reason instanceof Error ? reason.message : t('sales.error-inesperado'),
+      )
+    } finally {
+      setPaying(false)
+    }
+  }
 
   return (
     <Modal
@@ -35,6 +68,19 @@ export default function SaleDetailModal({ sale, onClose }: SaleDetailModalProps)
       onClose={onClose}
       title={`${t('sales.venta')} ${sale.sale_number}`}
       size="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {t('common.cerrar')}
+          </Button>
+          {canPay && (
+            <Button onClick={() => void handlePayment()} loading={paying}>
+              <BadgeCheck aria-hidden="true" className="h-4 w-4" />
+              {t('sales.registrar-pago-del-saldo')}
+            </Button>
+          )}
+        </>
+      }
     >
       <div className="space-y-5">
         <div className="grid gap-3 text-body-sm sm:grid-cols-2">
