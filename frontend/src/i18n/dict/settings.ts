@@ -204,6 +204,10 @@ export const dictSettings: ModuleDict = {
     'settings.nivel-advertencia': 'Advertencia',
     'settings.nivel-exito': 'Éxito',
     'settings.nivel-error': 'Error',
+    'settings.todas-las-notificaciones': 'Todas',
+    'settings.sin-notificaciones-de-este-tipo': 'Sin notificaciones de este tipo',
+    'settings.todavia-no-hay-avisos-de-este-tipo':
+      'Todavía no hay avisos de este tipo en el historial.',
     'settings.export-ventas': 'Ventas',
     'settings.export-productos': 'Productos',
     'settings.export-clientes': 'Clientes',
@@ -438,6 +442,10 @@ export const dictSettings: ModuleDict = {
     'settings.nivel-advertencia': 'Warning',
     'settings.nivel-exito': 'Success',
     'settings.nivel-error': 'Error',
+    'settings.todas-las-notificaciones': 'All',
+    'settings.sin-notificaciones-de-este-tipo': 'No notifications of this type',
+    'settings.todavia-no-hay-avisos-de-este-tipo':
+      'There are no notices of this type in the history yet.',
     'settings.export-ventas': 'Sales',
     'settings.export-productos': 'Products',
     'settings.export-clientes': 'Customers',

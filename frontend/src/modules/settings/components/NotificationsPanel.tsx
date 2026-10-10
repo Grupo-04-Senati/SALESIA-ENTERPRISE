@@ -5,6 +5,8 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import type { BadgeVariant } from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
+import Tabs from '@/components/ui/Tabs'
+import type { TabItem } from '@/components/ui/Tabs'
 import NotificationDetailModal from '@/components/ui/NotificationDetailModal'
 import { Input, Select, Textarea } from '@/components/ui/form'
 import { Spinner } from '@/components/feedback/Loader'
@@ -36,10 +38,13 @@ import type {
 
 /**
  * Pestaña «Notificaciones» de Configuración (ENDPOINTS.notifications):
- * historial, CSV, vaciar, alta manual (Admin) y matriz módulo → roles.
+ * historial dividido en pestañas por tipo (Todas / Info / Advertencia /
+ * Éxito / Error), CSV, vaciar, alta manual (Admin) y matriz módulo → roles.
  */
 
 const LEVELS: NotificationLevel[] = ['info', 'warning', 'success', 'error']
+
+type LevelFilter = 'all' | NotificationLevel
 
 const LEVEL_BADGES: Record<NotificationLevel, BadgeVariant> = {
   info: 'info',
@@ -67,6 +72,7 @@ export default function NotificationsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [tabLevel, setTabLevel] = useState<LevelFilter>('all')
 
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -292,6 +298,25 @@ export default function NotificationsPanel() {
 
   const unread = items.filter((row) => !isNotificationRead(row)).length
 
+  const counts: Record<LevelFilter, number> = {
+    all: items.length,
+    info: 0,
+    warning: 0,
+    success: 0,
+    error: 0,
+  }
+  for (const row of items) counts[row.level] += 1
+
+  const tabItems: TabItem[] = [
+    { id: 'all', label: `${t('settings.todas-las-notificaciones')} (${counts.all})` },
+    ...LEVELS.map((level) => ({
+      id: level,
+      label: `${t(LEVEL_KEYS[level])} (${counts[level]})`,
+    })),
+  ]
+
+  const visible = tabLevel === 'all' ? items : items.filter((row) => row.level === tabLevel)
+
   // Refleja el estado leído/no leído actualizado tras recargar.
   const active = selected
     ? (items.find((row) => row.id === selected.id) ?? selected)
@@ -344,6 +369,15 @@ export default function NotificationsPanel() {
           )}
         </div>
       </div>
+
+      {!error && !loading && items.length > 0 && (
+        <Tabs
+          id="notif-levels"
+          items={tabItems}
+          value={tabLevel}
+          onChange={(id) => setTabLevel(id as LevelFilter)}
+        />
+      )}
 
       {error ? (
         <div className="card">
@@ -398,6 +432,14 @@ export default function NotificationsPanel() {
             }
           />
         </div>
+      ) : visible.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={Bell}
+            title={t('settings.sin-notificaciones-de-este-tipo')}
+            description={t('settings.todavia-no-hay-avisos-de-este-tipo')}
+          />
+        </div>
       ) : (
         <div className="card">
           <DataTable
@@ -410,7 +452,7 @@ export default function NotificationsPanel() {
               t('settings.acciones'),
             ]}
           >
-            {items.map((row) => (
+            {visible.map((row) => (
               <TableRow key={row.id} onClick={() => openDetail(row)}>
                 <TableCell className="whitespace-nowrap">{formatDateTime(row.created_at)}</TableCell>
                 <TableCell>
