@@ -1,7 +1,8 @@
 """Storefront de la tienda web: catálogo público, cuenta de cliente y pedidos.
 
-El catálogo y el contacto son públicos; registrar un pedido, ver «Mis pedidos»,
-marcar la llegada y reclamar exigen sesión de cliente (JWT tipo ``customer``).
+El catálogo y el contacto son públicos; registrar un pedido, ver «Mis pedidos»
+y reclamar exigen sesión de cliente (JWT tipo ``customer``). La llegada de un
+pedido solo la registra el equipo interno (ventas), nunca el cliente.
 El aislamiento por empresa se resuelve con ``settings.storefront_company_id``
 (fallback: la primera empresa registrada).
 """
@@ -28,10 +29,8 @@ from app.models.customer import Customer
 from app.models.inventory import Inventory
 from app.models.product import Product
 from app.models.quote import Quote
-from app.models.sale import Sale
 from app.schemas.customer import CustomerCreate
 from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
-from app.schemas.sale import ReceivedUpdate
 from app.schemas.storefront import (
     StoreClaimCreate,
     StoreContactCreate,
@@ -458,36 +457,6 @@ def store_orders(request: Request, db: Session = Depends(get_db)):
     company_id = _company_id(db)
     customer = _current_store_customer(db, company_id, request)
     return sale_service.list_sales(db, company_id, customer_id=customer.id, page=1, page_size=50)
-
-
-def _owned_sale(db: Session, company_id: int, sale_id: int, customer: Customer) -> Sale:
-    sale = db.execute(
-        select(Sale).where(
-            Sale.id == sale_id,
-            Sale.company_id == company_id,
-            Sale.customer_id == customer.id,
-        )
-    ).scalar_one_or_none()
-    if sale is None:
-        raise NotFound('Pedido no encontrado.')
-    return sale
-
-
-@router.put('/orders/{sale_id}/received')
-def store_order_received(
-    sale_id: int,
-    payload: ReceivedUpdate,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    """El cliente marca (o desmarca) su pedido como recibido."""
-    company_id = _company_id(db)
-    ip = client_ip(request)
-    customer = _current_store_customer(db, company_id, request)
-    _owned_sale(db, company_id, sale_id, customer)
-    return sale_service.set_sale_received(
-        db, company_id, sale_id, payload.received, actor=None, ip=ip
-    )
 
 
 @router.post('/orders/{sale_id}/claims', status_code=status.HTTP_201_CREATED)

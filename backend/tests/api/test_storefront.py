@@ -354,9 +354,6 @@ def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
 
 def test_store_orders_requiere_sesion(client):
     assert client.get('/api/v1/store/orders').status_code == 401
-    assert client.put(
-        '/api/v1/store/orders/1/received', json={'received': True}
-    ).status_code == 401
     assert client.post(
         '/api/v1/store/orders/1/claims',
         json={'description': 'No me llegó el pedido que realicé.'},
@@ -391,33 +388,16 @@ def test_store_orders_y_marcado_de_recibido(client, admin_headers):
     )
     assert sin_gestion.status_code in (401, 403), 'solo Admin/Gerente gestionan la entrega'
 
-    marcado_cliente = client.put(
+    cliente_no_marca = client.put(
         f"/api/v1/store/orders/{quote['sale_id']}/received",
         json={'received': True},
         headers=auth,
     )
-    assert marcado_cliente.status_code == 200, marcado_cliente.text
-    assert marcado_cliente.json()['received_at'] is not None
-
-    otro = _store_auth(client, 'Otro Cliente Recibido', 'otro.recibido@example.com')
-    ajeno = client.put(
-        f"/api/v1/store/orders/{quote['sale_id']}/received",
-        json={'received': True},
-        headers=otro,
-    )
-    assert ajeno.status_code == 404, 'cada cliente solo ve sus pedidos'
+    assert cliente_no_marca.status_code == 404, 'el cliente no marca la llegada'
 
     orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
     mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
-    assert mine['received_at'] is not None, 'el cliente ve la marca de recibido'
-
-    desmarcado_cliente = client.put(
-        f"/api/v1/store/orders/{quote['sale_id']}/received",
-        json={'received': False},
-        headers=auth,
-    )
-    assert desmarcado_cliente.status_code == 200
-    assert desmarcado_cliente.json()['received_at'] is None
+    assert mine['received_at'] is None, 'sin marca hasta que el sistema confirme'
 
     marcado = client.put(
         f"/api/v1/sales/{quote['sale_id']}/received",
@@ -429,7 +409,7 @@ def test_store_orders_y_marcado_de_recibido(client, admin_headers):
 
     orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
     mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
-    assert mine['received_at'] is not None
+    assert mine['received_at'] is not None, 'el cliente ve la marca del sistema'
 
     unmarked = client.put(
         f"/api/v1/sales/{quote['sale_id']}/received",

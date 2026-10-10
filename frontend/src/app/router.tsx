@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { createBrowserRouter, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import MainLayout from '@/layouts/MainLayout'
 import AuthLayout from '@/layouts/AuthLayout'
@@ -16,22 +16,43 @@ import { fetchMe } from '@/modules/auth/services/authService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLang } from '@/i18n/i18n'
 
-const CustomersPage = lazy(() => import('@/modules/customers/pages/CustomersPage'))
-const ProductsPage = lazy(() => import('@/modules/products/pages/ProductsPage'))
-const CategoriesPage = lazy(() => import('@/modules/categories/pages/CategoriesPage'))
-const EmployeesPage = lazy(() => import('@/modules/employees/pages/EmployeesPage'))
-const SalesPage = lazy(() => import('@/modules/sales/pages/SalesPage'))
-const InventoryPage = lazy(() => import('@/modules/inventory/pages/InventoryPage'))
-const AnalyticsPage = lazy(() => import('@/modules/analytics/pages/AnalyticsPage'))
-const ProbabilityPage = lazy(() => import('@/modules/probability/pages/ProbabilityPage'))
-const InsightsPage = lazy(() => import('@/modules/insights/pages/InsightsPage'))
-const ReportsPage = lazy(() => import('@/modules/reports/pages/ReportsPage'))
-const SettingsPage = lazy(() => import('@/modules/settings/pages/SettingsPage'))
-const AutomationPage = lazy(() => import('@/modules/automation/pages/AutomationPage'))
-const PurchasingPage = lazy(() => import('@/modules/purchasing/pages/PurchasingPage'))
-const QuotesPage = lazy(() => import('@/modules/quotes/pages/QuotesPage'))
-const ReturnsPage = lazy(() => import('@/modules/returns/pages/ReturnsPage'))
-const PricingPage = lazy(() => import('@/modules/pricing/pages/PricingPage'))
+/**
+ * Carga perezosa de módulos con recuperación ante despliegues: si un chunk
+ * cacheado ya no existe en el servidor (la pestaña sobrevivió a un deploy),
+ * recarga la página una sola vez para obtener la versión nueva.
+ */
+function lazyPage(load: () => Promise<{ default: ComponentType }>) {
+  return lazy(async () => {
+    try {
+      return await load()
+    } catch (error) {
+      const clave = 'salesia-reload-chunk'
+      const ultimo = Number(sessionStorage.getItem(clave) ?? 0)
+      if (Date.now() - ultimo > 60_000) {
+        sessionStorage.setItem(clave, String(Date.now()))
+        window.location.reload()
+      }
+      throw error
+    }
+  })
+}
+
+const CustomersPage = lazyPage(() => import('@/modules/customers/pages/CustomersPage'))
+const ProductsPage = lazyPage(() => import('@/modules/products/pages/ProductsPage'))
+const CategoriesPage = lazyPage(() => import('@/modules/categories/pages/CategoriesPage'))
+const EmployeesPage = lazyPage(() => import('@/modules/employees/pages/EmployeesPage'))
+const SalesPage = lazyPage(() => import('@/modules/sales/pages/SalesPage'))
+const InventoryPage = lazyPage(() => import('@/modules/inventory/pages/InventoryPage'))
+const AnalyticsPage = lazyPage(() => import('@/modules/analytics/pages/AnalyticsPage'))
+const ProbabilityPage = lazyPage(() => import('@/modules/probability/pages/ProbabilityPage'))
+const InsightsPage = lazyPage(() => import('@/modules/insights/pages/InsightsPage'))
+const ReportsPage = lazyPage(() => import('@/modules/reports/pages/ReportsPage'))
+const SettingsPage = lazyPage(() => import('@/modules/settings/pages/SettingsPage'))
+const AutomationPage = lazyPage(() => import('@/modules/automation/pages/AutomationPage'))
+const PurchasingPage = lazyPage(() => import('@/modules/purchasing/pages/PurchasingPage'))
+const QuotesPage = lazyPage(() => import('@/modules/quotes/pages/QuotesPage'))
+const ReturnsPage = lazyPage(() => import('@/modules/returns/pages/ReturnsPage'))
+const PricingPage = lazyPage(() => import('@/modules/pricing/pages/PricingPage'))
 
 function PageLoader() {
   const { t } = useLang()
