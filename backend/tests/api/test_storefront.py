@@ -355,6 +355,9 @@ def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
 def test_store_orders_requiere_sesion(client):
     assert client.get('/api/v1/store/orders').status_code == 401
     assert client.post(
+        '/api/v1/store/orders/1/pay', json={'method': 'yape'}
+    ).status_code == 401
+    assert client.post(
         '/api/v1/store/orders/1/claims',
         json={'description': 'No me llegó el pedido que realicé.'},
     ).status_code == 401
@@ -546,4 +549,114 @@ def test_store_reclamo_de_pedido_flujo_completo(client, admin_headers, vendedor_
     )
     assert cancelled.status_code == 200, cancelled.text
     restored = client.get(f'/api/v1/store/products/{target["id"]}').json()['current_stock']
+    assert restored == stock_before
+
+
+def test_store_pago_simulado_pasarela(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    target = max(products, key=lambda row: row['current_stock'])
+    stock_before = target['current_stock']
+
+    auth = _store_auth(client, 'Cliente Pago Web', 'pago.web@example.com', password='pago12345')
+    quote = _quote(client, target, auth=auth, notes='Prueba de pasarela')
+    assert quote.status_code == 201, quote.text
+    quote = quote.json()
+    sale_id = quote['sale_id']
+
+    orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
+    mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
+    assert mine['status'] == 'pending', 'el pedido nace pendiente de pago'
+    assert mine['balance'] > 0
+
+    sin_sesion = client.post(f'/api/v1/store/orders/{sale_id}/pay', json={'method': 'yape'})
+    assert sin_sesion.status_code == 401
+
+    otro = _store_auth(client, 'Otro Cliente Pago', 'otro.pago@example.com')
+    ajeno = client.post(
+        f'/api/v1/store/orders/{sale_id}/pay',
+        json={'method': 'yape'},
+        headers=otro,
+    )
+    assert ajeno.status_code == 404, 'solo el dueño del pedido puede pagar'
+
+    mal_metodo = client.post(
+        f'/api/v1/store/orders/{sale_id}/pay',
+        json={'method': 'cash'},
+        headers=auth,
+    )
+    assert mal_metodo.status_code == 422, 'la pasarela solo acepta card, yape o plin'
+
+    pagado = client.post(
+        f'/api/v1/store/orders/{sale_id}/pay',
+        json={'method': 'yape', 'reference': 'YP-DEMO-0001'},
+        headers=auth,
+    )
+    assert pagado.status_code == 201, pagado.text
+    body = pagado.json()
+    assert body['status'] == 'paid'
+    assert body['balance'] == 0
+    assert body['payments'][-1]['method'] == 'yape'
+    assert body['payments'][-1]['reference'] == 'YP-DEMO-0001'
+
+    repetido = client.post(
+        f'/api/v1/store/orders/{sale_id}/pay',
+        json={'method': 'card'},
+        headers=auth,
+    )
+    assert repetido.status_code == 409, 'el pedido ya pagado no admite otro cobro'
+    assert 'pagado' in repetido.json()['message']
+
+    orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
+    mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
+    assert mine['status'] == 'paid'
+    assert mine['balance'] == 0
+
+    detalle = client.get(f'/api/v1/sales/{sale_id}', headers=admin_headers)
+    assert detalle.status_code == 200
+    assert detalle.json()['payments'][-1]['method'] == 'yape'
+
+    notifications = client.get(
+        '/api/v1/notifications?page_size=50', headers=admin_headers
+    ).json()['items']
+    found = [row for row in notifications if 'Pago recibido' in row.get('title', '')]
+    assert found, 'el pago debe generar una notificación en el sistema'
+    assert quote['sale_number'] in found[0]['message']
+
+    anulado_previo = _quote(client, target, auth=auth, notes='Pedido anulado sin pagar')
+    assert anulado_previo.status_code == 201, anulado_previo.text
+    anulado_previo = anulado_previo.json()
+    anulado = client.post(
+        f"/api/v1/sales/{anulado_previo['sale_id']}/cancel",
+        json={'reason': 'limpieza del test de pasarela'},
+        headers=admin_headers,
+    )
+    assert anulado.status_code == 200, anulado.text
+    pagar_anulado = client.post(
+        f"/api/v1/store/orders/{anulado_previo['sale_id']}/pay",
+        json={'method': 'plin'},
+        headers=auth,
+    )
+    assert pagar_anulado.status_code == 400
+    assert 'anulado' in pagar_anulado.json()['message']
+
+    sin_referencia = _quote(client, target, auth=auth, notes='Pago sin referencia')
+    assert sin_referencia.status_code == 201, sin_referencia.text
+    sin_referencia = sin_referencia.json()
+    autogenerado = client.post(
+        f"/api/v1/store/orders/{sin_referencia['sale_id']}/pay",
+        json={'method': 'card'},
+        headers=auth,
+    )
+    assert autogenerado.status_code == 201, autogenerado.text
+    referencia = autogenerado.json()['payments'][-1]['reference']
+    assert referencia.startswith('SIM-'), 'la operación se autogenera si no viene del cliente'
+
+    for sid in (sale_id, sin_referencia['sale_id']):
+        limpieza = client.post(
+            f'/api/v1/sales/{sid}/cancel',
+            json={'reason': 'limpieza del test de pasarela'},
+            headers=admin_headers,
+        )
+        assert limpieza.status_code == 200, limpieza.text
+    restored = client.get(f"/api/v1/store/products/{target['id']}").json()['current_stock']
     assert restored == stock_before

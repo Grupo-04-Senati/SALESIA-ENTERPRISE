@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, List, Literal, Optional
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
@@ -71,3 +71,10 @@ class StoreClaimCreate(NormalizedModel):
     """Reclamo de un pedido de la tienda (no llegó o tuvo problemas)."""
 
     description: str = Field(min_length=10, max_length=1000)
+
+
+class StorePaymentCreate(NormalizedModel):
+    """Cobro de la pasarela simulada de la tienda (solo el dueño del pedido)."""
+
+    method: Literal['card', 'yape', 'plin'] = 'card'
+    reference: Optional[str] = Field(default=None, max_length=64)

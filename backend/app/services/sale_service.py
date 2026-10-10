@@ -462,7 +462,7 @@ def add_payment(
         )
 
     db.add(
-        Payment(sale_id=sale.id, method=payload.method, amount=amount, reference=payload.reference)
+        Payment(sale=sale, method=payload.method, amount=amount, reference=payload.reference)
     )
     db.flush()
     paid, balance = _paid_totals(sale)

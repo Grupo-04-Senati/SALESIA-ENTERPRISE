@@ -13,6 +13,7 @@ import logging
 import re
 import unicodedata
 from typing import Optional
+from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -31,10 +32,12 @@ from app.models.product import Product
 from app.models.quote import Quote
 from app.schemas.customer import CustomerCreate
 from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
+from app.schemas.sale import PaymentCreate
 from app.schemas.storefront import (
     StoreClaimCreate,
     StoreContactCreate,
     StoreLoginInput,
+    StorePaymentCreate,
     StoreQuoteCreate,
     StoreRegisterInput,
 )
@@ -457,6 +460,65 @@ def store_orders(request: Request, db: Session = Depends(get_db)):
     company_id = _company_id(db)
     customer = _current_store_customer(db, company_id, request)
     return sale_service.list_sales(db, company_id, customer_id=customer.id, page=1, page_size=50)
+
+
+@router.post('/orders/{sale_id}/pay', status_code=status.HTTP_201_CREATED)
+def store_order_pay(
+    sale_id: int,
+    payload: StorePaymentCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Cobro de la pasarela simulada: paga el saldo completo del pedido (solo dueño)."""
+    company_id = _company_id(db)
+    ip = client_ip(request)
+    customer = _current_store_customer(db, company_id, request)
+    order = sale_service.get_sale(db, company_id, sale_id)
+    if not order['customer'] or order['customer']['id'] != customer.id:
+        raise NotFound('Pedido no encontrado.')
+    if order['status'] == 'cancelled':
+        raise BusinessRuleError('No se puede pagar un pedido anulado.')
+    if order['balance'] <= 0:
+        raise Conflict('El pedido ya está pagado.')
+    reference = (payload.reference or '').strip() or f'SIM-{uuid4().hex[:10].upper()}'
+    paid = sale_service.add_payment(
+        db,
+        company_id,
+        sale_id,
+        PaymentCreate(method=payload.method, amount=order['balance'], reference=reference),
+        actor=None,
+        ip=ip,
+    )
+    label = {'card': 'tarjeta', 'yape': 'Yape', 'plin': 'Plin'}[payload.method]
+    try:
+        system_service.create_notification(
+            db,
+            company_id,
+            NotificationCreate(
+                title=f'Pago recibido · pedido de la tienda · {paid["sale_number"]}',
+                message=(
+                    f'Venta {paid["sale_number"]} · {customer.name} pagó '
+                    f'S/ {float(order["balance"]):.2f} con {label} '
+                    f'(operación {reference}). El pedido queda pagado.'
+                ),
+                level='info',
+                module='ventas',
+                link=f'/ventas?sale={sale_id}',
+                detail={
+                    'source': 'storefront',
+                    'sale_id': sale_id,
+                    'sale_number': paid['sale_number'],
+                    'method': payload.method,
+                    'reference': reference,
+                    'amount': float(order['balance']),
+                },
+            ),
+            actor=None,
+            ip=ip,
+        )
+    except Exception:
+        logger.exception('No se pudo crear la notificación de pago del pedido %s', sale_id)
+    return paid
 
 
 @router.post('/orders/{sale_id}/claims', status_code=status.HTTP_201_CREATED)

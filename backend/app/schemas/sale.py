@@ -9,7 +9,7 @@ from pydantic import Field
 
 from app.schemas.base import NormalizedModel
 
-PaymentMethod = Literal['cash', 'card', 'transfer']
+PaymentMethod = Literal['cash', 'card', 'transfer', 'yape', 'plin']
 MovementKind = Literal['IN', 'OUT', 'RETURN', 'SHRINKAGE', 'ADJUSTMENT']
 # sale_service.update_sale_status (L488) acepta exactamente estos estados.
 SaleStatusValue = Literal['pending', 'partial', 'paid', 'cancelled']

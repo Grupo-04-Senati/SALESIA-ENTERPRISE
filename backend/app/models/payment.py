@@ -15,7 +15,7 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.models.sale import Sale
 
-PAYMENT_METHODS = ('cash', 'card', 'transfer')
+PAYMENT_METHODS = ('cash', 'card', 'transfer', 'yape', 'plin')
 
 
 class Payment(IDMixin, TimestampMixin, Base):
