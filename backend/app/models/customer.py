@@ -31,7 +31,9 @@ class Customer(IDMixin, UpdatedAtMixin, Base):
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     segment: Mapped[str] = mapped_column(String(30), default='Nuevo')
-    commercial_line: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    commercial_line: Mapped[Optional[str]] = mapped_column(
+        'linea_comercial', String(80), nullable=True
+    )
     seller_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey('empleados.id', ondelete='SET NULL'), nullable=True
     )
