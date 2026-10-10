@@ -131,6 +131,10 @@ export const dictProducts: ModuleDict = {
     'products.import-accion-crear': 'Crear',
     'products.import-accion-actualizar': 'Actualizar',
     'products.import-accion-error': 'Error',
+    'products.import-plantillas-proyecto': 'Plantillas de ejemplo del proyecto',
+    'products.import-plantilla-coma': 'CSV con coma (,)',
+    'products.import-plantilla-excel': 'CSV para Excel en español (;)',
+    'products.import-plantilla-leeme': 'Cómo usarlas (LEEME)',
   },
   en: {
     'products.sin-stock': 'Out of stock',
@@ -260,5 +264,9 @@ export const dictProducts: ModuleDict = {
     'products.import-accion-crear': 'Create',
     'products.import-accion-actualizar': 'Update',
     'products.import-accion-error': 'Error',
+    'products.import-plantillas-proyecto': 'Project sample templates',
+    'products.import-plantilla-coma': 'CSV with comma (,)',
+    'products.import-plantilla-excel': 'CSV for Spanish Excel (;)',
+    'products.import-plantilla-leeme': 'How to use them (README)',
   },
 }

@@ -1,0 +1,42 @@
+PLANTILLA DE IMPORTACIÓN DE PRODUCTOS (CSV)
+===========================================
+
+ARCHIVOS
+- productos-ejemplo.csv ......... formato con coma (,) y punto decimal. Sirve para
+                                  importar directamente y como referencia universal.
+- productos-ejemplo-excel-es.csv  formato con punto y coma (;) y coma decimal,
+                                  tal como lo guarda Excel en español
+                                  (Datos > Texto en columnas > Delimitado > ;).
+                                  Úsalo si copias y pegas desde Excel.
+
+CÓMO IMPORTAR
+1. Admin → Catálogo → pestaña Productos → botón "Importar CSV".
+2. Elegir el archivo (o copiar el formato de estas plantillas).
+3. Revisar la vista previa: cada fila muestra Crear, Actualizar o Error con el motivo.
+4. Si el CSV trae SKU que ya existen en el sistema, marcar
+   "Actualizar productos existentes (por SKU)".
+5. Confirmar "Importar". El stock inicial queda registrado en el kardex
+   como entrada, y las categorías nuevas se crean solas.
+
+COLUMNAS
+Obligatorias: sku, nombre, categoria, precio_venta
+Opcionales:   precio_costo, precio_mayoreo, marca, stock_inicial,
+              stock_minimo, unidad, destacado, descripcion
+
+REGLAS
+- Encabezados en español o inglés (categoria/category, precio_venta/price,
+  stock/stock_inicial, etc.).
+- SKU: letras, números, guion, guion bajo o punto; único por producto.
+- Destacado: sí/no (o true/false, 1/0, vacío).
+- Unidad: texto libre (UND, Kg, Cja...), no necesita existir previamente.
+- Precios: máximo 2 decimales. Con coma decimal solo si el separador es ;.
+- Máximo 2000 filas por importación.
+
+IMÁGENES
+Las imágenes NO se importan por CSV. Se suben producto por producto desde el
+formulario de edición del producto (almacenamiento en Supabase) o desde la
+ficha en la tienda.
+
+NOTA
+Antes de escribir nada, la vista previa clasifica cada fila. Las filas con
+error se omiten sin abortar el resto de la importación.

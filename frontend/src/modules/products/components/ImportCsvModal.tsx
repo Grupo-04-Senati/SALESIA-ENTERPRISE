@@ -18,17 +18,11 @@ import {
  * Importador de productos por CSV (Catálogo → Productos).
  * Vista previa por fila antes de escribir nada; el stock inicial se registra
  * como entrada en el kardex para que las ventas descuenten bien.
+ * Las plantillas de ejemplo viven en public/plantillas/ (servidas por Vercel).
  */
 
-const TEMPLATE_HEADERS = [
-  'sku', 'nombre', 'categoria', 'precio_costo', 'precio_venta', 'precio_mayoreo',
-  'marca', 'stock_inicial', 'stock_minimo', 'unidad', 'destacado', 'descripcion',
-]
-
-const TEMPLATE_SAMPLE = [
-  'SKU-001,Teclado Mecánico,Periféricos,80.50,120.99,110,MarcaX,25,5,UND,sí,Teclado RGB',
-  'SKU-002,Mouse Gamer,Periféricos,40,75.90,70,Logi,30,3,UND,no,Mouse 12000dpi',
-]
+const TEMPLATE_URL = '/plantillas/productos-ejemplo.csv'
+const TEMPLATE_EXCEL_URL = '/plantillas/productos-ejemplo-excel-es.csv'
 
 interface Props {
   open: boolean
@@ -114,15 +108,11 @@ export default function ImportCsvModal({ open, onClose, onImported }: Props) {
     }
   }
 
-  const downloadTemplate = () => {
-    const content = [TEMPLATE_HEADERS.join(','), ...TEMPLATE_SAMPLE].join('\n')
-    const blob = new Blob([String.fromCharCode(0xfeff) + content], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
+  const downloadTemplate = (url: string, name: string) => {
     const link = document.createElement('a')
     link.href = url
-    link.download = 'plantilla-productos.csv'
+    link.download = name
     link.click()
-    URL.revokeObjectURL(url)
   }
 
   const actionBadge = (action: string) => {
@@ -139,7 +129,11 @@ export default function ImportCsvModal({ open, onClose, onImported }: Props) {
       size="lg"
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="outline" onClick={downloadTemplate} type="button">
+          <Button
+            variant="outline"
+            onClick={() => downloadTemplate(TEMPLATE_URL, 'plantilla-productos.csv')}
+            type="button"
+          >
             <Download aria-hidden="true" className="h-4 w-4" />
             {t('products.import-plantilla')}
           </Button>
@@ -200,6 +194,31 @@ export default function ImportCsvModal({ open, onClose, onImported }: Props) {
           </div>
 
           <p className="text-caption text-gray-500">{t('products.import-ayuda')}</p>
+
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption">
+            <span className="text-gray-500">{t('products.import-plantillas-proyecto')}:</span>
+            <a
+              className="text-primary underline-offset-2 hover:underline"
+              href={TEMPLATE_URL}
+              download="plantilla-productos.csv"
+            >
+              {t('products.import-plantilla-coma')}
+            </a>
+            <a
+              className="text-primary underline-offset-2 hover:underline"
+              href={TEMPLATE_EXCEL_URL}
+              download="plantilla-productos-excel-es.csv"
+            >
+              {t('products.import-plantilla-excel')}
+            </a>
+            <a
+              className="text-primary underline-offset-2 hover:underline"
+              href="/plantillas/LEEME.txt"
+              download="LEEME-plantillas.txt"
+            >
+              {t('products.import-plantilla-leeme')}
+            </a>
+          </p>
 
           {error && <p className="text-body-sm text-error">{error}</p>}
 

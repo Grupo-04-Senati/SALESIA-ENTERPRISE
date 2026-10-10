@@ -1,0 +1,7 @@
+sku,nombre,categoria,precio_costo,precio_venta,precio_mayoreo,marca,stock_inicial,stock_minimo,unidad,destacado,descripcion
+SKU-101,Agua Mineral Cielo 600ml,Bebidas,1.20,2.50,2.20,Cielo,48,10,UND,sí,Botella 600 ml
+SKU-102,Gaseosa Inca Kola 1.5L,Bebidas,3.50,6.00,5.50,Inca Kola,24,6,UND,no,Gaseosa 1.5 litros
+SKU-103,Arroz Molina Premium 1kg,Alimentos,4.00,6.50,6.00,Molina,30,5,Kg,sí,Arroz grano largo
+SKU-104,Azúcar Rubia 1kg,Alimentos,3.80,5.50,5.00,Bell,20,5,Kg,no,Azúcar rubia granel
+SKU-105,Galletas Fontana 120g,Snacks,1.50,2.80,2.50,Fontana,36,8,UND,sí,Galletas de chocolate
+SKU-106,Jabón Roma 750ml,Aseo,5.20,8.90,8.20,Roma,15,4,UND,no,Lavavajillas con aroma limón
