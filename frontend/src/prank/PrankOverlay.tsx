@@ -153,6 +153,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--cmd5{right:22vw;top:38vh;width:min(470px,92vw)}
 .prank-win--cmd6{left:5vw;top:46vh;width:min(500px,92vw)}
 .prank-win--cmd7{right:5vw;top:12vh;width:min(460px,92vw)}
+.prank-win--cmd8{left:34vw;top:4vh;width:min(480px,92vw)}
+.prank-win--cmd9{right:16vw;bottom:7vh;width:min(500px,92vw)}
 .prank-win--map{right:max(12px,3vw);bottom:5vh;width:min(400px,92vw)}
 .prank-win--map .prank-win__bar{background:#14532d;cursor:default}
 .prank-win--notepad{left:50%;top:42%;transform:translate(-50%,-50%);width:min(600px,92vw);background:#fff;border:1px solid #9a9a9a;box-shadow:0 26px 60px rgba(0,0,0,.5)}
@@ -175,6 +177,8 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-win--cmd3 .prank-console{height:260px}
 .prank-win--cmd4 .prank-console,.prank-win--cmd6 .prank-console{height:240px}
 .prank-win--cmd5 .prank-console,.prank-win--cmd7 .prank-console{height:220px}
+.prank-win--cmd8 .prank-console{height:200px}
+.prank-win--cmd9 .prank-console{height:230px}
 .prank-console__line{min-height:19px}
 .prank-cursor{display:inline-block;width:9px;height:15px;background:#4ade80;vertical-align:-2px;animation:prank-blink 1s steps(2,start) infinite}
 .prank-map{display:block;width:100%;height:300px;border:0;background:#0c0c0c}
@@ -191,6 +195,11 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-green__line{margin:0;white-space:pre-wrap;word-break:break-word}
 .prank-green__line--warn{color:#f48771}
 .prank-green__line--prompt{color:#dcdcaa}
+.prank-redwave{position:fixed;inset:0;background:rgba(174,0,0,.5);pointer-events:none;animation:prank-red-pulse .8s ease-in-out infinite alternate}
+.prank-bigalert{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,92vw);padding:26px 30px;text-align:center;background:#120000;border:3px solid #ff2a2a;border-radius:14px;box-shadow:0 0 70px rgba(255,0,0,.75);animation:prank-shake .28s ease-in-out infinite}
+.prank-bigalert__tag{margin:0 0 10px;color:#ff5252;font-size:clamp(18px,3vw,30px);font-weight:900;letter-spacing:6px;animation:prank-blink .5s steps(2,start) infinite}
+.prank-bigalert__msg{margin:0;color:#fff;font-size:clamp(26px,5.5vw,58px);font-weight:900;line-height:1.1;text-shadow:0 0 18px rgba(255,0,0,.9)}
+.prank-bigalert__sub{margin:14px 0 0;color:#ffd0d0;font-size:clamp(13px,2vw,18px)}
 .prank-terror{position:fixed;inset:0;pointer-events:none;overflow:hidden;background:repeating-linear-gradient(45deg,rgba(0,0,0,.42) 0 60px,rgba(70,0,0,.36) 60px 120px);font-family:'Segoe UI',system-ui,sans-serif}
 .prank-terror--lite{background:repeating-linear-gradient(45deg,rgba(0,0,0,.26) 0 60px,rgba(70,0,0,.2) 60px 120px)}
 .prank-terror--lite .prank-terror__word{font-size:clamp(18px,3vw,38px);animation:prank-pulse-lite 2.2s ease-in-out infinite alternate}
@@ -204,6 +213,7 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 @keyframes prank-shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}75%{transform:translate(4px,-2px)}}
 @keyframes prank-blink{50%{opacity:.3}}
 @keyframes prank-load{from{transform:translateX(-120%)}to{transform:translateX(340%)}}
+@keyframes prank-red-pulse{from{background:rgba(150,0,0,.38)}to{background:rgba(210,0,0,.62)}}
 @keyframes prank-strobe{from{background:rgba(130,0,0,.52)}to{background:rgba(0,95,48,.46)}}
 @keyframes prank-pulse{from{opacity:.35;transform:rotate(-7deg) scale(.94)}to{opacity:1;transform:rotate(6deg) scale(1.06)}}
 @keyframes prank-pulse-lite{from{opacity:.2;transform:rotate(-7deg) scale(.96)}to{opacity:.7;transform:rotate(4deg) scale(1.02)}}
@@ -225,6 +235,8 @@ export default function PrankOverlay() {
   const [notepad, setNotepad] = useState(false)
   const [jump, setJump] = useState(false)
   const [scare, setScare] = useState(false)
+  const [redWave, setRedWave] = useState(false)
+  const [bigAlert, setBigAlert] = useState(false)
   const [flick, setFlick] = useState(0)
   const [alerts, setAlerts] = useState<number[]>([])
   const phaseRef = useRef<Phase>('idle')
@@ -317,6 +329,8 @@ export default function PrankOverlay() {
     setJump(false)
     setScare(false)
     setFlick(0)
+    setRedWave(false)
+    setBigAlert(false)
     setAlerts([])
     alertIdx.current = 0
     const items: Win[] = SALA_IMAGES.slice(0, INITIAL_COUNT).map((file) =>
@@ -502,16 +516,27 @@ export default function PrankOverlay() {
         setAlerts((prev) => (prev.includes(id) ? prev : prev.concat(id)))
       }
       if (remaining <= TIMING.NOTEPAD_LEAD_MS) setNotepad(true)
-      if (remaining <= TIMING.JUMPSCARE_LEAD_MS) setJump(true)
-      if (remaining <= TIMING.SCREAM_LEAD_MS) {
-        setScare(true)
-        if (jumpSnd.current === null) {
+      const flashStart = TIMING.GREEN_MS + TIMING.EARLY_JUMP_MS
+      const inFlash = elapsed >= flashStart && elapsed < flashStart + TIMING.FLASH_JUMP_MS
+      const wantJump = remaining <= TIMING.JUMPSCARE_LEAD_MS || inFlash
+      const wantScare = remaining <= TIMING.SCREAM_LEAD_MS || inFlash
+      setJump(wantJump)
+      setScare(wantScare)
+      if (wantScare) {
+        const snd = jumpSnd.current
+        if (snd === null) {
           const scream = new Audio(JUMP_SND)
           scream.volume = 0.9
           jumpSnd.current = scream
           scream.play().catch(() => {})
+        } else if (snd.ended) {
+          snd.currentTime = 0
+          snd.play().catch(() => {})
         }
       }
+      const mid = total / 2
+      setRedWave(elapsed >= mid)
+      setBigAlert(elapsed >= mid && elapsed < mid + TIMING.BIG_ALERT_MS)
       if (remaining <= 60) {
         openMaps()
         window.clearInterval(id)
@@ -770,6 +795,16 @@ export default function PrankOverlay() {
           </div>
         )
       })}
+      {redWave && (
+        <div dir="ltr" data-prank-ui className="prank-redwave" style={{ zIndex: 12800 }} />
+      )}
+      {bigAlert && (
+        <div dir="ltr" data-prank-ui className="prank-bigalert" style={{ zIndex: 13400 }}>
+          <p className="prank-bigalert__tag">ALERTA CRITICA</p>
+          <p className="prank-bigalert__msg">LA ENTIDAD YA CONTROLA EL EQUIPO</p>
+          <p className="prank-bigalert__sub">SUS DATOS ESTAN SIENDO TRANSFERIDOS AHORA MISMO</p>
+        </div>
+      )}
       {phase === 'hack' && (
         <>
           {!closedFixed.includes('cmd1') && (
@@ -950,6 +985,48 @@ export default function PrankOverlay() {
                 </button>
               </div>
               <CmdWindow variant="sys" delay={600} stage={stage} />
+            </div>
+          )}
+          {stage >= 1 && !closedFixed.includes('cmd8') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd8' + quake}
+              style={{ zIndex: 10992 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">C:\Windows\system32\cmd.exe — tasklist /svc</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de procesos"
+                  onClick={() => hide('cmd8')}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="net" delay={1100} stage={stage} />
+            </div>
+          )}
+          {stage >= 2 && !closedFixed.includes('cmd9') && (
+            <div
+              dir="ltr"
+              data-prank-ui
+              className={'prank-win prank-win--cmd prank-win--cmd9' + quake}
+              style={{ zIndex: 10991 }}
+            >
+              <div className="prank-win__bar">
+                <span className="prank-win__title">C:\Windows\system32\cmd.exe — netstat -ano</span>
+                <button
+                  type="button"
+                  className="prank-win__close"
+                  aria-label="Cerrar consola de red"
+                  onClick={() => hide('cmd9')}
+                >
+                  ✕
+                </button>
+              </div>
+              <CmdWindow variant="dump" delay={300} stage={stage} />
             </div>
           )}
           {stage >= 2 && (
