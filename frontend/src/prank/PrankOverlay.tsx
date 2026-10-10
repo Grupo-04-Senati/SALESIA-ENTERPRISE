@@ -14,11 +14,13 @@ interface Win {
   y: number
   z: number
   w: number
+  h: number
+  fit?: boolean
 }
 
-const WIN_W = 300
+type Size = { w: number; h: number }
 
-const WIN_H = 260
+const WIN_W = 300
 
 const GRID_COL_W = 290
 
@@ -36,14 +38,23 @@ const END_COUNT = 50
 
 const SEED_COUNT = 8
 
-const GREEN_MSGS = [
-  'Windows Update: instalando actualizaciones 13 de 48',
-  'Preparando Windows... no apague el equipo',
-  'Configurando dispositivos: teclado y mouse',
-  'Verificando el disco C: 84% completado',
-  'Microsoft Defender: analizando el sistema',
-  'Aplicando la configuracion de seguridad del equipo',
-  'Windows terminara de configurarse en unos segundos',
+const GREEN_STREAM = [
+  'C:\\Users\\SENATI> net user hacker /add',
+  'Acceso concedido al grupo Administradores ... [OK]',
+  'Abriendo puerto 4444 en el firewall ... [OK]',
+  'Extrayendo datos (@pct%) del disco C:',
+  'Borrando puntos de restauracion del sistema ... [OK]',
+  'Microsoft Defender: desactivado permanentemente',
+  'Copiando C:\\Windows\\System32\\config\\SAM ...',
+  'Subiendo archivos a 198.51.100.7 (@pct%)',
+  'ADVERTENCIA: el equipo ya no responde al usuario',
+  'Descargando herramientas de acceso remoto (@pct%)',
+  'Ella esta entrando por la camara frontal ...',
+  'لا يمكن إيقاف العملية هنا',
+  'Analizando documentos del SENATI ... [OK]',
+  'ADVERTENCIA: no cierre esta ventana ni apague el equipo',
+  'Copiando contrasenas del navegador (@pct%)',
+  'Instalando clave de acceso permanente ... [OK]',
 ]
 
 const MAP_EMBED = 'https://maps.google.com/maps?q=-11.846935%2C-77.100032&z=17&t=k&output=embed'
@@ -171,11 +182,15 @@ const CSS = `.prank-tint{position:fixed;inset:0;pointer-events:none;z-index:9990
 .prank-aviso__box{max-width:min(760px,92vw);padding:26px 32px;text-align:center;background:#0f172a;border:2px solid #22c55e;border-radius:14px;box-shadow:0 0 40px rgba(34,197,94,.45);animation:prank-shake .3s ease-in-out infinite}
 .prank-aviso__title{margin:0 0 10px;color:#4ade80;font-size:clamp(22px,4.4vw,46px);font-weight:900;letter-spacing:1px}
 .prank-aviso__sub{margin:0;color:#e2e8f0;font-size:clamp(13px,2.2vw,20px);font-weight:600}
-.prank-green{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:24px;background:#00e676;color:#04210f;font-family:'Courier New',Courier,monospace;text-align:center}
-.prank-green__title{margin:0;font-size:clamp(30px,8vw,110px);font-weight:900;line-height:1.05;text-transform:uppercase;animation:prank-blink 1s steps(2,start) infinite}
-.prank-green__track{width:min(620px,86vw);height:28px;overflow:hidden;background:rgba(4,33,15,.18);border:3px solid #04210f;border-radius:999px}
-.prank-green__fill{display:block;width:45%;height:100%;background:#04210f;animation:prank-load 1.6s linear infinite}
-.prank-green__sub{margin:0;font-size:clamp(14px,3vw,26px);font-weight:700}
+.prank-green{position:fixed;inset:0;display:flex;flex-direction:column;background:#0c0c0c;color:#cccccc;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:clamp(13px,1.6vw,18px);line-height:1.5;cursor:default}
+.prank-green__bar{flex:none;display:flex;align-items:center;padding:6px 10px;background:#1f1f1f;border-bottom:1px solid #3a3a3a}
+.prank-green__title{margin:0;color:#d4d4d4;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prank-green__head{flex:none;padding:12px 18px 4px;color:#9cdcfe}
+.prank-green__head p{margin:0}
+.prank-green__stream{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:8px 18px 16px}
+.prank-green__line{margin:0;white-space:pre-wrap;word-break:break-word}
+.prank-green__line--warn{color:#f48771}
+.prank-green__line--prompt{color:#dcdcaa}
 .prank-terror{position:fixed;inset:0;pointer-events:none;overflow:hidden;background:repeating-linear-gradient(45deg,rgba(0,0,0,.42) 0 60px,rgba(70,0,0,.36) 60px 120px);font-family:'Segoe UI',system-ui,sans-serif}
 .prank-terror--lite{background:repeating-linear-gradient(45deg,rgba(0,0,0,.26) 0 60px,rgba(70,0,0,.2) 60px 120px)}
 .prank-terror--lite .prank-terror__word{font-size:clamp(18px,3vw,38px);animation:prank-pulse-lite 2.2s ease-in-out infinite alternate}
@@ -204,7 +219,8 @@ export default function PrankOverlay() {
   const [phase, setPhaseState] = useState<Phase>('idle')
   const [stage, setStage] = useState(0)
   const [coreIdx, setCoreIdx] = useState(0)
-  const [msgIdx, setMsgIdx] = useState(0)
+  const [greenLines, setGreenLines] = useState<string[]>([])
+  const [naturals, setNaturals] = useState<Record<string, { w: number; h: number }>>({})
   const [closedFixed, setClosedFixed] = useState<string[]>([])
   const [notepad, setNotepad] = useState(false)
   const [jump, setJump] = useState(false)
@@ -230,10 +246,45 @@ export default function PrankOverlay() {
     setPhaseState(value)
   }
 
-  const makeWin = (file: string, url: string, x: number, y: number, w = WIN_W): Win => {
+  const makeWin = (file: string, url: string, x: number | null, y: number | null, size?: Size, fit?: boolean): Win => {
     nextId.current += 1
     zTop.current += 1
-    return { id: nextId.current, file, url, x, y, z: zTop.current, w }
+    const s = size ?? (fit === true ? gridFit(url) : adSize(url, nextId.current))
+    const px =
+      x === null
+        ? Math.floor(Math.random() * Math.max(1, window.innerWidth - s.w + 1))
+        : Math.min(x, Math.max(0, window.innerWidth - s.w))
+    const py =
+      y === null
+        ? Math.floor(Math.random() * Math.max(1, window.innerHeight - s.h + 1))
+        : Math.min(y, Math.max(0, window.innerHeight - s.h))
+    return { id: nextId.current, file, url, x: px, y: py, z: zTop.current, w: s.w, h: s.h, fit }
+  }
+
+  const adSize = (url: string, id: number): Size => {
+    const nat = naturals[url]
+    if (nat === undefined) return { w: WIN_W, h: Math.round(WIN_W * 0.73) }
+    const scale = 0.55 + ((id * 53) % 46) / 100
+    let w = Math.round(nat.w * scale)
+    let h = Math.round(nat.h * scale)
+    const maxW = Math.max(160, window.innerWidth - 40)
+    const maxH = Math.max(140, window.innerHeight - 130)
+    if (w > maxW) {
+      h = Math.max(60, Math.round((h * maxW) / w))
+      w = maxW
+    }
+    if (h > maxH) {
+      w = Math.max(60, Math.round((w * maxH) / h))
+      h = maxH
+    }
+    return { w, h }
+  }
+
+  const gridFit = (url: string): Size => {
+    const nat = naturals[url]
+    if (nat === undefined) return { w: GRID_COL_W - 10, h: GRID_ROW_H - 10 }
+    const scale = Math.min(1, (GRID_COL_W - 10) / nat.w, (GRID_ROW_H - 10) / nat.h)
+    return { w: Math.round(nat.w * scale), h: Math.round(nat.h * scale) }
   }
 
   const senarSeed = (): Win[] => {
@@ -253,7 +304,8 @@ export default function PrankOverlay() {
     }
     return cells.slice(0, SEED_COUNT).map((cell, index) => {
       const file = SENAR_IMAGES[index % SENAR_IMAGES.length]
-      return makeWin(file, senarUrl(file), cell.x, cell.y)
+      const url = senarUrl(file)
+      return makeWin(file, url, cell.x, cell.y, gridFit(url), true)
     })
   }
 
@@ -268,39 +320,24 @@ export default function PrankOverlay() {
     setAlerts([])
     alertIdx.current = 0
     const items: Win[] = SALA_IMAGES.slice(0, INITIAL_COUNT).map((file) =>
-      makeWin(
-        file,
-        salaUrl(file),
-        Math.floor(Math.random() * (Math.max(0, window.innerWidth - WIN_W) + 1)),
-        Math.floor(Math.random() * (Math.max(0, window.innerHeight - WIN_H) + 1)),
-      ),
+      makeWin(file, salaUrl(file), null, null),
     )
     pending.current = items.slice(1)
     loading.current = items.length > 1
     setWins(items.length > 0 ? [items[0]] : [])
   }
 
-  const spawnTo = (target: number, w: number) => {
+  const spawnTo = (target: number) => {
     const current = Math.max(prevCount.current, 0)
     const deficit = Math.min(target, SPAWN_MAX, current + 6) - current
     if (deficit <= 0) return
-    const maxX = Math.max(0, window.innerWidth - w)
-    const maxY = Math.max(0, window.innerHeight - WIN_H)
     const useSala = Math.random() < 0.5
     const pool = useSala ? SALA_IMAGES : SENAR_IMAGES
     const extras: Win[] = []
     for (let i = 0; i < deficit; i += 1) {
       const file = pool[Math.floor(Math.random() * pool.length)]
       const url = useSala ? salaUrl(file) : senarUrl(file)
-      extras.push(
-        makeWin(
-          file,
-          url,
-          Math.floor(Math.random() * (maxX + 1)),
-          Math.floor(Math.random() * (maxY + 1)),
-          w,
-        ),
-      )
+      extras.push(makeWin(file, url, null, null))
     }
     setWins((prev) => [...prev, ...extras])
   }
@@ -503,8 +540,7 @@ export default function PrankOverlay() {
         p < 0.5
           ? INITIAL_COUNT + Math.round((p / 0.5) * (MID_COUNT - INITIAL_COUNT))
           : MID_COUNT + Math.round(((p - 0.5) / 0.5) * (END_COUNT - MID_COUNT))
-      const w = Math.round(340 + p * 430)
-      spawnTo(target, w)
+      spawnTo(target)
       timer = window.setTimeout(step, Math.round(3800 * Math.pow(1 - p, 1.7) + 250))
     }
     timer = window.setTimeout(step, SPAWN_FIRST_MS)
@@ -516,9 +552,17 @@ export default function PrankOverlay() {
 
   useEffect(() => {
     if (phase !== 'green') return undefined
+    const fmt = (i: number) => {
+      const raw = GREEN_STREAM[i % GREEN_STREAM.length]
+      return raw.split('@pct').join(String((i * 13 + 7) % 100))
+    }
+    setGreenLines(GREEN_STREAM.slice(0, 8).map((_, i) => fmt(i)))
+    let n = 8
     const id = window.setInterval(() => {
-      setMsgIdx((idx) => (idx + 1) % GREEN_MSGS.length)
-    }, 1600)
+      const line = fmt(n)
+      n += 1
+      setGreenLines((prev) => prev.concat(line).slice(-45))
+    }, 45)
     return () => window.clearInterval(id)
   }, [phase])
 
@@ -529,6 +573,58 @@ export default function PrankOverlay() {
     }, 900)
     return () => window.clearInterval(id)
   }, [stage])
+
+  useEffect(() => {
+    const urls = SALA_IMAGES.map(salaUrl).concat(SENAR_IMAGES.map(senarUrl))
+    urls.forEach((url) => {
+      const im = document.createElement('img')
+      im.onload = () => {
+        if (im.naturalWidth < 1) return
+        setNaturals((prev) =>
+          prev[url] !== undefined ? prev : { ...prev, [url]: { w: im.naturalWidth, h: im.naturalHeight } },
+        )
+      }
+      im.src = url
+    })
+  }, [])
+
+  useEffect(() => {
+    if (Object.keys(naturals).length === 0) return
+    setWins((prev) => {
+      let changed = false
+      const next = prev.map((win) => {
+        const nat = naturals[win.url]
+        if (nat === undefined) return win
+        let w: number
+        let h: number
+        if (win.fit === true) {
+          const scale = Math.min(1, (GRID_COL_W - 10) / nat.w, (GRID_ROW_H - 10) / nat.h)
+          w = Math.round(nat.w * scale)
+          h = Math.round(nat.h * scale)
+        } else {
+          const scale = 0.55 + ((win.id * 53) % 46) / 100
+          w = Math.round(nat.w * scale)
+          h = Math.round(nat.h * scale)
+          const maxW = Math.max(160, window.innerWidth - 40)
+          const maxH = Math.max(140, window.innerHeight - 130)
+          if (w > maxW) {
+            h = Math.max(60, Math.round((h * maxW) / w))
+            w = maxW
+          }
+          if (h > maxH) {
+            w = Math.max(60, Math.round((w * maxH) / h))
+            h = maxH
+          }
+        }
+        const x = Math.min(win.x, Math.max(0, window.innerWidth - w))
+        const y = Math.min(win.y, Math.max(0, window.innerHeight - h))
+        if (w === win.w && h === win.h && x === win.x && y === win.y) return win
+        changed = true
+        return { ...win, w, h, x, y }
+      })
+      return changed ? next : prev
+    })
+  }, [naturals])
 
   useEffect(() => {
     if (!active || !scare) return undefined
@@ -627,7 +723,7 @@ export default function PrankOverlay() {
             src={win.url}
             alt=""
             draggable={false}
-            style={{ height: Math.round(win.w * 0.73) }}
+            style={{ height: win.h }}
           />
         </div>
       ))}
@@ -935,11 +1031,30 @@ export default function PrankOverlay() {
       )}
       {phase === 'green' && (
         <div dir="ltr" data-prank-ui className="prank-green" style={{ zIndex: 12001 }}>
-          <p className="prank-green__title">ROBANDO DATOS DE SENATI</p>
-          <div className="prank-green__track">
-            <span className="prank-green__fill" />
+          <div className="prank-green__bar">
+            <span className="prank-green__title">C:\Windows\system32\cmd.exe - ROBANDO DATOS DE SENATI</span>
           </div>
-          <p className="prank-green__sub">{GREEN_MSGS[msgIdx]}</p>
+          <div className="prank-green__head">
+            <p>Microsoft Windows [Version 10.0.19045.4046]</p>
+            <p>(c) Corporation. Todos los derechos reservados.</p>
+            <p>C:\Users\SENATI&gt;</p>
+          </div>
+          <div className="prank-green__stream">
+            {greenLines.map((line, index) => {
+              const warn = line.includes('ADVERTENCIA') || /[\u0600-\u06FF]/.test(line)
+              return (
+                <p
+                  key={index}
+                  className={'prank-green__line' + (warn ? ' prank-green__line--warn' : '')}
+                >
+                  {line}
+                </p>
+              )
+            })}
+            <p className="prank-green__line prank-green__line--prompt">
+              C:\Users\SENATI&gt; <span className="prank-cursor" />
+            </p>
+          </div>
         </div>
       )}
     </>
