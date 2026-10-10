@@ -55,7 +55,7 @@ export const dictProducts: ModuleDict = {
     'products.gaseosa-500ml': 'Gaseosa 500ml',
     'products.nombre-del-producto': 'Nombre del producto',
     'products.no-hay-categorias-crealas-primero-en-el-menu-categorias':
-      'No hay categorías: créalas primero en el menú Categorías.',
+      'No hay categorías: créalas primero en la pestaña Categorías (Catálogo).',
     'products.unidad': 'Unidad',
     'products.precio-de-costo': 'Precio de costo (S/)',
     'products.precio-de-venta': 'Precio de venta (S/)',
@@ -184,7 +184,7 @@ export const dictProducts: ModuleDict = {
     'products.gaseosa-500ml': 'Soda 500ml',
     'products.nombre-del-producto': 'Product name',
     'products.no-hay-categorias-crealas-primero-en-el-menu-categorias':
-      'There are no categories: create them first in the Categories menu.',
+      'There are no categories: create them first in the Categories tab (Catalog).',
     'products.unidad': 'Unit',
     'products.precio-de-costo': 'Cost price (S/)',
     'products.precio-de-venta': 'Sale price (S/)',
