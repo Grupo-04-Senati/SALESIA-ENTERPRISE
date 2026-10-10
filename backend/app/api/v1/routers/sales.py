@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.sale import CancelRequest, PaymentCreate, SaleCreate, StatusUpdate
+from app.schemas.sale import CancelRequest, PaymentCreate, ReceivedUpdate, SaleCreate, StatusUpdate
 from app.services import sale_service
 
 router = APIRouter(tags=['sales'])
@@ -84,9 +84,24 @@ def update_status(
     db: Session = Depends(get_db),
     actor: User = Depends(require_role(*manage_roles)),
 ):
+    """RN-17/RN-18: cambio manual de estado (Admin/Gerente)."""
     return sale_service.update_sale_status(
         db, company_id_of(actor), sale_id, payload.status, payload.reason,
         actor=actor, ip=_ip(request),
+    )
+
+
+@router.put('/sales/{sale_id}/received')
+def update_received(
+    sale_id: int,
+    payload: ReceivedUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_role(*manage_roles)),
+):
+    """Marca o desmarca la entrega del pedido (visible en la tienda)."""
+    return sale_service.set_sale_received(
+        db, company_id_of(actor), sale_id, payload.received, actor=actor, ip=_ip(request)
     )
 
 

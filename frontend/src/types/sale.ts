@@ -41,6 +41,8 @@ export interface Sale {
   balance: number
   cancelled_at: string | null
   cancel_reason: string | null
+  /** Marca de entrega que pone el admin y ve el cliente en la tienda. */
+  received_at: string | null
 }
 
 /** Payload para registrar venta (el backend recalcula totales, RN-11). */

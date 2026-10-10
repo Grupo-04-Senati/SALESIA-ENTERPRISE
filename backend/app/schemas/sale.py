@@ -96,6 +96,7 @@ class SaleResponse(NormalizedModel):
     balance: float
     cancelled_at: Optional[datetime] = None
     cancel_reason: Optional[str] = None
+    received_at: Optional[datetime] = None
     payments: List[PaymentResponse] = []
 
 
@@ -108,6 +109,10 @@ class PaymentCreate(NormalizedModel):
 class StatusUpdate(NormalizedModel):
     status: SaleStatusValue
     reason: Optional[str] = Field(default=None, max_length=255)
+
+
+class ReceivedUpdate(NormalizedModel):
+    received: bool
 
 
 class CancelRequest(NormalizedModel):

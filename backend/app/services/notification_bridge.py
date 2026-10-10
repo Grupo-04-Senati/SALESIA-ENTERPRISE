@@ -116,6 +116,8 @@ _VERBS = {
     'deactivate': 'desactivado',
     'password_change': 'actualizada (contraseña)',
     'password_reset': 'restablecida (contraseña)',
+    'receive': 'marcado como recibido',
+    'unreceive': 'desmarcado como recibido',
 }
 
 _WARNING_SUFFIXES = ('delete', 'cancel', 'deactivate')

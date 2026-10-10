@@ -11,6 +11,7 @@ import re
 import unicodedata
 from typing import Optional
 
+import jwt
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -18,7 +19,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import client_ip
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import AppError, BusinessRuleError, NotFound
+from app.core.exceptions import AppError, BusinessRuleError, Conflict, NotFound, Unauthenticated
+from app.core.security import create_customer_token, decode_token, hash_password, verify_password
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.inventory import Inventory
@@ -26,9 +28,20 @@ from app.models.product import Product
 from app.models.quote import Quote
 from app.schemas.customer import CustomerCreate
 from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
-from app.schemas.storefront import StoreContactCreate, StoreQuoteCreate
+from app.schemas.storefront import (
+    StoreContactCreate,
+    StoreLoginInput,
+    StoreQuoteCreate,
+    StoreRegisterInput,
+)
 from app.schemas.system import NotificationCreate
-from app.services import customer_service, product_service, quote_service, system_service
+from app.services import (
+    customer_service,
+    product_service,
+    quote_service,
+    sale_service,
+    system_service,
+)
 from app.services.event_service import log_app_event
 
 router = APIRouter(prefix='/store', tags=['storefront'])
@@ -179,6 +192,64 @@ def _find_or_create_customer(db: Session, company_id: int, payload: StoreQuoteCr
     return db.get(Customer, created['id'])
 
 
+def _store_token_payload(request: Request) -> Optional[dict]:
+    """Payload del JWT de cliente; ``None`` si no hay Authorization."""
+    header = request.headers.get('Authorization', '')
+    if not header.startswith('Bearer '):
+        return None
+    token = header[len('Bearer '):].strip()
+    try:
+        payload = decode_token(token)
+    except jwt.PyJWTError:
+        raise Unauthenticated('Sesión inválida o expirada. Vuelve a ingresar.')
+    if payload.get('type') != 'customer':
+        raise Unauthenticated('Sesión inválida.')
+    return payload
+
+
+def _current_store_customer(db: Session, company_id: int, request: Request) -> Customer:
+    payload = _store_token_payload(request)
+    if payload is None:
+        raise Unauthenticated('Inicia sesión para continuar.')
+    sub = str(payload.get('sub') or '')
+    if not sub.startswith('c'):
+        raise Unauthenticated('Sesión inválida.')
+    try:
+        customer_id = int(sub[1:])
+    except ValueError:
+        raise Unauthenticated('Sesión inválida.')
+    customer = db.get(Customer, customer_id)
+    if customer is None or customer.company_id != company_id or not customer.is_active:
+        raise Unauthenticated('Sesión inválida.')
+    return customer
+
+
+def _optional_store_customer(db: Session, company_id: int, request: Request) -> Optional[Customer]:
+    if not request.headers.get('Authorization'):
+        return None
+    return _current_store_customer(db, company_id, request)
+
+
+def _customer_payload(customer: Customer) -> dict:
+    return {
+        'id': customer.id,
+        'name': customer.name,
+        'email': customer.email,
+        'phone': customer.phone,
+        'document_number': customer.document_number,
+        'segment': customer.segment,
+        'created_at': customer.created_at,
+    }
+
+
+def _auth_response(customer: Customer, company_id: int) -> dict:
+    return {
+        'access_token': create_customer_token(customer_id=customer.id, company_id=company_id),
+        'token_type': 'bearer',
+        'customer': _customer_payload(customer),
+    }
+
+
 def _validate_store_stock(db: Session, company_id: int, payload: StoreQuoteCreate, by_id: dict) -> None:
     """RN-10 en la tienda: no se confirma un pedido con menos stock del pedido."""
     stock_rows = db.execute(
@@ -220,7 +291,9 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
     """
     company_id = _company_id(db)
     ip = client_ip(request)
-    customer = _find_or_create_customer(db, company_id, payload, ip)
+    customer = _optional_store_customer(db, company_id, request)
+    if customer is None:
+        customer = _find_or_create_customer(db, company_id, payload, ip)
 
     product_ids = [item.product_id for item in payload.items]
     rows = db.execute(
@@ -348,3 +421,77 @@ def store_contact(payload: StoreContactCreate, request: Request, db: Session = D
     )
     db.commit()
     return {'status': 'ok', 'message': 'Mensaje recibido. Te contactaremos pronto.'}
+
+
+@router.post('/auth/register', status_code=status.HTTP_201_CREATED)
+def store_register(payload: StoreRegisterInput, request: Request, db: Session = Depends(get_db)):
+    """Alta de cuenta de cliente en la tienda (email + contraseña).
+
+    Si el correo ya hizo pedidos como invitado, la contraseña se vincula a
+    ese cliente para conservar el historial en «Mis pedidos».
+    """
+    company_id = _company_id(db)
+    ip = client_ip(request)
+    email = str(payload.email).lower()
+    customer = db.execute(
+        select(Customer).where(Customer.company_id == company_id, Customer.email == email)
+    ).scalars().first()
+
+    if customer is not None:
+        if customer.password_hash:
+            raise Conflict('Ya existe una cuenta con este correo.')
+        customer.password_hash = hash_password(payload.password)
+        if payload.phone and not customer.phone:
+            customer.phone = payload.phone
+        db.commit()
+        db.refresh(customer)
+    else:
+        created = customer_service.create_customer(
+            db,
+            company_id,
+            CustomerCreate(
+                document_number=_next_document(db, company_id),
+                name=payload.name,
+                email=email,
+                phone=payload.phone,
+                segment='Tienda Web',
+            ),
+            actor=None,
+            ip=ip,
+        )
+        customer = db.get(Customer, created['id'])
+        customer.password_hash = hash_password(payload.password)
+        db.commit()
+        db.refresh(customer)
+
+    return _auth_response(customer, company_id)
+
+
+@router.post('/auth/login')
+def store_login(payload: StoreLoginInput, request: Request, db: Session = Depends(get_db)):
+    company_id = _company_id(db)
+    email = str(payload.email).lower()
+    customer = db.execute(
+        select(Customer).where(Customer.company_id == company_id, Customer.email == email)
+    ).scalars().first()
+    if customer is None or not customer.password_hash or not verify_password(
+        payload.password, customer.password_hash
+    ):
+        raise Unauthenticated('Correo o contraseña incorrectos.')
+    if not customer.is_active:
+        raise Unauthenticated('Cuenta desactivada. Contacta al administrador.')
+    return _auth_response(customer, company_id)
+
+
+@router.get('/auth/me')
+def store_me(request: Request, db: Session = Depends(get_db)):
+    company_id = _company_id(db)
+    return _customer_payload(_current_store_customer(db, company_id, request))
+
+
+@router.get('/orders')
+def store_orders(request: Request, db: Session = Depends(get_db)):
+    """Pedidos del cliente autenticado (venta + líneas + pagos)."""
+    company_id = _company_id(db)
+    customer = _current_store_customer(db, company_id, request)
+    return sale_service.list_sales(db, company_id, customer_id=customer.id, page=1, page_size=50)

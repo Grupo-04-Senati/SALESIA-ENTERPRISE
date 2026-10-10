@@ -82,6 +82,7 @@ def _serialize(sale: Sale) -> dict:
         'balance': float(balance),
         'cancelled_at': sale.cancelled_at,
         'cancel_reason': sale.cancel_reason,
+        'received_at': sale.received_at,
         'payments': [
             {
                 'id': payment.id,
@@ -509,6 +510,38 @@ def update_sale_status(
         entity='sales',
         entity_id=sale.id,
         detail={'status': status_value},
+        ip_address=ip,
+    )
+    db.commit()
+    db.refresh(sale)
+    return _serialize(sale)
+
+
+def set_sale_received(
+    db: Session,
+    company_id: int,
+    sale_id: int,
+    received: bool,
+    actor=None,
+    ip: Optional[str] = None,
+) -> dict:
+    """PUT /sales/{id}/received — entrega del pedido (lo ve el cliente en la tienda)."""
+    sale = db.execute(
+        select(Sale).where(Sale.id == sale_id, Sale.company_id == company_id)
+    ).scalar_one_or_none()
+    if sale is None:
+        raise NotFound('Venta no encontrada.')
+    if sale.status == 'cancelled':
+        raise BusinessRuleError('No se puede marcar como recibida una venta anulada.')
+
+    sale.received_at = datetime.now(timezone.utc) if received else None
+    write_audit(
+        db,
+        user=actor,
+        action='sale.receive' if received else 'sale.unreceive',
+        entity='sales',
+        entity_id=sale.id,
+        detail={'received': received},
         ip_address=ip,
     )
     db.commit()

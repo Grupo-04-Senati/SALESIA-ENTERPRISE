@@ -35,6 +35,7 @@ class Customer(IDMixin, UpdatedAtMixin, Base):
         BigInteger, ForeignKey('empleados.id', ondelete='SET NULL'), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     seller: Mapped[Optional['Employee']] = relationship('Employee', lazy='selectin')
     company: Mapped['Company'] = relationship('Company', lazy='selectin')

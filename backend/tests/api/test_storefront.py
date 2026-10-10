@@ -215,3 +215,158 @@ def test_store_contact_valida_datos(client):
         'message': 'corto',
     })
     assert response.status_code == 422
+
+
+def test_store_auth_registro_login_y_me(client):
+    payload = {
+        'name': 'Ana Tienda Web',
+        'email': 'ana.tienda@example.com',
+        'phone': '911000111',
+        'password': 'secreta123',
+    }
+    response = client.post('/api/v1/store/auth/register', json=payload)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body['token_type'] == 'bearer'
+    assert body['customer']['email'] == 'ana.tienda@example.com'
+    token = body['access_token']
+
+    assert client.get('/api/v1/store/auth/me').status_code == 401
+
+    me = client.get('/api/v1/store/auth/me', headers={'Authorization': f'Bearer {token}'})
+    assert me.status_code == 200
+    assert me.json()['name'] == 'Ana Tienda Web'
+    assert me.json()['phone'] == '911000111'
+
+    duplicated = client.post('/api/v1/store/auth/register', json=payload)
+    assert duplicated.status_code == 409
+    assert 'Ya existe una cuenta' in duplicated.json()['message']
+
+    login = client.post('/api/v1/store/auth/login', json={
+        'email': payload['email'], 'password': payload['password'],
+    })
+    assert login.status_code == 200, login.text
+    assert login.json()['access_token']
+    assert login.json()['customer']['id'] == body['customer']['id']
+
+    wrong = client.post('/api/v1/store/auth/login', json={
+        'email': payload['email'], 'password': 'clave-equivocada',
+    })
+    assert wrong.status_code == 401
+    assert 'incorrectos' in wrong.json()['message']
+
+    bad_token = client.get(
+        '/api/v1/store/auth/me', headers={'Authorization': 'Bearer token-falso'}
+    )
+    assert bad_token.status_code == 401
+
+
+def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    target = max(products, key=lambda row: row['current_stock'])
+    quote = client.post('/api/v1/store/quotes', json={
+        'customer': {
+            'name': 'Invitado Que Registra',
+            'phone': '933444555',
+            'email': 'invitado.registro@example.com',
+        },
+        'items': [{'product_id': target['id'], 'quantity': 1}],
+    }).json()
+    assert quote['status'] == 'converted'
+
+    registered = client.post('/api/v1/store/auth/register', json={
+        'name': 'Invitado Que Registra',
+        'email': 'invitado.registro@example.com',
+        'password': 'cuenta1234',
+    })
+    assert registered.status_code == 201, registered.text
+
+    token = registered.json()['access_token']
+    orders = client.get(
+        '/api/v1/store/orders', headers={'Authorization': f'Bearer {token}'}
+    )
+    assert orders.status_code == 200
+    sale_numbers = [row['sale_number'] for row in orders.json()['items']]
+    assert quote['sale_number'] in sale_numbers, 'el historial de invitado queda en la cuenta'
+
+    cancelled = client.post(
+        f"/api/v1/sales/{quote['sale_id']}/cancel",
+        json={'reason': 'limpieza del test de vínculo'},
+        headers=admin_headers,
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+
+def test_store_orders_requiere_sesion(client):
+    assert client.get('/api/v1/store/orders').status_code == 401
+    assert client.post('/api/v1/store/auth/login', json={
+        'email': 'no.existe@example.com', 'password': 'cualquiera1',
+    }).status_code == 401
+
+
+def test_store_orders_y_marcado_de_recibido(client, admin_headers):
+    products = client.get('/api/v1/store/products?page_size=100').json()['items']
+    target = max(products, key=lambda row: row['current_stock'])
+    stock_before = target['current_stock']
+
+    quote = client.post('/api/v1/store/quotes', json={
+        'customer': {
+            'name': 'Cliente Recibido Web',
+            'phone': '955666777',
+            'email': 'recibido.web@example.com',
+        },
+        'items': [{'product_id': target['id'], 'quantity': 1}],
+    }).json()
+    assert quote['status'] == 'converted'
+
+    registered = client.post('/api/v1/store/auth/register', json={
+        'name': 'Cliente Recibido Web',
+        'email': 'recibido.web@example.com',
+        'password': 'pedido1234',
+    })
+    assert registered.status_code == 201, registered.text
+    auth = {'Authorization': f"Bearer {registered.json()['access_token']}"}
+
+    orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
+    mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
+    assert mine['received_at'] is None, 'nace sin marcar como recibido'
+    assert mine['status'] == 'pending'
+
+    sin_gestion = client.put(
+        f"/api/v1/sales/{quote['sale_id']}/received",
+        json={'received': True},
+    )
+    assert sin_gestion.status_code in (401, 403), 'solo Admin/Gerente gestionan la entrega'
+
+    marked = client.put(
+        f"/api/v1/sales/{quote['sale_id']}/received",
+        json={'received': True},
+        headers=admin_headers,
+    )
+    assert marked.status_code == 200, marked.text
+    assert marked.json()['received_at'] is not None
+
+    orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
+    mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
+    assert mine['received_at'] is not None, 'el cliente ve la marca de recibido'
+
+    unmarked = client.put(
+        f"/api/v1/sales/{quote['sale_id']}/received",
+        json={'received': False},
+        headers=admin_headers,
+    )
+    assert unmarked.status_code == 200
+    assert unmarked.json()['received_at'] is None
+
+    orders = client.get('/api/v1/store/orders', headers=auth).json()['items']
+    mine = next(row for row in orders if row['sale_number'] == quote['sale_number'])
+    assert mine['received_at'] is None
+
+    cancelled = client.post(
+        f"/api/v1/sales/{quote['sale_id']}/cancel",
+        json={'reason': 'limpieza del test de recibido'},
+        headers=admin_headers,
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    restored = client.get(f"/api/v1/store/products/{target['id']}").json()['current_stock']
+    assert restored == stock_before

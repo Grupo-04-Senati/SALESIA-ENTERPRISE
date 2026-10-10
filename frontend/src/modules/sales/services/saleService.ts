@@ -101,6 +101,16 @@ export async function registerPayment(
   return getSale(id)
 }
 
+/** Marca o desmarca la venta como recibida por el cliente (visible en la tienda). */
+export async function setSaleReceived(id: number, received: boolean): Promise<Sale> {
+  await apiFetch(`${ENDPOINTS.saleReceived(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ received }),
+  })
+  await hydrateStore(['sales'])
+  return getSale(id)
+}
+
 /** Registra la venta en el backend y devuelve el proceso ejecutado. */
 export async function createSale(input: SaleInput): Promise<SaleProcessResult> {
   const created = await apiFetch<SaleCreated & { trace?: ProcessTrace['steps'] }>(ENDPOINTS.sales, {

@@ -45,6 +45,7 @@ class Sale(IDMixin, UpdatedAtMixin, Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    received_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     customer: Mapped[Optional['Customer']] = relationship('Customer', lazy='joined')
     seller: Mapped[Optional['Employee']] = relationship('Employee', lazy='joined')

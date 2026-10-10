@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BadgeCheck } from 'lucide-react'
+import { BadgeCheck, PackageCheck, Undo2 } from 'lucide-react'
 import type { Sale } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -8,7 +8,7 @@ import Badge from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
-import { registerPayment } from '../services/saleService'
+import { registerPayment, setSaleReceived } from '../services/saleService'
 
 /**
  * Detalle de una venta (Fase 08 · RF-06): líneas, totales y pago.
@@ -35,6 +35,7 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
   const { t } = useLang()
   const toast = useToast()
   const [paying, setPaying] = useState(false)
+  const [receiving, setReceiving] = useState(false)
   if (!sale) return null
   const status = SALE_STATUS_LABELS[sale.status]
   const canPay = sale.status !== 'cancelled' && sale.balance > 0
@@ -62,6 +63,26 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
     }
   }
 
+  const handleReceived = async () => {
+    if (receiving || !sale) return
+    setReceiving(true)
+    try {
+      const updated = await setSaleReceived(sale.id, !sale.received_at)
+      toast.success(
+        t(updated.received_at ? 'sales.recibido-registrado' : 'sales.recibido-deshecho'),
+        updated.sale_number,
+      )
+      onUpdated?.(updated)
+    } catch (reason: unknown) {
+      toast.error(
+        t('sales.no-se-pudo-actualizar-el-recibido'),
+        reason instanceof Error ? reason.message : t('sales.error-inesperado'),
+      )
+    } finally {
+      setReceiving(false)
+    }
+  }
+
   return (
     <Modal
       open={sale !== null}
@@ -77,6 +98,18 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
             <Button onClick={() => void handlePayment()} loading={paying}>
               <BadgeCheck aria-hidden="true" className="h-4 w-4" />
               {t('sales.registrar-pago-del-saldo')}
+            </Button>
+          )}
+          {sale.status !== 'cancelled' && !sale.received_at && (
+            <Button onClick={() => void handleReceived()} loading={receiving}>
+              <PackageCheck aria-hidden="true" className="h-4 w-4" />
+              {t('sales.marcar-como-recibido')}
+            </Button>
+          )}
+          {sale.status !== 'cancelled' && sale.received_at && (
+            <Button variant="outline" onClick={() => void handleReceived()} loading={receiving}>
+              <Undo2 aria-hidden="true" className="h-4 w-4" />
+              {t('sales.deshacer-recibido')}
             </Button>
           )}
         </>
@@ -99,6 +132,11 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
           <div>
             <p className="text-caption text-gray-500">{t('sales.estado')}</p>
             <Badge variant={status.variant}>{t(status.label)}</Badge>
+            {sale.received_at && (
+              <p className="mt-1 text-caption text-success">
+                {t('sales.recibido')} · {formatDateTime(sale.received_at)}
+              </p>
+            )}
           </div>
         </div>
 

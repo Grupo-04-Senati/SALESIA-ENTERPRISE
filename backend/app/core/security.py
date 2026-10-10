@@ -57,6 +57,14 @@ def create_reset_token(user_id: int) -> str:
     return _encode({'sub': str(user_id), 'type': 'reset'}, timedelta(minutes=30))
 
 
+def create_customer_token(*, customer_id: int, company_id: int) -> str:
+    """JWT de cliente de la tienda (tipo 'customer', sesión de 30 días)."""
+    return _encode(
+        {'sub': f'c{customer_id}', 'company_id': str(company_id), 'type': 'customer'},
+        timedelta(days=30),
+    )
+
+
 def decode_token(token: str) -> Dict[str, Any]:
     """Decodifica y valida; lanza `jwt.PyJWTError` si es inválido o expiró."""
     return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
