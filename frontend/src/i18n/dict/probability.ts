@@ -27,7 +27,25 @@ export const dictProbability: ModuleDict = {
     'probability.minimo': 'Mínimo',
     'probability.maximo': 'Máximo',
     'probability.rango': 'Rango',
-    'probability.linea-azul-media-linea-cyan-mediana': 'Línea azul: media · línea cyan: mediana · ',
+    'probability.la-media-queda-en':
+      'La media queda en {valor}: promedio de {n} observaciones del periodo (suma de todos los valores ÷ cantidad de observaciones).',
+    'probability.la-mediana-queda-en':
+      'La mediana queda en {valor}: la mitad de las observaciones está por debajo y la mitad por encima de ese valor.',
+    'probability.explica-media':
+      'La línea azul muestra las ventas ordenadas de menor a mayor y su promedio. La media sube cuando entran ventas grandes y baja cuando predominan las pequeñas.',
+    'probability.explica-mediana':
+      'La línea cyan marca el punto central del periodo. A diferencia de la media, la mediana no se mueve por una venta extremadamente alta o baja, por eso representa mejor al ticket típico.',
+    'probability.interp-visual-media-alta':
+      'La media queda sobre la mediana: algunas ventas muy altas elevan el promedio (cola derecha).',
+    'probability.interp-visual-media-baja':
+      'La media queda bajo la mediana: las ventas pequeñas tiran el promedio hacia abajo (cola izquierda).',
+    'probability.interp-visual-mediana-alta':
+      'La mediana queda sobre la media: el valor central se mantiene aunque haya pocas ventas grandes.',
+    'probability.interp-visual-mediana-baja':
+      'La mediana queda bajo la media: la mitad de las ventas es pequeña y arrastra el valor central.',
+    'probability.comparacion-media-mediana': 'Comparación automática',
+    'probability.comparacion-cifras':
+      'Media {media} frente a mediana {mediana}: difieren en {monto} ({pct}%).',
     'probability.teorema-de-bayes-automatico': 'Teorema de Bayes automático',
     'probability.p-a-previa': 'P(A) previa',
     'probability.de-n-ventas': 'de {n} ventas →',
@@ -135,7 +153,25 @@ export const dictProbability: ModuleDict = {
     'probability.minimo': 'Minimum',
     'probability.maximo': 'Maximum',
     'probability.rango': 'Range',
-    'probability.linea-azul-media-linea-cyan-mediana': 'Blue line: mean · cyan line: median · ',
+    'probability.la-media-queda-en':
+      'The mean is {valor}: the average of {n} observations in the period (sum of all values ÷ number of observations).',
+    'probability.la-mediana-queda-en':
+      'The median is {valor}: half of the observations fall below it and half above it.',
+    'probability.explica-media':
+      'The blue line shows sales sorted from lowest to highest plus their average. The mean rises when large sales come in and falls when small sales dominate.',
+    'probability.explica-mediana':
+      'The cyan line marks the midpoint of the period. Unlike the mean, the median does not move because of a single extremely high or low sale, so it better represents the typical ticket.',
+    'probability.interp-visual-media-alta':
+      'The mean is above the median: a few very high sales raise the average (right tail).',
+    'probability.interp-visual-media-baja':
+      'The mean is below the median: small sales pull the average down (left tail).',
+    'probability.interp-visual-mediana-alta':
+      'The median is above the mean: the central value holds even when a few large sales exist.',
+    'probability.interp-visual-mediana-baja':
+      'The median is below the mean: half of the sales are small and drag the central value down.',
+    'probability.comparacion-media-mediana': 'Automatic comparison',
+    'probability.comparacion-cifras':
+      'Mean {media} versus median {mediana}: they differ by {monto} ({pct}%).',
     'probability.teorema-de-bayes-automatico': 'Automatic Bayes theorem',
     'probability.p-a-previa': 'P(A) prior',
     'probability.de-n-ventas': 'of {n} sales →',

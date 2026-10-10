@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Activity, ListChecks, Percent } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
 import Badge from '@/components/ui/Badge'
 import BayesChart from '@/components/charts/BayesChart'
+import MediaChart from '@/components/charts/MediaChart'
+import MedianChart from '@/components/charts/MedianChart'
 import BayesForm from '../components/BayesForm'
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
-import { CHART_AXIS, CHART_GRID, compareMeanMedian } from '@/data/analytics'
+import { compareMeanMedian } from '@/data/analytics'
 import {
   getBayesScenarios,
   getStatisticalDatasets,
@@ -159,16 +160,6 @@ export default function ProbabilityPage() {
     setHistory(listAnalyses())
   }, [estadistico, posterior, dataset, scenario, version])
 
-  const grafico = useMemo(
-    () =>
-      dataset
-        ? [...dataset.values]
-            .sort((a, b) => a - b)
-            .map((value, index) => ({ index: index + 1, valor: value }))
-        : [],
-    [dataset, version],
-  )
-
   const faltaDatosMedia = !estadistico
   const faltaDatosBayes = !posterior
 
@@ -233,39 +224,69 @@ export default function ProbabilityPage() {
                 </div>
               ))}
             </dl>
+          </section>
 
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={grafico} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-                  <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
-                  <XAxis
-                    dataKey="index"
-                    tick={{ fill: CHART_AXIS, fontSize: 12 }}
-                    axisLine={{ stroke: CHART_GRID }}
-                    tickLine={false}
-                    tickFormatter={(value: number) => `N.º ${value}`}
-                  />
-                  <YAxis
-                    tick={{ fill: CHART_AXIS, fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(value: number) => `${value.toFixed(0)}`}
-                  />
-                  <Tooltip
-                    formatter={(value) => `${formatCurrency(Number(value))}`}
-                    contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
-                  />
-                  <Bar dataKey="valor" name={t('probability.valor')} fill="#3B82F6" radius={[3, 3, 0, 0]} />
-                  <ReferenceLine y={estadistico.media} stroke="#1E3A8A" strokeDasharray="4 4" />
-                  <ReferenceLine y={estadistico.mediana} stroke="#06B6D4" strokeDasharray="4 4" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          {/* Cada medida con su gráfico y su explicación automática */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section className="card space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-h4 text-gray-800">{t('probability.media')}</h3>
+                <span className="text-h4 font-bold text-primary">{formatCurrency(estadistico.media)}</span>
+              </div>
+              <MediaChart values={dataset.values} />
+              <p className="text-body-sm text-gray-600">
+                {t('probability.la-media-queda-en', {
+                  valor: formatCurrency(estadistico.media),
+                  n: estadistico.count,
+                })}
+              </p>
+              <p className="text-caption text-gray-500">{t('probability.explica-media')}</p>
+              {estadistico.diferenciaPct >= 5 && (
+                <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                  {t('probability.interp-visual-media-alta')}
+                </p>
+              )}
+              {estadistico.diferenciaPct <= -5 && (
+                <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                  {t('probability.interp-visual-media-baja')}
+                </p>
+              )}
+            </section>
 
-            <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
-              {t('probability.linea-azul-media-linea-cyan-mediana')}{t(estadistico.interpretacion)}{' '}
-              El eje X numera cada venta ordenada de menor a mayor (N.º 1, N.º 2…) sobre la que se
-              calculan la media y la mediana.
+            <section className="card space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-h4 text-gray-800">{t('probability.mediana')}</h3>
+                <span className="text-h4 font-bold text-accent">{formatCurrency(estadistico.mediana)}</span>
+              </div>
+              <MedianChart values={dataset.values} />
+              <p className="text-body-sm text-gray-600">
+                {t('probability.la-mediana-queda-en', { valor: formatCurrency(estadistico.mediana) })}
+              </p>
+              <p className="text-caption text-gray-500">{t('probability.explica-mediana')}</p>
+              {estadistico.diferenciaPct >= 5 && (
+                <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                  {t('probability.interp-visual-mediana-baja')}
+                </p>
+              )}
+              {estadistico.diferenciaPct <= -5 && (
+                <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                  {t('probability.interp-visual-mediana-alta')}
+                </p>
+              )}
+            </section>
+          </div>
+
+          {/* Comparación con cifras automáticas */}
+          <section className="card space-y-2">
+            <h3 className="text-h4 text-gray-800">{t('probability.comparacion-media-mediana')}</h3>
+            <p className="rounded-md bg-gray-50 px-3 py-2 text-body-sm text-gray-700">
+              {t('probability.comparacion-cifras', {
+                media: formatCurrency(estadistico.media),
+                mediana: formatCurrency(estadistico.mediana),
+                monto: formatCurrency(Math.abs(estadistico.diferencia)),
+                pct: Math.abs(estadistico.diferenciaPct).toFixed(1),
+              })}{' '}
+              {t(estadistico.interpretacion)}
             </p>
           </section>
         </>
