@@ -281,11 +281,29 @@ export function reportToCsv(report: Report): string {
 
 /** Descarga el reporte como archivo CSV en el navegador. */
 export function downloadCsv(report: Report): void {
-  const blob = new Blob([`\uFEFF${reportToCsv(report)}`], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([`﻿${reportToCsv(report)}`], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = `${report.type}-${report.generated_at.slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/** Descarga los cinco reportes (ventas, estadístico, productos, clientes y
+ * vendedores) en un único CSV: una sección por reporte con su encabezado,
+ * sus columnas y sus filas. */
+export async function downloadAllCsv(t: Translator): Promise<void> {
+  const reports = await Promise.all(REPORT_TYPES.map((entry) => generateReport(entry.value, t)))
+  const sections = reports.map((report) => [report.title, reportToCsv(report)].join('\n'))
+  const csv = `﻿${sections.join('\n\n')}\n`
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `reportes-salesia-${new Date().toISOString().slice(0, 10)}.csv`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

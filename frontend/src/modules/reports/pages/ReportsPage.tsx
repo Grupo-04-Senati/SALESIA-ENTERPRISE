@@ -26,6 +26,7 @@ import { CHART_AXIS, CHART_GRID } from '@/modules/analytics/services/statisticsS
 import { useDataVersion } from '@/data/DataProvider'
 import {
   REPORT_TYPES,
+  downloadAllCsv,
   downloadCsv,
   generateReport,
   getMonthlySummary,
@@ -76,6 +77,7 @@ export default function ReportsPage() {
   const [type, setType] = useState<ReportType>('ventas')
   const [report, setReport] = useState<Report | null>(null)
   const [loading, setLoading] = useState(true)
+  const [downloadingAll, setDownloadingAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const version = useDataVersion()
 
@@ -128,6 +130,16 @@ export default function ReportsPage() {
     )
   }
 
+  const handleExportAll = () => {
+    setDownloadingAll(true)
+    downloadAllCsv(t)
+      .then(() =>
+        toast.success(t('reports.todos-los-reportes-exportados'), t('reports.descarga-todos-detalle')),
+      )
+      .catch(() => toast.error(t('reports.no-se-pudo-generar-el-reporte')))
+      .finally(() => setDownloadingAll(false))
+  }
+
   return (
     <div className="space-y-6">
       <div className="no-print">
@@ -162,6 +174,10 @@ export default function ReportsPage() {
           <Button variant="outline" onClick={handleGenerate} loading={loading}>
             <RefreshCw aria-hidden="true" className="h-4 w-4" />
             {t('reports.actualizar-ahora')}
+          </Button>
+          <Button variant="secondary" onClick={handleExportAll} loading={downloadingAll}>
+            <Download aria-hidden="true" className="h-4 w-4" />
+            {t('reports.descargar-todo-csv')}
           </Button>
           {report && (
             <>

@@ -11,6 +11,10 @@ export const dictReports: ModuleDict = {
       'Reportes de ventas, estadístico, productos, clientes y vendedores con exportación (Fase 12).',
     'reports.actualizar-ahora': 'Actualizar ahora',
     'reports.exportar-csv': 'Exportar CSV',
+    'reports.descargar-todo-csv': 'Descargar todo (CSV)',
+    'reports.todos-los-reportes-exportados': 'Los 5 reportes se exportaron',
+    'reports.descarga-todos-detalle':
+      'ventas, estadístico, productos, clientes y vendedores descargados en un solo archivo CSV.',
     'reports.imprimir': 'Imprimir',
     'reports.el-reporte-se-arma-solo-con-los-datos-actuales-del-sistema':
       'El reporte se arma solo con los datos actuales del sistema.',
@@ -107,6 +111,10 @@ export const dictReports: ModuleDict = {
       'Sales, statistical, product, customer and seller reports with export (Phase 12).',
     'reports.actualizar-ahora': 'Refresh now',
     'reports.exportar-csv': 'Export CSV',
+    'reports.descargar-todo-csv': 'Download all (CSV)',
+    'reports.todos-los-reportes-exportados': 'The 5 reports were exported',
+    'reports.descarga-todos-detalle':
+      'sales, statistical, products, customers and sellers downloaded in a single CSV file.',
     'reports.imprimir': 'Print',
     'reports.el-reporte-se-arma-solo-con-los-datos-actuales-del-sistema':
       'The report is built automatically from the current system data.',
