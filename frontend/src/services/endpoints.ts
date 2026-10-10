@@ -33,6 +33,8 @@ export const ENDPOINTS = {
   products: '/api/v1/products',
   productStatus: (id: number) => `/api/v1/products/${id}/status`,
   productComponents: (id: number) => `/api/v1/products/${id}/components`,
+  productsImportPreview: '/api/v1/products/import/preview',
+  productsImport: '/api/v1/products/import',
   categories: '/api/v1/categories',
 
   // §2.5 Vendedores

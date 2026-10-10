@@ -31,7 +31,7 @@ ROLES_UNICO = ('Admin',)
 # entity audit → (clave de módulo, etiqueta, ruta, roles por defecto)
 ENTITY_MODULES: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
     'products': ('productos', 'Productos', '/productos', ROLES_ALMACEN),
-    'categories': ('categorias', 'Categorías', '/categorias', ROLES_ALMACEN),
+    'categories': ('categorias', 'Categorías', '/productos', ROLES_ALMACEN),
     'unidades': ('productos', 'Productos', '/productos', ROLES_ALMACEN),
     'inventory_movements': ('inventario', 'Inventario', '/inventario', ROLES_ALMACEN),
     'stock_almacenes': ('inventario', 'Inventario', '/inventario', ROLES_ALMACEN),
@@ -118,6 +118,7 @@ _VERBS = {
     'password_reset': 'restablecida (contraseña)',
     'receive': 'marcado como recibido',
     'unreceive': 'desmarcado como recibido',
+    'import': 'importado',
 }
 
 _WARNING_SUFFIXES = ('delete', 'cancel', 'deactivate')

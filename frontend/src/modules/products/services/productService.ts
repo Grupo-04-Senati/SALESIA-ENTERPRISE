@@ -146,3 +146,56 @@ export async function removeKitComponent(productId: number, componentId: number)
     { method: 'DELETE' },
   )
 }
+
+// ------------------------------------------------------------ import CSV
+
+export interface ImportRow {
+  line: number
+  ok: boolean
+  action: 'create' | 'update' | 'error'
+  errors: string[]
+  data: Record<string, string | number | boolean | null> | null
+}
+
+export interface ImportPreview {
+  total_rows: number
+  valid_rows: number
+  error_rows: number
+  will_create: number
+  will_update: number
+  new_categories: string[]
+  update_existing: boolean
+  rows: ImportRow[]
+}
+
+export interface ImportResult {
+  created: number
+  updated: number
+  categories_created: number
+  stock_movements: number
+  skipped: number
+}
+
+/** Clasifica las filas del CSV sin escribir nada (POST /products/import/preview). */
+export async function previewProductImport(
+  csv: string,
+  updateExisting: boolean,
+): Promise<ImportPreview> {
+  return apiFetch<ImportPreview>(ENDPOINTS.productsImportPreview, {
+    method: 'POST',
+    body: JSON.stringify({ csv, update_existing: updateExisting }),
+  })
+}
+
+/** Importa las filas válidas (POST /products/import). */
+export async function runProductImport(
+  csv: string,
+  updateExisting: boolean,
+): Promise<ImportResult> {
+  const result = await apiFetch<ImportResult>(ENDPOINTS.productsImport, {
+    method: 'POST',
+    body: JSON.stringify({ csv, update_existing: updateExisting }),
+  })
+  await hydrateStore(['categories', 'products'])
+  return result
+}

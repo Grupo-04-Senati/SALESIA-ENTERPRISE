@@ -18,7 +18,6 @@ import type { MovementInput, StockRow } from '../services/inventoryService'
 import MovementForm from '../components/MovementForm'
 import StockCountsPanel from '../components/StockCountsPanel'
 import WarehousesPanel from '../components/WarehousesPanel'
-import UnitsPanel from '../components/UnitsPanel'
 import BranchesPanel from '../components/BranchesPanel'
 import ProcessTraceList from '@/components/ProcessTraceList'
 import { isLowStock } from '@/data/store'
@@ -27,8 +26,7 @@ import { useDataVersion } from '@/data/DataProvider'
 /**
  * Página de Inventario (Fase 08 · RF-08): secciones en pestañas —
  * Existencias (stock, alertas), Movimientos (kardex), Conteos,
- * Almacenes, Unidades y Sucursales.
- * TODO(Fase 05): conectar con /api/v1/inventory.
+ * Almacenes y Sucursales. Las unidades de medida viven en Catálogo.
  */
 
 const PAGE_SIZE = 10
@@ -50,7 +48,6 @@ export default function InventoryPage() {
     { id: 'movimientos', label: t('inventory.movimientos') },
     { id: 'conteos', label: t('inventory.conteos') },
     { id: 'almacenes', label: t('inventory.almacenes') },
-    { id: 'unidades', label: t('inventory.unidades') },
     { id: 'sucursales', label: t('inventory.sucursales') },
   ]
 
@@ -374,11 +371,6 @@ export default function InventoryPage() {
           {/* Almacenes */}
           <TabPanel tabId="almacenes" active={tab === 'almacenes'}>
             <WarehousesPanel />
-          </TabPanel>
-
-          {/* Unidades */}
-          <TabPanel tabId="unidades" active={tab === 'unidades'}>
-            <UnitsPanel />
           </TabPanel>
 
           {/* Sucursales */}

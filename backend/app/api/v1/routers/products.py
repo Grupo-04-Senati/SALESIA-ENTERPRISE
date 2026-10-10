@@ -15,10 +15,11 @@ from app.schemas.product import (
     CategoryUpdate,
     KitComponentCreate,
     ProductCreate,
+    ProductImportRequest,
     ProductStatusPatch,
     ProductUpdate,
 )
-from app.services import product_service, storage_service
+from app.services import product_import_service, product_service, storage_service
 
 router = APIRouter(tags=['products'])
 
@@ -101,6 +102,36 @@ def delete_product(
     """Baja lÃ³gica del producto (los productos con ventas nunca se borran)."""
     return product_service.set_product_status(
         db, company_id_of(actor), product_id, 'inactive', actor=actor, ip=client_ip(request)
+    )
+
+
+# ---------------------------------------------------------- importación CSV
+
+
+@router.post('/products/import/preview')
+def preview_product_import(
+    payload: ProductImportRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(admin_only),
+):
+    """Clasifica cada fila del CSV (crear/actualizar/error) sin escribir nada."""
+    return product_import_service.preview(
+        db, company_id_of(user), payload.csv, update_existing=payload.update_existing
+    )
+
+
+@router.post('/products/import', status_code=status.HTTP_201_CREATED)
+def run_product_import(
+    payload: ProductImportRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    """Importa las filas válidas: crea categorías faltantes y registra el
+    stock inicial como entrada en el kardex (RN-20…RN-23)."""
+    return product_import_service.execute(
+        db, company_id_of(actor), payload.csv,
+        update_existing=payload.update_existing, actor=actor, ip=client_ip(request),
     )
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import ClassVar, Literal, Optional
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from app.schemas.base import NormalizedModel
 
@@ -63,6 +63,17 @@ class ProductStatusPatch(NormalizedModel):
     """PATCH /products/{id}/status — antes era un body ``dict`` sin validar."""
 
     status: ProductStatus
+
+
+class ProductImportRequest(BaseModel):
+    """POST /products/import[/preview] — el CSV viaja como texto UTF-8.
+
+    Se usa ``BaseModel`` (no ``NormalizedModel``) para no colapsar los
+    saltos de línea ni los espacios del contenido del archivo.
+    """
+
+    csv: str = Field(min_length=1, max_length=2_000_000)
+    update_existing: bool = False
 
 
 class ProductResponse(ProductData):

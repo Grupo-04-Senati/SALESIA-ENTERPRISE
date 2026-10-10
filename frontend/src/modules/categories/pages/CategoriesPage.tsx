@@ -167,11 +167,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1>{t('categories.categorias')}</h1>
-          <p className="mt-1 text-body-sm text-gray-600">{t('categories.catalogo-de-categorias-de-producto')}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-4">
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
           {t('categories.nueva-categoria')}

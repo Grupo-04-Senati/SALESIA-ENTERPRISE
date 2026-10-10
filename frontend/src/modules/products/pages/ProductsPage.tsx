@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Layers, Package, Pencil, Plus, Power, Star } from 'lucide-react'
+import { Layers, Package, Pencil, Plus, Power, Star, Upload } from 'lucide-react'
 import DataTable, { TableRow, TableCell, TableStateRow } from '@/components/tables/DataTable'
 import Pagination from '@/components/tables/Pagination'
 import Button from '@/components/ui/Button'
@@ -20,6 +20,7 @@ import {
 import type { Product, ProductInput } from '@/types/product'
 import ProductForm from '../components/ProductForm'
 import KitModal from '../components/KitModal'
+import ImportCsvModal from '../components/ImportCsvModal'
 import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
 import { useLang } from '@/i18n/i18n'
@@ -56,6 +57,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
 
   const [formOpen, setFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [kitProduct, setKitProduct] = useState<Product | null>(null)
   const version = useDataVersion()
@@ -153,11 +155,11 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1>{t('products.productos')}</h1>
-          <p className="mt-1 text-body-sm text-gray-600">{t('products.catalogo-de-productos')}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <Button variant="outline" onClick={() => setImportOpen(true)}>
+          <Upload aria-hidden="true" className="h-4 w-4" />
+          {t('products.importar-csv')}
+        </Button>
         <Button onClick={openCreate}>
           <Plus aria-hidden="true" className="h-4 w-4" />
           {t('products.nuevo-producto')}
@@ -391,6 +393,8 @@ export default function ProductsPage() {
       />
 
       <KitModal product={kitProduct} onClose={() => setKitProduct(null)} />
+
+      <ImportCsvModal open={importOpen} onClose={() => setImportOpen(false)} onImported={reload} />
     </div>
   )
 }

@@ -38,8 +38,7 @@ function lazyPage(load: () => Promise<{ default: ComponentType }>) {
 }
 
 const CustomersPage = lazyPage(() => import('@/modules/customers/pages/CustomersPage'))
-const ProductsPage = lazyPage(() => import('@/modules/products/pages/ProductsPage'))
-const CategoriesPage = lazyPage(() => import('@/modules/categories/pages/CategoriesPage'))
+const CatalogPage = lazyPage(() => import('@/modules/products/pages/CatalogPage'))
 const EmployeesPage = lazyPage(() => import('@/modules/employees/pages/EmployeesPage'))
 const SalesPage = lazyPage(() => import('@/modules/sales/pages/SalesPage'))
 const InventoryPage = lazyPage(() => import('@/modules/inventory/pages/InventoryPage'))
@@ -133,8 +132,7 @@ function ModuleGuard({ path, children }: { path: string; children: ReactNode }) 
  */
 const MODULE_ROUTES: Record<string, ReactNode> = {
   '/clientes': <Suspense fallback={<PageLoader />}><CustomersPage /></Suspense>,
-  '/productos': <Suspense fallback={<PageLoader />}><ProductsPage /></Suspense>,
-  '/categorias': <Suspense fallback={<PageLoader />}><CategoriesPage /></Suspense>,
+  '/productos': <Suspense fallback={<PageLoader />}><CatalogPage /></Suspense>,
   '/vendedores': <Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>,
   '/ventas': <Suspense fallback={<PageLoader />}><SalesPage /></Suspense>,
   '/inventario': <Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>,
@@ -190,6 +188,8 @@ export const router = createBrowserRouter([
               </ModuleGuard>
             ),
           })),
+          // Categorías se fusionó en Catálogo: redirige enlaces antiguos.
+          { path: 'categorias', element: <Navigate to="/productos" replace /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
