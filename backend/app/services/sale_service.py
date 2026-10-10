@@ -93,6 +93,16 @@ def _serialize(sale: Sale) -> dict:
             }
             for payment in sale.payments
         ],
+        'claims': [
+            {
+                'id': claim.id,
+                'description': claim.description,
+                'status': claim.status,
+                'created_at': claim.created_at,
+                'resolved_at': claim.resolved_at,
+            }
+            for claim in sale.claims
+        ],
     }
 
 

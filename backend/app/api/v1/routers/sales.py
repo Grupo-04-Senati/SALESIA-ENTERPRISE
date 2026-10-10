@@ -11,7 +11,7 @@ from app.api.deps import company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.sale import CancelRequest, PaymentCreate, ReceivedUpdate, SaleCreate, StatusUpdate
-from app.services import sale_service
+from app.services import claim_service, sale_service
 
 router = APIRouter(tags=['sales'])
 
@@ -102,6 +102,19 @@ def update_received(
     """Marca o desmarca la entrega del pedido (visible en la tienda)."""
     return sale_service.set_sale_received(
         db, company_id_of(actor), sale_id, payload.received, actor=actor, ip=_ip(request)
+    )
+
+
+@router.put('/claims/{claim_id}/resolve')
+def resolve_claim(
+    claim_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_role(*manage_roles)),
+):
+    """Marca un reclamo de la tienda como atendido (Admin/Gerente)."""
+    return claim_service.resolve_claim(
+        db, company_id_of(actor), claim_id, actor=actor, ip=_ip(request)
     )
 
 

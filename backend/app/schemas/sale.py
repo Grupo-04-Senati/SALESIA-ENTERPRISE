@@ -80,6 +80,15 @@ class PartyRef(NormalizedModel):
     name: str
 
 
+class ClaimResponse(NormalizedModel):
+    id: int = Field(ge=1)
+    sale_id: int = Field(ge=1)
+    description: str
+    status: str
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+
+
 class SaleResponse(NormalizedModel):
     id: int = Field(ge=1)
     sale_number: str
@@ -98,6 +107,7 @@ class SaleResponse(NormalizedModel):
     cancel_reason: Optional[str] = None
     received_at: Optional[datetime] = None
     payments: List[PaymentResponse] = []
+    claims: List[ClaimResponse] = []
 
 
 class PaymentCreate(NormalizedModel):

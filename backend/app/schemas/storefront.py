@@ -35,7 +35,9 @@ class StoreQuoteItem(NormalizedModel):
 
 
 class StoreQuoteCreate(NormalizedModel):
-    customer: StoreCustomer
+    """Pedido de la tienda: la identidad la da la sesión; ``customer`` es opcional."""
+
+    customer: Optional[StoreCustomer] = None
     items: List[StoreQuoteItem] = Field(min_length=1, max_length=50)
     notes: Optional[str] = Field(default=None, max_length=500)
 
@@ -63,3 +65,9 @@ class StoreRegisterInput(NormalizedModel):
 class StoreLoginInput(NormalizedModel):
     email: EmailStr = Field(max_length=160)
     password: str = Field(min_length=1, max_length=72)
+
+
+class StoreClaimCreate(NormalizedModel):
+    """Reclamo de un pedido de la tienda (no llegó o tuvo problemas)."""
+
+    description: str = Field(min_length=10, max_length=1000)

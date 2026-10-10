@@ -41,6 +41,7 @@ export const ENDPOINTS = {
   saleCancel: (id: number) => `/api/v1/sales/${id}/cancel`,
   salePayments: (id: number) => `/api/v1/sales/${id}/payments`,
   saleReceived: (id: number) => `/api/v1/sales/${id}/received`,
+  claimResolve: (id: number) => `/api/v1/claims/${id}/resolve`,
   inventory: '/api/v1/inventory',
   inventoryProduct: (id: number) => `/api/v1/inventory/${id}`,
   inventoryMovements: '/api/v1/inventory/movements',

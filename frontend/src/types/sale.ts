@@ -24,6 +24,16 @@ export interface SaleItem {
   subtotal?: number
 }
 
+/** Reclamo que el cliente abre desde la tienda (pedido no recibido). */
+export interface SaleClaim {
+  id: number
+  sale_id: number
+  description: string
+  status: 'pendiente' | 'atendida'
+  created_at: string
+  resolved_at: string | null
+}
+
 export interface Sale {
   id: number
   sale_number: string
@@ -43,6 +53,8 @@ export interface Sale {
   cancel_reason: string | null
   /** Marca de entrega que pone el admin y ve el cliente en la tienda. */
   received_at: string | null
+  /** Reclamos abiertos por el cliente sobre este pedido. */
+  claims?: SaleClaim[]
 }
 
 /** Payload para registrar venta (el backend recalcula totales, RN-11). */

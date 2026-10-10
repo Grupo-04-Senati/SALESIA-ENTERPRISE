@@ -111,6 +111,13 @@ export async function setSaleReceived(id: number, received: boolean): Promise<Sa
   return getSale(id)
 }
 
+/** Marca un reclamo del cliente como atendido y devuelve la venta actualizada. */
+export async function resolveClaim(claimId: number, saleId: number): Promise<Sale> {
+  await apiFetch(`${ENDPOINTS.claimResolve(claimId)}`, { method: 'PUT' })
+  await hydrateStore(['sales'])
+  return getSale(saleId)
+}
+
 /** Registra la venta en el backend y devuelve el proceso ejecutado. */
 export async function createSale(input: SaleInput): Promise<SaleProcessResult> {
   const created = await apiFetch<SaleCreated & { trace?: ProcessTrace['steps'] }>(ENDPOINTS.sales, {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BadgeCheck, PackageCheck, Undo2 } from 'lucide-react'
+import { BadgeCheck, Check, PackageCheck, Undo2 } from 'lucide-react'
 import type { Sale } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -8,7 +8,7 @@ import Badge from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
 import { formatCurrency, formatDateTime } from '@/utils/formatters'
-import { registerPayment, setSaleReceived } from '../services/saleService'
+import { registerPayment, resolveClaim, setSaleReceived } from '../services/saleService'
 
 /**
  * Detalle de una venta (Fase 08 · RF-06): líneas, totales y pago.
@@ -36,6 +36,7 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
   const toast = useToast()
   const [paying, setPaying] = useState(false)
   const [receiving, setReceiving] = useState(false)
+  const [resolving, setResolving] = useState<number | null>(null)
   if (!sale) return null
   const status = SALE_STATUS_LABELS[sale.status]
   const canPay = sale.status !== 'cancelled' && sale.balance > 0
@@ -80,6 +81,23 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
       )
     } finally {
       setReceiving(false)
+    }
+  }
+
+  const handleResolveClaim = async (claimId: number) => {
+    if (resolving !== null || !sale) return
+    setResolving(claimId)
+    try {
+      const updated = await resolveClaim(claimId, sale.id)
+      toast.success(t('sales.reclamo-atendido-toast'), updated.sale_number)
+      onUpdated?.(updated)
+    } catch (reason: unknown) {
+      toast.error(
+        t('sales.no-se-pudo-atender-el-reclamo'),
+        reason instanceof Error ? reason.message : t('sales.error-inesperado'),
+      )
+    } finally {
+      setResolving(null)
     }
   }
 
@@ -189,6 +207,49 @@ export default function SaleDetailModal({ sale, onClose, onUpdated }: SaleDetail
             </span>
           </div>
         </div>
+
+        {(sale.claims?.length ?? 0) > 0 && (
+          <div className="space-y-2">
+            <p className="text-caption font-semibold uppercase text-gray-500">
+              {t('sales.reclamaciones')}
+            </p>
+            {sale.claims?.map((claim) => (
+              <div key={claim.id} className="rounded-lg border border-gray-200 p-3 text-body-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Badge variant={claim.status === 'pendiente' ? 'warning' : 'success'}>
+                    {t(
+                      claim.status === 'pendiente'
+                        ? 'sales.reclamo-pendiente'
+                        : 'sales.reclamo-atendido',
+                    )}
+                  </Badge>
+                  <span className="text-caption text-gray-500">
+                    {formatDateTime(claim.created_at)}
+                  </span>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-gray-700">{claim.description}</p>
+                {claim.resolved_at && (
+                  <p className="mt-1 text-caption text-success">
+                    {t('sales.atendido-el')} {formatDateTime(claim.resolved_at)}
+                  </p>
+                )}
+                {claim.status === 'pendiente' && (
+                  <div className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={resolving === claim.id}
+                      onClick={() => void handleResolveClaim(claim.id)}
+                    >
+                      <Check aria-hidden="true" className="h-4 w-4" />
+                      {t('sales.marcar-como-atendido')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Modal>
   )

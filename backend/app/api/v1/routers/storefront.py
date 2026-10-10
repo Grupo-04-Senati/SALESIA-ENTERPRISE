@@ -1,7 +1,9 @@
-"""Storefront público de la tienda web: catálogo y cotizaciones sin token.
+"""Storefront de la tienda web: catálogo público, cuenta de cliente y pedidos.
 
-Endpoints abiertos (sin JWT): el aislamiento por empresa se resuelve con
-``settings.storefront_company_id`` (fallback: la primera empresa registrada).
+El catálogo y el contacto son públicos; registrar un pedido, ver «Mis pedidos»,
+marcar la llegada y reclamar exigen sesión de cliente (JWT tipo ``customer``).
+El aislamiento por empresa se resuelve con ``settings.storefront_company_id``
+(fallback: la primera empresa registrada).
 """
 
 from __future__ import annotations
@@ -26,9 +28,12 @@ from app.models.customer import Customer
 from app.models.inventory import Inventory
 from app.models.product import Product
 from app.models.quote import Quote
+from app.models.sale import Sale
 from app.schemas.customer import CustomerCreate
 from app.schemas.quotes import QuoteCreate, QuoteItemInput, QuoteStatusUpdate
+from app.schemas.sale import ReceivedUpdate
 from app.schemas.storefront import (
+    StoreClaimCreate,
     StoreContactCreate,
     StoreLoginInput,
     StoreQuoteCreate,
@@ -36,6 +41,7 @@ from app.schemas.storefront import (
 )
 from app.schemas.system import NotificationCreate
 from app.services import (
+    claim_service,
     customer_service,
     product_service,
     quote_service,
@@ -156,42 +162,6 @@ def _next_document(db: Session, company_id: int) -> str:
         seq += 1
 
 
-def _find_or_create_customer(db: Session, company_id: int, payload: StoreQuoteCreate, ip: str) -> Customer:
-    data = payload.customer
-    statement = select(Customer).where(Customer.company_id == company_id)
-    customer = None
-    if data.email:
-        customer = db.execute(statement.where(Customer.email == str(data.email))).scalars().first()
-    if customer is None and data.phone:
-        customer = db.execute(statement.where(Customer.phone == data.phone)).scalars().first()
-    if customer is not None:
-        changed = False
-        if not customer.phone and data.phone:
-            customer.phone = data.phone
-            changed = True
-        if not customer.email and data.email:
-            customer.email = str(data.email)
-            changed = True
-        if changed:
-            db.commit()
-        return customer
-
-    created = customer_service.create_customer(
-        db,
-        company_id,
-        CustomerCreate(
-            document_number=_next_document(db, company_id),
-            name=data.name,
-            email=data.email,
-            phone=data.phone,
-            segment='Tienda Web',
-        ),
-        actor=None,
-        ip=ip,
-    )
-    return db.get(Customer, created['id'])
-
-
 def _store_token_payload(request: Request) -> Optional[dict]:
     """Payload del JWT de cliente; ``None`` si no hay Authorization."""
     header = request.headers.get('Authorization', '')
@@ -222,12 +192,6 @@ def _current_store_customer(db: Session, company_id: int, request: Request) -> C
     if customer is None or customer.company_id != company_id or not customer.is_active:
         raise Unauthenticated('Sesión inválida.')
     return customer
-
-
-def _optional_store_customer(db: Session, company_id: int, request: Request) -> Optional[Customer]:
-    if not request.headers.get('Authorization'):
-        return None
-    return _current_store_customer(db, company_id, request)
 
 
 def _customer_payload(customer: Customer) -> dict:
@@ -284,16 +248,15 @@ def _discard_unconverted_quote(db: Session, company_id: int, quote_id: int) -> N
 def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depends(get_db)):
     """Registra el pedido de la tienda: cotización + venta automática en SalesIA.
 
-    Los precios se recalculan en servidor con el catálogo vigente (RN-11),
-    ``tax_rate=0`` para coincidir con el subtotal mostrado en la tienda y la
-    cotización se convierte de inmediato en venta: valida stock (RN-10),
-    lo descuenta con kardex y la venta queda en ``ventas`` para estadísticas.
+    Solo clientes con sesión pueden comprar (401 sin JWT). Los precios se
+    recalculan en servidor con el catálogo vigente (RN-11), ``tax_rate=0`` para
+    coincidir con el subtotal mostrado en la tienda y la cotización se convierte
+    de inmediato en venta: valida stock (RN-10), lo descuenta con kardex y la
+    venta queda en ``ventas`` para estadísticas.
     """
     company_id = _company_id(db)
     ip = client_ip(request)
-    customer = _optional_store_customer(db, company_id, request)
-    if customer is None:
-        customer = _find_or_create_customer(db, company_id, payload, ip)
+    customer = _current_store_customer(db, company_id, request)
 
     product_ids = [item.product_id for item in payload.items]
     rows = db.execute(
@@ -491,7 +454,53 @@ def store_me(request: Request, db: Session = Depends(get_db)):
 
 @router.get('/orders')
 def store_orders(request: Request, db: Session = Depends(get_db)):
-    """Pedidos del cliente autenticado (venta + líneas + pagos)."""
+    """Pedidos del cliente autenticado (venta + líneas + pagos + reclamos)."""
     company_id = _company_id(db)
     customer = _current_store_customer(db, company_id, request)
     return sale_service.list_sales(db, company_id, customer_id=customer.id, page=1, page_size=50)
+
+
+def _owned_sale(db: Session, company_id: int, sale_id: int, customer: Customer) -> Sale:
+    sale = db.execute(
+        select(Sale).where(
+            Sale.id == sale_id,
+            Sale.company_id == company_id,
+            Sale.customer_id == customer.id,
+        )
+    ).scalar_one_or_none()
+    if sale is None:
+        raise NotFound('Pedido no encontrado.')
+    return sale
+
+
+@router.put('/orders/{sale_id}/received')
+def store_order_received(
+    sale_id: int,
+    payload: ReceivedUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """El cliente marca (o desmarca) su pedido como recibido."""
+    company_id = _company_id(db)
+    ip = client_ip(request)
+    customer = _current_store_customer(db, company_id, request)
+    _owned_sale(db, company_id, sale_id, customer)
+    return sale_service.set_sale_received(
+        db, company_id, sale_id, payload.received, actor=None, ip=ip
+    )
+
+
+@router.post('/orders/{sale_id}/claims', status_code=status.HTTP_201_CREATED)
+def store_order_claim(
+    sale_id: int,
+    payload: StoreClaimCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Reclamo del cliente sobre su pedido (no llegó / tuvo problemas)."""
+    company_id = _company_id(db)
+    ip = client_ip(request)
+    customer = _current_store_customer(db, company_id, request)
+    return claim_service.create_claim(
+        db, company_id, sale_id, customer, payload.description, ip
+    )

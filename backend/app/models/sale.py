@@ -13,6 +13,7 @@ from app.models.base import IDMixin, UpdatedAtMixin
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.claim import Claim
     from app.models.customer import Customer
     from app.models.employee import Employee
     from app.models.payment import Payment
@@ -54,4 +55,7 @@ class Sale(IDMixin, UpdatedAtMixin, Base):
     )
     payments: Mapped[List['Payment']] = relationship(
         'Payment', cascade='all, delete-orphan', lazy='selectin', order_by='Payment.id'
+    )
+    claims: Mapped[List['Claim']] = relationship(
+        'Claim', cascade='all, delete-orphan', lazy='selectin', order_by='Claim.id'
     )

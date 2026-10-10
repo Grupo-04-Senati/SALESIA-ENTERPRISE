@@ -7,6 +7,7 @@ from app.models.audit_log import AuditLog
 from app.models.bayes_analysis import BayesAnalysis
 from app.models.branch import Branch
 from app.models.category import Category
+from app.models.claim import Claim
 from app.models.company import Company
 from app.models.crm import CustomerInteraction, CustomerSegment
 from app.models.customer import Customer
@@ -38,7 +39,7 @@ from app.models.warehouse import Shipment, StockCount, StockCountDetail, Warehou
 
 __all__ = [
     'AppEvent', 'AuditLog', 'AutomationRule', 'BayesAnalysis', 'Branch', 'Category',
-    'Company', 'Customer', 'CustomerInteraction', 'CustomerSegment', 'DataExport',
+    'Company', 'Claim', 'Customer', 'CustomerInteraction', 'CustomerSegment', 'DataExport',
     'Dataset', 'DatasetVariable', 'Employee', 'Insight', 'Inventory',
     'InventoryMovement', 'KpiSnapshot', 'LoginAttempt', 'Notification', 'Observation',
     'PasswordReset', 'Payment', 'Permission', 'PriceList', 'PriceListItem',
