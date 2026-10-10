@@ -21,7 +21,7 @@ def _seller_id(client, headers):
 
 def test_venta_crea_cliente_inline(client, admin_headers):
     product = _first(client, '/api/v1/products', admin_headers, '&status=active')
-    doc = f'88{int(time.time()) % 100000000:08d}'[:8]
+    doc = f"88{int(time.time() * 1000) % 10**6:06d}"
     payload = {
         'customer': {
             'document_type': 'DNI',
@@ -185,23 +185,50 @@ def test_producto_es_kit_tras_agregar_componente(client, admin_headers):
 
 
 def test_estado_de_cuenta_cliente(client, admin_headers):
-    customer = _first(client, '/api/v1/customers', admin_headers, '&status=active')
+    # Cliente con venta y pago real (cubre montos Decimal de la bd).
+    product = _first(client, '/api/v1/products', admin_headers, '&status=active')
+    doc = f"99{int(time.time() * 1000) % 10**6:06d}"
+    unit_price = float(product['sale_price'])
+    sale_resp = client.post('/api/v1/sales', headers=admin_headers, json={
+        'customer': {
+            'document_type': 'DNI',
+            'document_number': doc,
+            'name': 'Cliente Estado Cuenta',
+        },
+        'seller_id': _seller_id(client, admin_headers),
+        'items': [{'product_id': product['id'], 'quantity': 1,
+                   'unit_price': unit_price, 'discount': 0}],
+        'tax_rate': 0,
+        'payment': {'method': 'cash', 'amount': unit_price},
+    })
+    assert sale_resp.status_code == 201, sale_resp.text
+
+    listing = client.get(
+        f'/api/v1/customers?q={doc}&page_size=50', headers=admin_headers
+    ).json()
+    customer = next(row for row in listing['items'] if row['document_number'] == doc)
+
     response = client.get(
         f"/api/v1/customers/{customer['id']}/account-statement", headers=admin_headers
     )
     assert response.status_code == 200, response.text
     body = response.json()
     assert body['customer']['id'] == customer['id']
-    assert 'total_purchased' in body
-    assert 'total_paid' in body
-    assert 'balance' in body
-    assert 'aging' in body
+    assert body['total_purchased'] == unit_price
+    assert body['total_paid'] == unit_price
+    assert body['balance'] == 0
     assert set(body['aging']) == {'vigente', '1-30', '31-60', '61-90', '90+'}
-    assert isinstance(body['sales'], list)
+    assert len(body['sales']) == 1
+    assert body['sales'][0]['paid'] == unit_price
+    assert body['sales'][0]['balance'] == 0
+
+    client.post(f"/api/v1/sales/{sale_resp.json()['id']}/cancel", headers=admin_headers, json={
+        'reason': 'Limpieza de prueba automatizada',
+    })
 
 
 def test_cliente_guarda_linea_comercial(client, admin_headers):
-    doc = f'77{int(time.time()) % 100000000:08d}'[:8]
+    doc = f"77{int(time.time() * 1000) % 10**6:06d}"
     response = client.post('/api/v1/customers', headers=admin_headers, json={
         'document_type': 'DNI',
         'document_number': doc,

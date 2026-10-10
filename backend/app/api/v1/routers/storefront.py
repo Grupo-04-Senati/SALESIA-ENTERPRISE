@@ -18,7 +18,7 @@ from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, Query, Request, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import client_ip
@@ -211,24 +211,6 @@ def store_categories(db: Session = Depends(get_db)):
         'page_size': max(len(items), 1),
         'pages': 1,
     }
-
-
-def _next_document(db: Session, company_id: int) -> str:
-    """DNI sintético único para los clientes creados desde la tienda."""
-    seq = db.execute(
-        select(func.count(Customer.id)).where(Customer.company_id == company_id)
-    ).scalar_one() + 1
-    while True:
-        candidate = f'9{seq:09d}'
-        taken = db.execute(
-            select(Customer.id).where(
-                Customer.company_id == company_id,
-                Customer.document_number == candidate,
-            )
-        ).scalar_one_or_none()
-        if taken is None:
-            return candidate
-        seq += 1
 
 
 def _store_token_payload(request: Request) -> Optional[dict]:
@@ -465,24 +447,39 @@ def store_contact(payload: StoreContactCreate, request: Request, db: Session = D
 
 @router.post('/auth/register', status_code=status.HTTP_201_CREATED)
 def store_register(payload: StoreRegisterInput, request: Request, db: Session = Depends(get_db)):
-    """Alta de cuenta de cliente en la tienda (email + contraseña).
+    """Alta de cuenta de cliente en la tienda (documento + email + contraseña).
 
-    Si el correo ya hizo pedidos como invitado, la contraseña se vincula a
-    ese cliente para conservar el historial en «Mis pedidos».
+    El DNI/RUC real queda en el CRM del admin. Si el correo o el documento ya
+    hicieron pedidos como invitado, la contraseña se vincula a ese cliente para
+    conservar el historial en «Mis pedidos».
     """
     company_id = _company_id(db)
     ip = client_ip(request)
     email = str(payload.email).lower()
     customer = db.execute(
-        select(Customer).where(Customer.company_id == company_id, Customer.email == email)
+        select(Customer).where(
+            Customer.company_id == company_id,
+            or_(Customer.email == email, Customer.document_number == payload.document_number),
+        )
     ).scalars().first()
 
     if customer is not None:
         if customer.password_hash:
-            raise Conflict('Ya existe una cuenta con este correo.')
+            raise Conflict('Ya existe una cuenta con este correo o documento.')
         customer.password_hash = hash_password(payload.password)
         if payload.phone and not customer.phone:
             customer.phone = payload.phone
+        if customer.email != email:
+            email_taken = db.execute(
+                select(Customer.id).where(
+                    Customer.company_id == company_id,
+                    Customer.email == email,
+                    Customer.id != customer.id,
+                )
+            ).scalar_one_or_none()
+            if email_taken is not None:
+                raise Conflict('Ya existe una cuenta con este correo o documento.')
+            customer.email = email
         db.commit()
         db.refresh(customer)
     else:
@@ -490,11 +487,11 @@ def store_register(payload: StoreRegisterInput, request: Request, db: Session = 
             db,
             company_id,
             CustomerCreate(
-                document_number=_next_document(db, company_id),
+                document_number=payload.document_number,
                 name=payload.name,
                 email=email,
                 phone=payload.phone,
-                segment='Tienda Web',
+                segment='Empresa' if payload.document_type == 'RUC' else 'Tienda Web',
             ),
             actor=None,
             ip=ip,
@@ -527,6 +524,29 @@ def store_login(payload: StoreLoginInput, request: Request, db: Session = Depend
 def store_me(request: Request, db: Session = Depends(get_db)):
     company_id = _company_id(db)
     return _customer_payload(_current_store_customer(db, company_id, request))
+
+
+@router.get('/lookup')
+def store_lookup(
+    document: str = Query(min_length=8, max_length=11, pattern=r'^\d{8,11}$'),
+    db: Session = Depends(get_db),
+):
+    """Autocompletado público del registro por DNI/RUC (solo base local).
+
+    Solo devuelve el nombre si el documento pertenece a un cliente invitado
+    (sin contraseña): las cuentas registradas no se exponen.
+    """
+    company_id = _company_id(db)
+    customer = db.execute(
+        select(Customer).where(
+            Customer.company_id == company_id,
+            Customer.document_number == document,
+            Customer.password_hash.is_(None),
+        )
+    ).scalars().first()
+    if customer is None:
+        return {'found': False, 'source': 'local'}
+    return {'found': True, 'name': customer.name, 'source': 'local'}
 
 
 @router.get('/orders')

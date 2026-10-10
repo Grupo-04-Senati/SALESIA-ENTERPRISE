@@ -53,13 +53,27 @@ class StoreContactCreate(NormalizedModel):
 
 
 class StoreRegisterInput(NormalizedModel):
-    """Alta de cuenta de cliente en la tienda (sesión con contraseña)."""
+    """Alta de cuenta de cliente en la tienda (sesión con contraseña).
+
+    El documento real (DNI de persona o RUC de empresa) queda en el CRM:
+    al registrarte con el mismo correo o documento de una compra previa
+    sin cuenta, se vincula el historial.
+    """
 
     letter_required: ClassVar[frozenset[str]] = frozenset({'name'})
     name: str = Field(min_length=3, max_length=150)
     email: EmailStr = Field(max_length=160)
+    document_type: Literal['DNI', 'RUC'] = 'DNI'
+    document_number: str = Field(min_length=8, max_length=11, pattern=r'^\d{8,11}$')
     phone: Optional[str] = Field(default=None, max_length=20, pattern=r'^(\+?\d{7,15})?$')
     password: str = Field(min_length=8, max_length=72)
+
+    @model_validator(mode='after')
+    def _check_document_length(self) -> 'StoreRegisterInput':
+        expected = 8 if self.document_type == 'DNI' else 11
+        if len(self.document_number) != expected:
+            raise ValueError(f'El {self.document_type} debe tener {expected} dígitos.')
+        return self
 
 
 class StoreLoginInput(NormalizedModel):

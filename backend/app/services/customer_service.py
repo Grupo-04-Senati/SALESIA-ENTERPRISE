@@ -244,7 +244,7 @@ def customer_account_statement(db: Session, company_id: int, customer_id: int) -
     total_purchased = 0.0
     total_paid = 0.0
     for sale in sales:
-        paid = sum((payment.amount for payment in sale.payments), 0.0)
+        paid = sum(float(payment.amount) for payment in sale.payments)
         balance = round(float(sale.total) - paid, 2)
         total_purchased += float(sale.total)
         total_paid += paid

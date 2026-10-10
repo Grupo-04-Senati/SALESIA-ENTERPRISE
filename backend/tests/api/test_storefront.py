@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+import time
 
-def _store_auth(client, name, email, password='clave1234', phone=None):
-    payload = {'name': name, 'email': email, 'password': password}
+
+def _store_auth(client, name, email, password='clave1234', phone=None, document=None):
+    payload = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'document_number': document or f"{int(time.time() * 1000) % 10**8:08d}",
+    }
     if phone:
         payload['phone'] = phone
     response = client.post('/api/v1/store/auth/register', json=payload)
@@ -248,12 +255,15 @@ def test_store_auth_registro_login_y_me(client):
         'email': 'ana.tienda@example.com',
         'phone': '911000111',
         'password': 'secreta123',
+        'document_number': '45678901',
     }
     response = client.post('/api/v1/store/auth/register', json=payload)
     assert response.status_code == 201, response.text
     body = response.json()
     assert body['token_type'] == 'bearer'
     assert body['customer']['email'] == 'ana.tienda@example.com'
+    assert body['customer']['document_number'] == '45678901'
+    assert body['customer']['segment'] == 'Tienda Web'
     token = body['access_token']
 
     assert client.get('/api/v1/store/auth/me').status_code == 401
@@ -288,7 +298,7 @@ def test_store_auth_registro_login_y_me(client):
 
 def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
     created = client.post('/api/v1/customers', json={
-        'document_number': '999000111',
+        'document_number': '99900011',
         'name': 'Invitado Que Registra',
         'email': 'invitado.registro@example.com',
         'segment': 'Tienda Web',
@@ -330,6 +340,7 @@ def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
         'name': 'Invitado Que Registra',
         'email': 'invitado.registro@example.com',
         'password': 'cuenta1234',
+        'document_number': '99900011',
     })
     if registered.status_code == 409:
         registered = client.post('/api/v1/store/auth/login', json={
@@ -353,6 +364,90 @@ def test_store_auth_vincula_historial_de_invitado(client, admin_headers):
         headers=admin_headers,
     )
     assert cancelled.status_code == 200, cancelled.text
+
+
+def test_store_auth_registro_empresa_ruc(client):
+    response = client.post('/api/v1/store/auth/register', json={
+        'name': 'Distribuidora Andina SAC',
+        'email': 'compras@andina.example.com',
+        'password': 'empresa123',
+        'document_type': 'RUC',
+        'document_number': '20998877666',
+    })
+    assert response.status_code == 201, response.text
+    customer = response.json()['customer']
+    assert customer['document_number'] == '20998877666'
+    assert customer['segment'] == 'Empresa'
+
+
+def test_store_auth_registro_valida_documento(client):
+    base = {'name': 'Cliente Dni Corto', 'email': 'dni.corto@example.com', 'password': 'clave1234'}
+    dni_corto = client.post('/api/v1/store/auth/register', json={
+        **base, 'document_number': '1234567',
+    })
+    assert dni_corto.status_code == 422
+
+    ruc_corto = client.post('/api/v1/store/auth/register', json={
+        'name': 'Empresa Ruc Corto',
+        'email': 'ruc.corto@example.com',
+        'password': 'clave1234',
+        'document_type': 'RUC',
+        'document_number': '20512345',
+    })
+    assert ruc_corto.status_code == 422
+
+
+def test_store_auth_vincula_por_documento(client, admin_headers):
+    created = client.post('/api/v1/customers', json={
+        'document_number': '88776655',
+        'name': 'Invitado Con Documento',
+        'email': 'invitado.doc@example.com',
+        'segment': 'Tienda Web',
+    }, headers=admin_headers)
+    assert created.status_code == 201, created.text
+
+    # Registra con otro correo pero el mismo DNI del invitado: se vincula la fila.
+    registered = client.post('/api/v1/store/auth/register', json={
+        'name': 'Invitado Con Documento',
+        'email': 'nuevo.correo.doc@example.com',
+        'password': 'documento123',
+        'document_number': '88776655',
+    })
+    assert registered.status_code == 201, registered.text
+
+    login = client.post('/api/v1/store/auth/login', json={
+        'email': 'nuevo.correo.doc@example.com', 'password': 'documento123',
+    })
+    assert login.status_code == 200, login.text
+    assert login.json()['customer']['id'] == created.json()['id']
+    assert login.json()['customer']['document_number'] == '88776655'
+
+
+def test_store_lookup_publico(client, admin_headers):
+    client.post('/api/v1/customers', json={
+        'document_number': '44332211',
+        'name': 'Cliente Lookup Invitado',
+        'segment': 'Tienda Web',
+    }, headers=admin_headers)
+
+    guest = client.get('/api/v1/store/lookup?document=44332211')
+    assert guest.status_code == 200
+    assert guest.json() == {'found': True, 'name': 'Cliente Lookup Invitado', 'source': 'local'}
+
+    # Una cuenta registrada no se expone en el lookup público.
+    client.post('/api/v1/store/auth/register', json={
+        'name': 'Cuenta Privada Lookup',
+        'email': 'privada.lookup@example.com',
+        'password': 'clave1234',
+        'document_number': '11223344',
+    })
+    privada = client.get('/api/v1/store/lookup?document=11223344')
+    assert privada.status_code == 200
+    assert privada.json()['found'] is False
+
+    desconocido = client.get('/api/v1/store/lookup?document=00000000')
+    assert desconocido.status_code == 200
+    assert desconocido.json()['found'] is False
 
 
 def test_store_orders_requiere_sesion(client):
