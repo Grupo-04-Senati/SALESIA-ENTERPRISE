@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { MovementType } from '@/types/sale'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Input, Select, Textarea } from '@/components/ui/form'
+import { Input, SearchSelect, Select, Textarea } from '@/components/ui/form'
 import { cleanText, integer, maxLength, minNumber, required, validateForm } from '@/utils/validators'
 import type { FormErrors, FormRules } from '@/utils/validators'
 import { useLang } from '@/i18n/i18n'
@@ -66,6 +66,16 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
 
   const needsReason = values.type === 'SHRINKAGE' || values.type === 'ADJUSTMENT'
 
+  const productOptions = useMemo(
+    () =>
+      stock.map((row) => ({
+        value: String(row.product_id),
+        label: `${row.name} (${row.sku}) — ${row.current_stock} ${row.unit}`,
+        keywords: `${row.sku} ${row.category}`,
+      })),
+    [stock],
+  )
+
   const rules: FormRules<FormValues> = {
     product_id: required(t('inventory.selecciona-un-producto')),
     quantity: (value) =>
@@ -114,20 +124,16 @@ export default function MovementForm({ open, onClose, stock, onSubmit }: Movemen
       }
     >
       <form id="movement-form" onSubmit={handleSubmit} className="space-y-4">
-        <Select
+        <SearchSelect
           label={t('inventory.producto')}
           required
           value={values.product_id}
-          onChange={setValue('product_id')}
+          onChange={(next) => setValue('product_id')({ target: { value: next } })}
           error={errors.product_id}
-        >
-          <option value="">{t('inventory.selecciona-un-producto-2')}</option>
-          {stock.map((row) => (
-            <option key={row.product_id} value={row.product_id}>
-              {row.name} ({row.sku}) — {row.current_stock} {row.unit}
-            </option>
-          ))}
-        </Select>
+          placeholder={t('inventory.escribe-para-buscar-productos')}
+          emptyText={t('inventory.sin-resultados-para-la-busqueda')}
+          options={productOptions}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
