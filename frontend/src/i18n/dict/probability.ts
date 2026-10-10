@@ -5,6 +5,7 @@ export const dictProbability: ModuleDict = {
   es: {
     'probability.media-y-mediana': 'Media y mediana',
     'probability.bayes': 'Bayes',
+    'probability.predicciones': 'Predicciones',
     'probability.variables': 'Variables',
     'probability.historial': 'Historial',
     'probability.la-regla-rn-40-exige-al-menos-n-observaciones-y-el-periodo-seleccionado-no-tiene-suficientes-datos-amplia-el-periodo-o-registra-mas-ventas-en':
@@ -46,6 +47,24 @@ export const dictProbability: ModuleDict = {
     'probability.comparacion-media-mediana': 'Comparación automática',
     'probability.comparacion-cifras':
       'Media {media} frente a mediana {mediana}: difieren en {monto} ({pct}%).',
+    'probability.pronostico-de-ingresos-automatico': 'Pronóstico de ingresos automático',
+    'probability.pronostico-fuente': 'Calculado sobre la serie mensual de',
+    'probability.proximo-mes-estimado': 'Próximo mes ({mes}) estimado',
+    'probability.pendiente-mensual': 'Pendiente mensual',
+    'probability.confianza-del-ajuste': 'Confianza del ajuste (R²)',
+    'probability.meses-analizados': 'Meses analizados',
+    'probability.ingresos-historicos': 'Ingresos históricos',
+    'probability.ingresos-proyectados': 'Ingresos proyectados',
+    'probability.linea-azul-historico-linea-naranja-proyectado':
+      'Línea azul: histórico · línea naranja discontinua: proyección.',
+    'probability.fc-creciente':
+      'La tendencia es creciente: el modelo proyecta un aumento de {monto} por mes.',
+    'probability.fc-decreciente':
+      'La tendencia es decreciente: el modelo proyecta una caída de {monto} por mes.',
+    'probability.fc-estable': 'La tendencia es estable: el modelo no proyecta un cambio relevante por mes.',
+    'probability.metodo-regresion-lineal':
+      'Método: regresión lineal por mínimos cuadrados sobre {n} meses; proyecta los próximos {h} meses. Es una estimación estadística, no una garantía.',
+    'probability.pronostico-automatico': 'Pronóstico automático',
     'probability.teorema-de-bayes-automatico': 'Teorema de Bayes automático',
     'probability.p-a-previa': 'P(A) previa',
     'probability.de-n-ventas': 'de {n} ventas →',
@@ -131,6 +150,7 @@ export const dictProbability: ModuleDict = {
   en: {
     'probability.media-y-mediana': 'Mean and median',
     'probability.bayes': 'Bayes',
+    'probability.predicciones': 'Predictions',
     'probability.variables': 'Variables',
     'probability.historial': 'History',
     'probability.la-regla-rn-40-exige-al-menos-n-observaciones-y-el-periodo-seleccionado-no-tiene-suficientes-datos-amplia-el-periodo-o-registra-mas-ventas-en':
@@ -172,6 +192,24 @@ export const dictProbability: ModuleDict = {
     'probability.comparacion-media-mediana': 'Automatic comparison',
     'probability.comparacion-cifras':
       'Mean {media} versus median {mediana}: they differ by {monto} ({pct}%).',
+    'probability.pronostico-de-ingresos-automatico': 'Automatic revenue forecast',
+    'probability.pronostico-fuente': 'Calculated from the monthly series of',
+    'probability.proximo-mes-estimado': 'Next month ({mes}) estimated',
+    'probability.pendiente-mensual': 'Monthly slope',
+    'probability.confianza-del-ajuste': 'Fit confidence (R²)',
+    'probability.meses-analizados': 'Months analyzed',
+    'probability.ingresos-historicos': 'Historical revenue',
+    'probability.ingresos-proyectados': 'Projected revenue',
+    'probability.linea-azul-historico-linea-naranja-proyectado':
+      'Blue line: historical · dashed orange line: projection.',
+    'probability.fc-creciente':
+      'The trend is growing: the model projects an increase of {monto} per month.',
+    'probability.fc-decreciente':
+      'The trend is declining: the model projects a drop of {monto} per month.',
+    'probability.fc-estable': 'The trend is stable: the model does not project a relevant monthly change.',
+    'probability.metodo-regresion-lineal':
+      'Method: ordinary least-squares linear regression over {n} months; projects the next {h} months. It is a statistical estimate, not a guarantee.',
+    'probability.pronostico-automatico': 'Automatic forecast',
     'probability.teorema-de-bayes-automatico': 'Automatic Bayes theorem',
     'probability.p-a-previa': 'P(A) prior',
     'probability.de-n-ventas': 'of {n} sales →',

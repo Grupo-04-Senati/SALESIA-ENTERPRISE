@@ -677,3 +677,100 @@ export function getSystemVariables(filters: Partial<AnalyticsFilters> = {}): Arr
     })),
   ]
 }
+
+/* ------------------------------------------------------------------
+   Predicciones (regresión lineal por mínimos cuadrados)
+   Pronóstico automático de ingresos: el sistema ajusta una recta a la
+   serie mensual histórica y proyecta los próximos meses. No requiere
+   datos escritos por el usuario.
+   ------------------------------------------------------------------ */
+
+export interface ForecastPoint {
+  mes: string
+  /** Ingresos históricos (null en los meses proyectados). */
+  ingresos: number | null
+  /** Serie de proyección (null en los históricos, con puente en el último). */
+  proyectado: number | null
+}
+
+export interface RevenueForecast {
+  puntos: ForecastPoint[]
+  /** Inclinación de la recta: cambio de ingresos por mes (S/). */
+  pendiente: number
+  r2: number
+  mesesAnalizados: number
+  horizonte: number
+  /** Próximo mes proyectado. */
+  proximo: { mes: string; ingresos: number }
+  interpretacion: string
+}
+
+/**
+ * Pronóstico de ingresos de los próximos `horizonte` meses por regresión
+ * lineal (mínimos cuadrados) sobre la serie mensual. Devuelve null si
+ * hay menos de 3 meses (RN-40: la recta necesita un mínimo de puntos).
+ */
+export function forecastMonthlyRevenue(
+  filters: Partial<AnalyticsFilters> = {},
+  horizonte = 3,
+): RevenueForecast | null {
+  const serie = getMonthly(filters)
+  const n = serie.length
+  if (n < 3) return null
+
+  const xs = serie.map((_, index) => index)
+  const ys = serie.map((point) => point.ingresos)
+  const sumX = xs.reduce((s, x) => s + x, 0)
+  const sumY = ys.reduce((s, y) => s + y, 0)
+  const sumXY = xs.reduce((s, x, index) => s + x * ys[index], 0)
+  const sumXX = xs.reduce((s, x) => s + x * x, 0)
+  const denom = n * sumXX - sumX * sumX
+  if (denom === 0) return null
+
+  const pendiente = (n * sumXY - sumX * sumY) / denom
+  const intercepto = (sumY - pendiente * sumX) / n
+  const mediaY = sumY / n
+  const ssTot = ys.reduce((s, y) => s + (y - mediaY) ** 2, 0)
+  const ssRes = ys.reduce((s, y, index) => s + (y - (intercepto + pendiente * index)) ** 2, 0)
+  const r2 = ssTot > 0 ? Math.max(0, Math.min(1, 1 - ssRes / ssTot)) : 0
+
+  const umbral = Math.max(Math.abs(mediaY) * 0.05, 1)
+  const interpretacion =
+    pendiente > umbral
+      ? 'probability.fc-creciente'
+      : pendiente < -umbral
+        ? 'probability.fc-decreciente'
+        : 'probability.fc-estable'
+
+  const proyectados: Array<{ mes: string; ingresos: number }> = []
+  const base = new Date()
+  base.setDate(1)
+  for (let step = 1; step <= horizonte; step++) {
+    const date = new Date(base)
+    date.setMonth(base.getMonth() + step)
+    proyectados.push({
+      mes: `${MONTH_NAMES[date.getMonth()]} ${String(date.getFullYear()).slice(2)}`,
+      ingresos: round2(Math.max(0, intercepto + pendiente * (n - 1 + step))),
+    })
+  }
+
+  const puntos: ForecastPoint[] = [
+    ...serie.map((point, index) => ({
+      mes: point.mes,
+      ingresos: point.ingresos,
+      // puente: el último histórico inicia la recta de proyección
+      proyectado: index === n - 1 ? point.ingresos : null,
+    })),
+    ...proyectados.map((point) => ({ mes: point.mes, ingresos: null, proyectado: point.ingresos })),
+  ]
+
+  return {
+    puntos,
+    pendiente: round2(pendiente),
+    r2: round2(r2),
+    mesesAnalizados: n,
+    horizonte,
+    proximo: proyectados[0],
+    interpretacion,
+  }
+}

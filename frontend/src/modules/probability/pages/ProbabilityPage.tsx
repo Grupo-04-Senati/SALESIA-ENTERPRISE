@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, ListChecks, Percent } from 'lucide-react'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Activity, ListChecks, Percent, TrendingUp } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import DataTable, { TableRow, TableCell } from '@/components/tables/DataTable'
@@ -10,7 +11,7 @@ import MediaChart from '@/components/charts/MediaChart'
 import MedianChart from '@/components/charts/MedianChart'
 import BayesForm from '../components/BayesForm'
 import { formatCurrency, formatNumber, formatPercent } from '@/utils/formatters'
-import { compareMeanMedian } from '@/data/analytics'
+import { CHART_AXIS, CHART_GRID, compareMeanMedian, forecastMonthlyRevenue } from '@/data/analytics'
 import {
   getBayesScenarios,
   getStatisticalDatasets,
@@ -37,6 +38,7 @@ import type { AnalysisRecord } from '@/types/statistics'
 const TAB_ITEMS = [
   { id: 'media', label: 'probability.media-y-mediana' },
   { id: 'bayes', label: 'probability.bayes' },
+  { id: 'predicciones', label: 'probability.predicciones' },
   { id: 'variables', label: 'probability.variables' },
   { id: 'historial', label: 'probability.historial' },
 ]
@@ -92,6 +94,7 @@ export default function ProbabilityPage() {
   const datasets = useMemo(() => getStatisticalDatasets(filters), [filters, version])
   const scenarios = useMemo(() => getBayesScenarios(), [version])
   const variables = useMemo(() => getSystemVariables(filters), [filters, version])
+  const forecast = useMemo(() => forecastMonthlyRevenue(filters), [filters, version])
 
   const dataset = datasets.find((entry) => entry.id === datasetId) ?? datasets[0]
   const scenario = scenarios.find((entry) => entry.id === scenarioId) ?? scenarios[0]
@@ -157,8 +160,15 @@ export default function ProbabilityPage() {
         result: `P(A|B) = ${posterior.posterior}`,
       })
     }
+    if (forecast) {
+      registerAnalysis({
+        kind: 'prediccion',
+        label: `${t('probability.pronostico-automatico')} · ${forecast.proximo.mes}`,
+        result: formatCurrency(forecast.proximo.ingresos),
+      })
+    }
     setHistory(listAnalyses())
-  }, [estadistico, posterior, dataset, scenario, version])
+  }, [estadistico, posterior, forecast, dataset, scenario, version])
 
   const faltaDatosMedia = !estadistico
   const faltaDatosBayes = !posterior
@@ -360,6 +370,109 @@ export default function ProbabilityPage() {
           </section>
         </>
           )
+        )}
+      </TabPanel>
+
+      {/* Predicciones: regresión lineal automática sobre ingresos mensuales */}
+      <TabPanel tabId="predicciones" active={tab === 'predicciones'}>
+        {!forecast ? (
+          <Rn40Message />
+        ) : (
+          <>
+            <section className="card space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp aria-hidden="true" className="h-5 w-5 text-primary" />
+                  <h2 className="text-h4 text-gray-800">{t('probability.pronostico-de-ingresos-automatico')}</h2>
+                </div>
+                <span className="text-caption text-gray-500">
+                  {t('probability.pronostico-fuente')}{' '}
+                  <Link to="/ventas" className="font-medium text-primary hover:underline">
+                    {t('probability.ver-ventas')}
+                  </Link>
+                </span>
+              </div>
+
+              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  {
+                    label: t('probability.proximo-mes-estimado', { mes: forecast.proximo.mes }),
+                    value: formatCurrency(forecast.proximo.ingresos),
+                    tone: 'text-primary',
+                  },
+                  {
+                    label: t('probability.pendiente-mensual'),
+                    value: `${forecast.pendiente >= 0 ? '+' : '−'}${formatCurrency(Math.abs(forecast.pendiente))}`,
+                    tone: forecast.pendiente >= 0 ? 'text-success-fg' : 'text-error-fg',
+                  },
+                  {
+                    label: t('probability.confianza-del-ajuste'),
+                    value: formatPercent(forecast.r2),
+                  },
+                  {
+                    label: t('probability.meses-analizados'),
+                    value: formatNumber(forecast.mesesAnalizados),
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-lg bg-gray-50 p-3">
+                    <dt className="text-caption text-gray-500">{item.label}</dt>
+                    <dd className={`text-body font-semibold text-gray-900 ${item.tone ?? ''}`}>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={forecast.puntos} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                    <CartesianGrid stroke={CHART_GRID} strokeDasharray="4 4" vertical={false} />
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fill: CHART_AXIS, fontSize: 11 }}
+                      axisLine={{ stroke: CHART_GRID }}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tick={{ fill: CHART_AXIS, fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value: number) => `${value.toFixed(0)}`}
+                    />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(Number(value))}
+                      contentStyle={{ background: '#FFFFFF', border: `1px solid ${CHART_GRID}`, borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ingresos"
+                      name={t('probability.ingresos-historicos')}
+                      stroke="#1E3A8A"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="proyectado"
+                      name={t('probability.ingresos-proyectados')}
+                      stroke="#F59E0B"
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      dot={{ r: 3, fill: '#F59E0B' }}
+                      connectNulls
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <p className="rounded-md bg-info-bg px-3 py-2 text-caption text-info-fg">
+                {t('probability.linea-azul-historico-linea-naranja-proyectado')} {t(forecast.interpretacion, {
+                  monto: formatCurrency(Math.abs(forecast.pendiente)),
+                })}{' '}
+                {t('probability.metodo-regresion-lineal', { n: forecast.mesesAnalizados, h: forecast.horizonte })}
+              </p>
+            </section>
+          </>
         )}
       </TabPanel>
 

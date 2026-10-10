@@ -104,7 +104,7 @@ export interface VariableClassification {
 /** Análisis registrado en el historial (RF-21). */
 export interface AnalysisRecord {
   id: number
-  kind: 'media' | 'mediana' | 'comparacion' | 'bayes' | 'variable'
+  kind: 'media' | 'mediana' | 'comparacion' | 'bayes' | 'variable' | 'prediccion'
   label: string
   result: string
   created_at: string
