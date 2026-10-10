@@ -6,6 +6,7 @@ Arquitectura: React → FastAPI → PostgreSQL (Supabase).
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request, status
@@ -70,10 +71,23 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 @app.exception_handler(Exception)
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception('Error no controlado en %s', request.url.path)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={'code': 'INTERNAL_ERROR', 'message': 'Error interno del servidor.'},
     )
+    # Este handler corre en ServerErrorMiddleware (fuera de CORSMiddleware):
+    # sin estas cabeceras el navegador reporta el 500 como un bloqueo CORS.
+    origin = request.headers.get('origin')
+    if origin:
+        allowed = origin in settings.cors_origin_list()
+        pattern = settings.cors_origin_regex_pattern()
+        if not allowed and pattern:
+            allowed = re.fullmatch(pattern, origin) is not None
+        if allowed:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Vary'] = 'Origin'
+    return response
 
 
 # ------------------------------------------------------------------ salud
