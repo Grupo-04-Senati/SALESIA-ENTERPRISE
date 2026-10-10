@@ -12,12 +12,13 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import client_ip
@@ -28,6 +29,7 @@ from app.core.security import create_customer_token, decode_token, hash_password
 from app.models.company import Company
 from app.models.customer import Customer
 from app.models.inventory import Inventory
+from app.models.pricing import ProductPromotion, Promotion
 from app.models.product import Product
 from app.models.quote import Quote
 from app.schemas.customer import CustomerCreate
@@ -72,7 +74,62 @@ def _company_id(db: Session) -> int:
     return company.id
 
 
-def _store_product(row: dict) -> dict:
+def _promotion_price(kind: str, value: float, sale_price: float) -> float:
+    if kind == 'percent':
+        clamped = min(max(value, 0.0), 100.0)
+        price = sale_price * (100.0 - clamped) / 100.0
+    else:
+        price = sale_price - value
+    return max(0.0, round(price, 2))
+
+
+def _active_promotions(
+    db: Session, company_id: int, product_ids: list[int], prices: dict[int, float]
+) -> dict[int, dict]:
+    """Promoción vigente por producto (gana el mayor descuento en dinero)."""
+    if not product_ids:
+        return {}
+    now = datetime.now(timezone.utc)
+
+    def _aware(value: datetime) -> datetime:
+        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+    rows = db.execute(
+        select(ProductPromotion.product_id, Promotion)
+        .join(Promotion, Promotion.id == ProductPromotion.promotion_id)
+        .where(
+            ProductPromotion.product_id.in_(product_ids),
+            Promotion.company_id == company_id,
+            Promotion.is_active.is_(True),
+            or_(Promotion.starts_at.is_(None), Promotion.starts_at <= now),
+            or_(Promotion.ends_at.is_(None), Promotion.ends_at >= now),
+        )
+    ).all()
+
+    best: dict[int, dict] = {}
+    for product_id, promo in rows:
+        starts = promo.starts_at
+        ends = promo.ends_at
+        if starts is not None and _aware(starts) > now:
+            continue
+        if ends is not None and _aware(ends) < now:
+            continue
+        sale_price = float(prices.get(product_id, 0.0))
+        price = _promotion_price(promo.kind, float(promo.value), sale_price)
+        payload = {
+            'name': promo.name,
+            'kind': promo.kind,
+            'value': float(promo.value),
+            'price': price,
+            'ends_at': ends.isoformat() if ends is not None else None,
+        }
+        current = best.get(product_id)
+        if current is None or price < current['price']:
+            best[product_id] = payload
+    return best
+
+
+def _store_product(row: dict, promotion: Optional[dict] = None) -> dict:
     """Versión pública del producto: sin costo y con slug de categoría."""
     category = row.get('category')
     return {
@@ -89,6 +146,7 @@ def _store_product(row: dict) -> dict:
         'current_stock': row['current_stock'],
         'unit': row['unit'],
         'status': row['status'],
+        'promotion': promotion,
     }
 
 
@@ -115,7 +173,15 @@ def store_products(
         db, company_id, q=q, status='active', category_id=category_id,
         page=page, page_size=page_size,
     )
-    result['items'] = [_store_product(item) for item in result['items']]
+    promotions = _active_promotions(
+        db,
+        company_id,
+        [item['id'] for item in result['items']],
+        {item['id']: item['sale_price'] for item in result['items']},
+    )
+    result['items'] = [
+        _store_product(item, promotions.get(item['id'])) for item in result['items']
+    ]
     return result
 
 
@@ -125,7 +191,8 @@ def store_product(product_id: int, db: Session = Depends(get_db)):
     row = product_service.get_product(db, company_id, product_id)
     if row['status'] != 'active':
         raise NotFound('Producto no encontrado.')
-    return _store_product(row)
+    promotion = _active_promotions(db, company_id, [row['id']], {row['id']: row['sale_price']})
+    return _store_product(row, promotion.get(row['id']))
 
 
 @router.get('/categories')
@@ -251,7 +318,8 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
     """Registra el pedido de la tienda: cotización + venta automática en SalesIA.
 
     Solo clientes con sesión pueden comprar (401 sin JWT). Los precios se
-    recalculan en servidor con el catálogo vigente (RN-11), ``tax_rate=0`` para
+    recalculan en servidor con el catálogo vigente (RN-11), incluida la
+    promoción activa del producto si existe, ``tax_rate=0`` para
     coincidir con el subtotal mostrado en la tienda y la cotización se convierte
     de inmediato en venta: valida stock (RN-10), lo descuenta con kardex y la
     venta queda en ``ventas`` para estadísticas.
@@ -273,11 +341,18 @@ def store_quote(payload: StoreQuoteCreate, request: Request, db: Session = Depen
     if missing:
         raise NotFound(f'Producto {missing[0]} no encontrado.')
 
+    promotions = _active_promotions(
+        db, company_id, product_ids, {row.id: float(row.price) for row in rows}
+    )
     items = [
         QuoteItemInput(
             product_id=item.product_id,
             quantity=item.quantity,
-            unit_price=float(by_id[item.product_id].price),
+            unit_price=(
+                promotions[item.product_id]['price']
+                if item.product_id in promotions
+                else float(by_id[item.product_id].price)
+            ),
             discount=0,
         )
         for item in payload.items

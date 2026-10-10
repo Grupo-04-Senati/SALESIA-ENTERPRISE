@@ -126,7 +126,10 @@ def test_store_quote_crea_cotizacion_y_venta_con_stock(client, admin_headers):
     assert quote['customer_name'] == 'Cliente Tienda Web'
     assert quote['item_count'] == 1
     assert quote['tax'] == 0
-    assert quote['subtotal'] == round(target['sale_price'] * qty, 2)
+    precio_unitario = (
+        target['promotion']['price'] if target.get('promotion') else target['sale_price']
+    )
+    assert quote['subtotal'] == round(precio_unitario * qty, 2)
     assert quote['total'] == quote['subtotal']
 
     assert quote['status'] == 'converted'
@@ -145,7 +148,7 @@ def test_store_quote_crea_cotizacion_y_venta_con_stock(client, admin_headers):
     detail = client.get(
         f"/api/v1/quotes/{quote['id']}", headers=admin_headers
     ).json()
-    assert detail['items'][0]['unit_price'] == target['sale_price']
+    assert detail['items'][0]['unit_price'] == precio_unitario
     assert detail['status'] == 'converted'
 
     cancelled = client.post(
@@ -660,3 +663,47 @@ def test_store_pago_simulado_pasarela(client, admin_headers):
         assert limpieza.status_code == 200, limpieza.text
     restored = client.get(f"/api/v1/store/products/{target['id']}").json()['current_stock']
     assert restored == stock_before
+
+
+def test_store_promociones_publicas_en_el_catalogo(client):
+    all_items = client.get('/api/v1/store/products?page_size=100').json()['items']
+    assert all('promotion' in item for item in all_items)
+    con_promo = [item for item in all_items if item['promotion']]
+    assert con_promo, 'el catálogo expone las promociones vigentes'
+
+    percent = next((i for i in con_promo if i['promotion']['kind'] == 'percent'), None)
+    if percent is not None:
+        esperado = round(percent['sale_price'] * (100 - percent['promotion']['value']) / 100, 2)
+        assert abs(percent['promotion']['price'] - esperado) < 0.01
+        assert percent['promotion']['price'] < percent['sale_price']
+        detalle = client.get(f"/api/v1/store/products/{percent['id']}").json()
+        assert detalle['promotion'] == percent['promotion']
+        assert detalle['promotion']['name']
+
+    fixed = next((i for i in con_promo if i['promotion']['kind'] == 'fixed'), None)
+    if fixed is not None:
+        esperado = max(0.0, round(fixed['sale_price'] - fixed['promotion']['value'], 2))
+        assert abs(fixed['promotion']['price'] - esperado) < 0.01
+
+    sin_promo = next((i for i in all_items if not i['promotion']), None)
+    if sin_promo is not None:
+        detalle = client.get(f"/api/v1/store/products/{sin_promo['id']}").json()
+        assert detalle['promotion'] is None
+
+
+def test_store_oferta_se_aplica_en_el_pedido(client):
+    all_items = client.get('/api/v1/store/products?page_size=100').json()['items']
+    en_oferta = [i for i in all_items if i['promotion'] and i['current_stock'] >= 1]
+    assert en_oferta, 'hay productos en oferta con stock'
+    target = max(en_oferta, key=lambda i: i['current_stock'])
+
+    auth = _store_auth(client, 'Comprador de Ofertas', 'ofertas-cliente@demo.pe')
+    response = _quote(client, target, auth=auth, quantity=1)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    unit_price = float(body['items'][0]['unit_price'])
+    assert abs(unit_price - target['promotion']['price']) < 0.01
+    assert abs(float(body['total']) - target['promotion']['price']) < 0.01, (
+        'tax_rate=0: el total del pedido en oferta es el precio promocionado'
+    )
+    assert body['items'][0]['product_id'] == target['id']
