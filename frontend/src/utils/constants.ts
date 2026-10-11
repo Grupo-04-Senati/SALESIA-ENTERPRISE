@@ -90,9 +90,20 @@ export const ALL_MODULES = '*'
 export const ROLE_MODULES: Record<string, string[] | typeof ALL_MODULES> = {
   Admin: ALL_MODULES,
   Gerente: ALL_MODULES,
-  Vendedor: ['/dashboard', '/ventas', '/clientes', '/cotizaciones', '/devoluciones', '/productos', '/precios'],
-  Analista: ['/dashboard', '/analytics', '/probabilidad', '/insights', '/reportes', '/clientes', '/productos'],
-  Almacén: ['/dashboard', '/inventario', '/compras', '/productos'],
+  Vendedor: ['/dashboard', '/ventas', '/clientes', '/cotizaciones', '/devoluciones', '/productos', '/precios', '/configuracion'],
+  Analista: ['/dashboard', '/analytics', '/probabilidad', '/insights', '/reportes', '/clientes', '/productos', '/configuracion'],
+  Almacén: ['/dashboard', '/inventario', '/compras', '/productos', '/configuracion'],
+}
+
+/**
+ * Submódulos por defecto de cada rol (fallback sin matriz guardada).
+ * Todos pueden abrir Configuración, pero los que no son Admin/Gerente solo
+ * ven «Mi perfil» hasta que el Admin les amplíe la matriz en Roles.
+ */
+export const ROLE_SUBMODULES: Record<string, Record<string, string[]>> = {
+  Vendedor: { '/configuracion': ['perfil'] },
+  Analista: { '/configuracion': ['perfil'] },
+  Almacén: { '/configuracion': ['perfil'] },
 }
 
 /** Submódulos (pestañas/paneles) filtrables por módulo — espejo de core/permissions.py. */
@@ -160,7 +171,8 @@ export function canAccessModule(
 
 /**
  * ¿Puede ver esta pestaña/panel del módulo? Si el rol no tiene submódulos
- * configurados para la ruta, se permite todo lo que el módulo ya habilita.
+ * configurados para la ruta, se usa ROLE_SUBMODULES (defaults por rol);
+ * si tampoco hay, se permite todo lo que el módulo ya habilita.
  */
 export function canSubmodule(
   scope: AccessScope | string | undefined | null,
@@ -172,7 +184,9 @@ export function canSubmodule(
   const modules = resolveModules(normalized)
   if (modules === ALL_MODULES) return true
   if (!modules.includes(path)) return false
-  const subs = normalized?.submodules?.[path]
+  const subs =
+    normalized?.submodules?.[path] ??
+    (normalized?.role ? ROLE_SUBMODULES[normalized.role]?.[path] : undefined)
   if (!subs || subs.length === 0) return true
   return subs.includes(submodule)
 }

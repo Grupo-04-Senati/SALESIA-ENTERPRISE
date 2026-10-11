@@ -19,6 +19,7 @@ import {
   MODULE_SUBMODULES,
   NAV_ITEMS,
   ROLE_MODULES,
+  ROLE_SUBMODULES,
   type NavItem,
 } from '@/utils/constants'
 
@@ -43,9 +44,10 @@ function modulesOf(role: RoleRecord): string[] {
 }
 
 function draftOf(role: RoleRecord): Draft {
-  const stored = role.permissions?.submodules ?? {}
+  const stored = role.permissions?.submodules
+  const source = stored ?? ROLE_SUBMODULES[role.name] ?? {}
   const submodules: Record<string, Set<string>> = {}
-  for (const [path, subs] of Object.entries(stored)) {
+  for (const [path, subs] of Object.entries(source)) {
     submodules[path] = new Set(subs)
   }
   return { modules: new Set(modulesOf(role)), submodules }
