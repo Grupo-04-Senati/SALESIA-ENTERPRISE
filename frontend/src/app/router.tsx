@@ -106,7 +106,7 @@ function ModuleGuard({ path, children }: { path: string; children: ReactNode }) 
   const navigate = useNavigate()
   const { t } = useLang()
 
-  if (!canAccessModule(user?.role, path)) {
+  if (!canAccessModule(user, path)) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <ShieldAlert aria-hidden="true" className="h-12 w-12 text-warning" />

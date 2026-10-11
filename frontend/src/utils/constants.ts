@@ -82,8 +82,10 @@ export const GROUP_LABELS_EN: Record<NavItem['group'], string> = {
 export const ALL_MODULES = '*'
 
 /**
- * Módulos asignados a cada rol (sidebar + guard de rutas).
- * Admin y Gerente ven todo; los demás solo sus módulos.
+ * Módulos por defecto de cada rol: se usan como fallback mientras el rol no
+ * tenga matriz guardada en el backend (Role.permissions). La fuente de verdad
+ * en runtime es `user.modules`, que llega de GET /auth/me y editable en
+ * Configuración → Roles (PUT /roles/{id}/permissions).
  */
 export const ROLE_MODULES: Record<string, string[] | typeof ALL_MODULES> = {
   Admin: ALL_MODULES,
@@ -93,22 +95,95 @@ export const ROLE_MODULES: Record<string, string[] | typeof ALL_MODULES> = {
   Almacén: ['/dashboard', '/inventario', '/compras', '/productos'],
 }
 
+/** Submódulos (pestañas/paneles) filtrables por módulo — espejo de core/permissions.py. */
+export interface SubmoduleDef {
+  id: string
+  label: string
+  labelEn: string
+}
+
+export const MODULE_SUBMODULES: Record<string, SubmoduleDef[]> = {
+  '/inventario': [
+    { id: 'existencias', label: 'Existencias', labelEn: 'Stock' },
+    { id: 'movimientos', label: 'Movimientos', labelEn: 'Movements' },
+    { id: 'conteos', label: 'Conteos', labelEn: 'Counts' },
+    { id: 'almacenes', label: 'Almacenes', labelEn: 'Warehouses' },
+    { id: 'sucursales', label: 'Sucursales', labelEn: 'Branches' },
+  ],
+  '/productos': [
+    { id: 'productos', label: 'Productos', labelEn: 'Products' },
+    { id: 'categorias', label: 'Categorías', labelEn: 'Categories' },
+    { id: 'unidades', label: 'Unidades', labelEn: 'Units' },
+  ],
+  '/configuracion': [
+    { id: 'perfil', label: 'Perfil', labelEn: 'Profile' },
+    { id: 'parametros', label: 'Parámetros', labelEn: 'Parameters' },
+    { id: 'usuarios', label: 'Usuarios', labelEn: 'Users' },
+    { id: 'roles', label: 'Roles', labelEn: 'Roles' },
+    { id: 'sistema', label: 'Sistema', labelEn: 'System' },
+    { id: 'notificaciones', label: 'Notificaciones', labelEn: 'Notifications' },
+    { id: 'exportaciones', label: 'Exportaciones', labelEn: 'Exports' },
+    { id: 'reportes', label: 'Reportes', labelEn: 'Reports' },
+  ],
+}
+
+/** Lo mínimo que necesitan las funciones de acceso: rol + matriz del backend. */
+export interface AccessScope {
+  role?: string
+  modules?: string[] | null
+  submodules?: Record<string, string[]> | null
+}
+
 /**
- * ¿El rol puede ver este módulo?
- * Rol desconocido o sin rol → todo (evita bloquear cuentas nuevas).
+ * Módulos efectivos del usuario: la matriz dinámica del backend si existe;
+ * si no, los defaults por nombre de rol. Rol desconocido → todo (evita
+ * bloquear cuentas nuevas).
  */
-export function canAccessModule(role: string | undefined, path: string): boolean {
-  const modules = role ? ROLE_MODULES[role] : undefined
-  if (modules === undefined || modules === ALL_MODULES) return true
+export function resolveModules(scope: AccessScope | null | undefined): string[] | typeof ALL_MODULES {
+  if (!scope) return ALL_MODULES
+  if (Array.isArray(scope.modules)) return scope.modules
+  const fallback = scope.role ? ROLE_MODULES[scope.role] : undefined
+  return fallback ?? ALL_MODULES
+}
+
+/** ¿Puede ver este módulo? Acepta el usuario completo o solo el nombre del rol. */
+export function canAccessModule(
+  scope: AccessScope | string | undefined | null,
+  path: string,
+): boolean {
+  const normalized: AccessScope | undefined =
+    typeof scope === 'string' ? { role: scope } : scope ?? undefined
+  const modules = resolveModules(normalized)
+  if (modules === ALL_MODULES) return true
   return modules.includes(path)
 }
 
-/** Módulos visibles para el rol (null = todos). */
-export function visibleModules(role: string | undefined): NavItem[] {
-  if (!role || ROLE_MODULES[role] === undefined || ROLE_MODULES[role] === ALL_MODULES) {
-    return NAV_ITEMS
-  }
-  return NAV_ITEMS.filter((item) => canAccessModule(role, item.path))
+/**
+ * ¿Puede ver esta pestaña/panel del módulo? Si el rol no tiene submódulos
+ * configurados para la ruta, se permite todo lo que el módulo ya habilita.
+ */
+export function canSubmodule(
+  scope: AccessScope | string | undefined | null,
+  path: string,
+  submodule: string,
+): boolean {
+  const normalized: AccessScope | undefined =
+    typeof scope === 'string' ? { role: scope } : scope ?? undefined
+  const modules = resolveModules(normalized)
+  if (modules === ALL_MODULES) return true
+  if (!modules.includes(path)) return false
+  const subs = normalized?.submodules?.[path]
+  if (!subs || subs.length === 0) return true
+  return subs.includes(submodule)
+}
+
+/** Módulos visibles (sidebar + launcher). */
+export function visibleModules(scope: AccessScope | string | undefined | null): NavItem[] {
+  const normalized: AccessScope | undefined =
+    typeof scope === 'string' ? { role: scope } : scope ?? undefined
+  const modules = resolveModules(normalized)
+  if (modules === ALL_MODULES) return NAV_ITEMS
+  return NAV_ITEMS.filter((item) => modules.includes(item.path))
 }
 
 /** Título de la topbar por ruta (txt §7.1) */

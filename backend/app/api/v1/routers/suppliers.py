@@ -13,7 +13,7 @@ from app.services import supplier_service
 
 router = APIRouter(prefix='/suppliers', tags=['suppliers'])
 
-read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista')
+read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista', 'Almacén')
 write_roles = ('Admin', 'Gerente')
 
 

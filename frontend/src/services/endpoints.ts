@@ -22,6 +22,7 @@ export const ENDPOINTS = {
   users: '/api/v1/users',
   userStatus: (id: number) => `/api/v1/users/${id}/status`,
   roles: '/api/v1/roles',
+  rolePermissions: (id: number) => `/api/v1/roles/${id}/permissions`,
 
   // §2.3 Clientes
   customers: '/api/v1/customers',

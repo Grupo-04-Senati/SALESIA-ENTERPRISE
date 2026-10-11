@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import { useLang } from '@/i18n/i18n'
+import { useAuth } from '@/hooks/useAuth'
+import { canSubmodule } from '@/utils/constants'
 import ProductsPage from './ProductsPage'
 import CategoriesPage from '@/modules/categories/pages/CategoriesPage'
 import UnitsPanel from '@/modules/inventory/components/UnitsPanel'
@@ -9,16 +11,25 @@ import UnitsPanel from '@/modules/inventory/components/UnitsPanel'
  * Módulo Catálogo: pestañas de Productos, Categorías y Unidades de medida.
  * Antes eran tres nav-items separados; se unen aquí para simplificar el menú
  * (categorías y unidades son catálogos auxiliares de productos).
+ * Las pestañas visibles respetan los submódulos del rol (Configuración → Roles).
  */
 export default function CatalogPage() {
   const { t } = useLang()
+  const { user } = useAuth()
   const [tab, setTab] = useState('productos')
 
   const TAB_ITEMS = [
     { id: 'productos', label: t('products.tab-productos') },
     { id: 'categorias', label: t('products.tab-categorias') },
     { id: 'unidades', label: t('products.tab-unidades') },
-  ]
+  ].filter((item) => canSubmodule(user, '/productos', item.id))
+
+  // Si el rol no puede ver la pestaña activa, se vuelve a la primera permitida.
+  useEffect(() => {
+    if (TAB_ITEMS.length > 0 && !TAB_ITEMS.some((item) => item.id === tab)) {
+      setTab(TAB_ITEMS[0].id)
+    }
+  }, [TAB_ITEMS, tab])
 
   return (
     <div className="space-y-6">

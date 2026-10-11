@@ -54,7 +54,7 @@ export default function LauncherPage() {
   }, [lang])
 
   const groupLabels = lang === 'en' ? GROUP_LABELS_EN : GROUP_LABELS
-  const visible = visibleModules(user?.role)
+  const visible = visibleModules(user)
   const q = query.trim().toLowerCase()
   const filtered = q
     ? visible.filter(

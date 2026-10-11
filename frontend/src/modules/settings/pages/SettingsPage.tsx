@@ -23,6 +23,7 @@ import Tabs, { TabPanel } from '@/components/ui/Tabs'
 import NotificationsPanel from '../components/NotificationsPanel'
 import ExportsPanel from '../components/ExportsPanel'
 import ReportsPanel from '../components/ReportsPanel'
+import RolesPanel from '../components/RolesPanel'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { useLang } from '@/i18n/i18n'
@@ -47,6 +48,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getState } from '@/data/store'
 import { hydrateStore } from '@/services/hydrate'
 import { API_BASE } from '@/services/api'
+import { canSubmodule } from '@/utils/constants'
 import {
   cleanText,
   email as emailRule,
@@ -67,6 +69,7 @@ const TAB_ITEMS = [
   { id: 'perfil', label: 'settings.mi-perfil' },
   { id: 'parametros', label: 'settings.parametros' },
   { id: 'usuarios', label: 'settings.usuarios-y-roles' },
+  { id: 'roles', label: 'settings.roles' },
   { id: 'sistema', label: 'settings.sistema' },
   { id: 'notificaciones', label: 'settings.notificaciones' },
   { id: 'exportaciones', label: 'settings.exportaciones' },
@@ -173,10 +176,17 @@ export default function SettingsPage() {
       setTabState((current) => (current === requested ? current : requested))
     }
   }, [searchParams])
-  const tabs =
-    user?.role === 'Admin'
-      ? TAB_ITEMS
-      : TAB_ITEMS.filter((item) => item.id !== 'usuarios')
+  // Usuarios y Roles son solo Admin; el resto respeta los submódulos del rol.
+  const tabs = TAB_ITEMS.filter((item) => {
+    if (item.id === 'usuarios' || item.id === 'roles') {
+      return user?.role === 'Admin'
+    }
+    return canSubmodule(user, '/configuracion', item.id)
+  })
+  // Si la URL pide una pestaña que el rol no puede ver, se vuelve al perfil.
+  useEffect(() => {
+    if (!tabs.some((item) => item.id === tab)) setTabState('perfil')
+  }, [tabs, tab])
 
   // Alta de usuarios (POST /users, solo Admin).
   const [userModalOpen, setUserModalOpen] = useState(false)
@@ -729,6 +739,11 @@ export default function SettingsPage() {
           {ROLES.join(' · ')}
         </p>
       </section>
+      </TabPanel>
+
+      {/* Roles: matriz de módulos y submódulos por rol (solo Admin) */}
+      <TabPanel tabId="roles" active={tab === 'roles'}>
+        <RolesPanel />
       </TabPanel>
 
       {/* Sistema: paleta, datos y estado */}

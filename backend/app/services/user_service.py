@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import role_display, role_key
 from app.core.exceptions import Conflict, Forbidden, NotFound, ValidationAppError
+from app.core.permissions import MODULE_PATHS, SUBMODULES
 from app.core.security import hash_password
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.auth import UserCreate, UserUpdate
+from app.schemas.auth import RolePermissionsUpdate, UserCreate, UserUpdate
 from app.services.audit_service import write_audit
 from app.utils.helpers import clamp_page, paginate
 from app.utils.validators import valid_email
@@ -62,6 +63,59 @@ def _resolve_role(db: Session, role: str) -> Role:
     if row is None:
         raise ValidationAppError(f'El rol "{role}" no existe.')
     return row
+
+
+def update_role_permissions(
+    db: Session, role_id: int, payload: RolePermissionsUpdate, actor=None
+) -> dict:
+    """Guarda los módulos/submódulos visibles para un rol (RF-02 · UI de Roles).
+
+    El rol Admin siempre conserva acceso total y no es editable. El resto de
+    roles guardan su matriz en Role.permissions; el frontend la consume desde
+    GET /auth/me y, si el campo está vacío, usa los defaults hardcodeados.
+    """
+    role = db.get(Role, role_id)
+    if role is None:
+        raise NotFound('El rol no existe.')
+    if role_key(role.name) == 'admin':
+        raise ValidationAppError('El rol Admin siempre tiene acceso total; no se puede editar.')
+
+    modules = [path.strip() for path in payload.modules]
+    if any(not path for path in modules):
+        raise ValidationAppError('Ruta de módulo vacía.')
+    if len(set(modules)) != len(modules):
+        raise ValidationAppError('Hay módulos duplicados.')
+    unknown = sorted(set(modules) - MODULE_PATHS)
+    if unknown:
+        raise ValidationAppError(f'Módulos desconocidos: {", ".join(unknown)}.')
+
+    cleaned: dict[str, list[str]] = {}
+    for path, subs in (payload.submodules or {}).items():
+        if path not in modules:
+            raise ValidationAppError(f'Submódulos pedidos de un módulo sin marcar: {path}.')
+        allowed = SUBMODULES.get(path, frozenset())
+        bad = sorted({sub for sub in subs if sub not in allowed})
+        if bad:
+            raise ValidationAppError(f'Submódulos desconocidos en {path}: {", ".join(bad)}.')
+        cleaned[path] = sorted(set(subs))
+
+    role.permissions = {'modules': sorted(set(modules)), 'submodules': cleaned}
+    db.flush()
+    write_audit(
+        db,
+        user=actor,
+        action='role.permissions',
+        entity='role',
+        entity_id=role.id,
+        detail={'role': role_display(role.name), 'modules': role.permissions['modules']},
+    )
+    db.commit()
+    return {
+        'id': role.id,
+        'name': role_display(role.name),
+        'description': role.description,
+        'permissions': role.permissions,
+    }
 
 
 def create_user(db: Session, company_id: int, payload: UserCreate, actor=None) -> dict:

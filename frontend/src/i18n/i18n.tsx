@@ -42,6 +42,7 @@ const baseES: Dict = {
   'topbar.themeLight': 'Modo claro',
   'topbar.prank': 'Modo oculto (tecla A)',
   'topbar.prankOff': 'Desactivar modo oculto',
+  'topbar.settings': 'Configuración',
   'launcher.greet': 'Hola',
   'launcher.lead':
     'Elige un módulo para empezar. Al entrar verás tu barra lateral con todo lo que te corresponde.',
@@ -86,6 +87,7 @@ const baseEN: Dict = {
   'topbar.themeLight': 'Light mode',
   'topbar.prank': 'Hidden mode (press A)',
   'topbar.prankOff': 'Disable hidden mode',
+  'topbar.settings': 'Settings',
   'launcher.greet': 'Hello',
   'launcher.lead': 'Pick a module to get started. Inside, your sidebar shows everything assigned to you.',
   'launcher.kpiMonth': 'Sales this month',

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import company_id_of, require_role
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.auth import StatusPatch, UserCreate, UserUpdate
+from app.schemas.auth import RolePermissionsUpdate, StatusPatch, UserCreate, UserUpdate
 from app.services import user_service
 
 router = APIRouter(tags=['users'])
@@ -70,3 +70,14 @@ def delete_user(
 @router.get('/roles')
 def list_roles(db: Session = Depends(get_db), _: User = Depends(admin_only)):
     return user_service.list_roles(db)
+
+
+@router.put('/roles/{role_id}/permissions')
+def update_role_permissions(
+    role_id: int,
+    payload: RolePermissionsUpdate,
+    db: Session = Depends(get_db),
+    actor: User = Depends(admin_only),
+):
+    """Define los módulos y submódulos visibles para un rol (no Admin)."""
+    return user_service.update_role_permissions(db, role_id, payload, actor=actor)

@@ -29,6 +29,25 @@ _MAX_ATTEMPTS = 5
 _LOCK_SECONDS = 15 * 60
 
 
+def _session_user(user: User) -> dict:
+    """Payload del usuario en login/refresh/me, con los permisos del rol.
+
+    ``modules``/``submodules`` provienen de Role.permissions (JSONB); si el
+    rol nunca fue configurado llegan como None/vacío y el frontend usa sus
+    defaults hardcodeados por nombre de rol.
+    """
+    permissions = user.role.permissions or {}
+    return {
+        'id': user.id,
+        'name': user.full_name,
+        'email': user.email,
+        'role': role_display(user.role.name),
+        'avatar': user.avatar,
+        'modules': permissions.get('modules'),
+        'submodules': permissions.get('submodules') or {},
+    }
+
+
 def _register_failure(db: Session, email: str, ip: Optional[str]) -> None:
     db.add(LoginAttempt(email=email.lower().strip(), success=False, ip=ip))
 
@@ -78,13 +97,7 @@ def login(db: Session, email: str, password: str, ip: Optional[str] = None) -> d
         ),
         'token_type': 'bearer',
         'expires_in': settings.access_token_expire_minutes * 60,
-        'user': {
-            'id': user.id,
-            'name': user.full_name,
-            'email': user.email,
-            'role': role_display(role),
-            'avatar': user.avatar,
-        },
+        'user': _session_user(user),
     }
 
 
@@ -111,25 +124,12 @@ def refresh(db: Session, refresh_token: str, ip: Optional[str] = None) -> dict:
         ),
         'token_type': 'bearer',
         'expires_in': settings.access_token_expire_minutes * 60,
-        'user': {
-            'id': user.id,
-            'name': user.full_name,
-            'email': user.email,
-            'role': role_display(role),
-            'avatar': user.avatar,
-        },
+        'user': _session_user(user),
     }
 
 
 def me(user: User) -> dict:
-    return {
-        'id': user.id,
-        'name': user.full_name,
-        'email': user.email,
-        'role': role_display(user.role.name),
-        'company_id': user.company_id,
-        'avatar': user.avatar,
-    }
+    return {**_session_user(user), 'company_id': user.company_id}
 
 
 def update_profile(db: Session, user: User, payload) -> dict:

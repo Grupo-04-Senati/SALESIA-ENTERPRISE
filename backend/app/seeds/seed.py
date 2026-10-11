@@ -667,10 +667,12 @@ def seed(db: Session, force: bool = False) -> None:
         initial = stocks[key] + sold_units.get(key, 0)
         remaining[key] = initial
         db.add(Inventory(product_id=product.id, stock=stocks[key], min_stock=product.min_stock))
-        db.add(InventoryMovement(
-            product_id=product.id, movement_type='in', quantity=initial,
-            reason='Stock inicial (seed)', resulting_stock=initial, created_by=None,
-        ))
+        # quantity > 0 (ck_movements_quantity_positive): sin stock inicial no hay movimiento.
+        if initial > 0:
+            db.add(InventoryMovement(
+                product_id=product.id, movement_type='in', quantity=initial,
+                reason='Stock inicial (seed)', resulting_stock=initial, created_by=None,
+            ))
     db.flush()
 
     year_counters: Dict[int, int] = {}

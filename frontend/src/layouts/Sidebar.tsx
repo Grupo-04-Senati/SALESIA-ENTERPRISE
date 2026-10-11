@@ -22,7 +22,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
   const { lang, t } = useLang()
-  const items = visibleModules(user?.role)
+  const items = visibleModules(user)
 
   // null = seguir el grupo de la ruta activa; '__none__' = todo colapsado.
   const [expandedOverride, setExpandedOverride] = useState<string | null>(null)

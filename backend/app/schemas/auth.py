@@ -49,6 +49,13 @@ class RoleOut(NormalizedModel):
     permissions: dict = {}
 
 
+class RolePermissionsUpdate(NormalizedModel):
+    """Módulos y submódulos visibles para un rol (Role.permissions JSONB)."""
+
+    modules: list[str] = Field(min_length=1, max_length=32)
+    submodules: dict[str, list[str]] = Field(default_factory=dict)
+
+
 class UserManagedOut(UserOut):
     status: ActiveStatus = 'active'
 

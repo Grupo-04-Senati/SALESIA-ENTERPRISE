@@ -150,3 +150,33 @@ export async function updateManagedUser(
     body: JSON.stringify(payload),
   })
 }
+
+// ------------------------------------------------------------------ roles
+
+/** Rol con su matriz de permisos (GET /roles, solo Admin). */
+export interface RoleRecord {
+  id: number
+  name: string
+  description?: string | null
+  permissions: {
+    modules?: string[]
+    submodules?: Record<string, string[]>
+  }
+}
+
+export async function listRoles(): Promise<RoleRecord[]> {
+  const page = await apiFetch<{ items: RoleRecord[] }>(ENDPOINTS.roles)
+  return page.items
+}
+
+/** PUT /roles/{id}/permissions — módulos y submódulos visibles para el rol. */
+export async function updateRolePermissions(
+  roleId: number,
+  modules: string[],
+  submodules: Record<string, string[]>,
+): Promise<RoleRecord> {
+  return apiFetch<RoleRecord>(ENDPOINTS.rolePermissions(roleId), {
+    method: 'PUT',
+    body: JSON.stringify({ modules, submodules }),
+  })
+}

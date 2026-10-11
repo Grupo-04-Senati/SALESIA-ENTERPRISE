@@ -12,6 +12,10 @@ export interface User {
   role: Role
   /** Foto de perfil (data-URI) o null si no tiene. */
   avatar?: string | null
+  /** Módulos permitidos (Role.permissions); null = sin configurar → defaults por rol. */
+  modules?: string[] | null
+  /** Submódulos (pestañas) permitidos por módulo; vacío = todos los del módulo. */
+  submodules?: Record<string, string[]> | null
 }
 
 export interface LoginRequest {

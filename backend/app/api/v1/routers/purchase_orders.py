@@ -19,7 +19,7 @@ from app.services import purchase_order_service
 
 router = APIRouter(prefix='/purchase-orders', tags=['purchase-orders'])
 
-read_roles = ('Admin', 'Gerente', 'Analista')
+read_roles = ('Admin', 'Gerente', 'Analista', 'Almacén')
 write_roles = ('Admin', 'Gerente')
 
 

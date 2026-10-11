@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate, useNavigation } from 'react-router-dom'
-import { ArrowLeft, Ghost, Languages, Menu, Moon, Search, Sun } from 'lucide-react'
-import { PATH_TITLES, PATH_TITLES_EN } from '@/utils/constants'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useNavigation, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Ghost, Languages, LogOut, Menu, Moon, Search, Settings, Sun } from 'lucide-react'
+import { PATH_TITLES, PATH_TITLES_EN, canAccessModule, canSubmodule } from '@/utils/constants'
 import { getTheme, toggleTheme, type Theme } from '@/utils/theme'
 import ProgressBar from '@/components/ui/ProgressBar'
 import NotificationsMenu from '@/components/ui/NotificationsMenu'
@@ -12,7 +12,8 @@ import { usePrank } from '@/prank/PrankContext'
 /**
  * Topbar (Diseño E): 56px, fondo claro, borde inferior fino.
  * Izquierda: marca (clicable al launcher). Centro-derecha: búsqueda,
- * idioma, tema, notificaciones y usuario. `home` oculta el breadcrumb.
+ * idioma, engranaje de configuración (secciones que el rol puede ver),
+ * tema, notificaciones y usuario. `home` oculta el breadcrumb.
  */
 interface TopbarProps {
   /** Abre el sidebar en móvil (hamburguesa). */
@@ -23,14 +24,29 @@ interface TopbarProps {
   search?: { value: string; onChange: (value: string) => void }
 }
 
+/** Secciones de Configuración enlazables desde el engranaje de la topbar. */
+const SETTINGS_LINKS: { id: string; label: string; adminOnly?: boolean }[] = [
+  { id: 'perfil', label: 'settings.mi-perfil' },
+  { id: 'parametros', label: 'settings.parametros' },
+  { id: 'usuarios', label: 'settings.usuarios-y-roles', adminOnly: true },
+  { id: 'roles', label: 'settings.roles', adminOnly: true },
+  { id: 'sistema', label: 'settings.sistema' },
+  { id: 'notificaciones', label: 'settings.notificaciones' },
+  { id: 'exportaciones', label: 'settings.exportaciones' },
+  { id: 'reportes', label: 'settings.reportes' },
+]
+
 export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const navigation = useNavigation()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { lang, toggleLang, t } = useLang()
+  const [searchParams] = useSearchParams()
   const { armed, setArmed } = usePrank()
   const [theme, setTheme] = useState<Theme>(() => getTheme())
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsRef = useRef<HTMLDivElement>(null)
   const titles = lang === 'en' ? PATH_TITLES_EN : PATH_TITLES
   const title = titles[pathname] ?? 'SalesIA Enterprise'
   const initials =
@@ -39,6 +55,30 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('') || 'US'
+
+  // Cierra el menú de configuración al hacer clic fuera o con Escape.
+  useEffect(() => {
+    if (!settingsOpen) return
+    const onPointer = (event: MouseEvent) => {
+      if (!settingsRef.current?.contains(event.target as Node)) setSettingsOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSettingsOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [settingsOpen])
+
+  const showSettings = canAccessModule(user, '/configuracion')
+  const settingsLinks = SETTINGS_LINKS.filter((link) =>
+    link.adminOnly
+      ? user?.role === 'Admin'
+      : canSubmodule(user, '/configuracion', link.id),
+  )
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 print:hidden lg:px-5">
@@ -146,6 +186,67 @@ export default function Topbar({ onMenu, home = false, search }: TopbarProps) {
           <Moon aria-hidden="true" className="h-[18px] w-[18px]" />
         )}
       </button>
+
+      {/* Engranaje: secciones de Configuración que el rol puede abrir */}
+      {showSettings && (
+        <div ref={settingsRef} className="relative">
+          <button
+            type="button"
+            aria-label={t('topbar.settings')}
+            title={t('topbar.settings')}
+            aria-haspopup="menu"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((open) => !open)}
+            className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+              settingsOpen
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-primary hover:text-white'
+            }`}
+          >
+            <Settings aria-hidden="true" className="h-[18px] w-[18px]" />
+          </button>
+          {settingsOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-11 z-40 w-60 overflow-hidden rounded-xl border border-gray-200 bg-white py-1.5 shadow-lg"
+            >
+              <p className="px-3 pb-1.5 pt-1 text-caption font-semibold uppercase tracking-wide text-gray-400">
+                {t('topbar.settings')}
+              </p>
+              {settingsLinks.map((link) => (
+                <button
+                  key={link.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setSettingsOpen(false)
+                    navigate(`/configuracion?tab=${link.id}`)
+                  }}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-body-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-primary"
+                >
+                  {t(link.label)}
+                  {pathname === '/configuracion' && searchParams.get('tab') === link.id && (
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  )}
+                </button>
+              ))}
+              <div className="my-1 border-t border-gray-100" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setSettingsOpen(false)
+                  logout()
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm text-error transition-colors hover:bg-error-bg"
+              >
+                <LogOut aria-hidden="true" className="h-4 w-4" />
+                {t('sidebar.logout')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Notificaciones (avisos reales) */}
       <NotificationsMenu />

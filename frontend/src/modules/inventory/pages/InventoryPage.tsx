@@ -22,6 +22,8 @@ import BranchesPanel from '../components/BranchesPanel'
 import ProcessTraceList from '@/components/ProcessTraceList'
 import { isLowStock } from '@/data/store'
 import { useDataVersion } from '@/data/DataProvider'
+import { useAuth } from '@/hooks/useAuth'
+import { canSubmodule } from '@/utils/constants'
 
 /**
  * Página de Inventario (Fase 08 · RF-08): secciones en pestañas —
@@ -42,14 +44,16 @@ const MOVEMENT_KEYS: Record<MovementType, string> = {
 export default function InventoryPage() {
   const { t } = useLang()
   const toast = useToast()
+  const { user } = useAuth()
 
+  // Pestañas filtradas por los submódulos del rol (Configuración → Roles).
   const TAB_ITEMS = [
     { id: 'existencias', label: t('inventory.existencias') },
     { id: 'movimientos', label: t('inventory.movimientos') },
     { id: 'conteos', label: t('inventory.conteos') },
     { id: 'almacenes', label: t('inventory.almacenes') },
     { id: 'sucursales', label: t('inventory.sucursales') },
-  ]
+  ].filter((item) => canSubmodule(user, '/inventario', item.id))
 
   const [stock, setStock] = useState<StockRow[]>([])
   const [movements, setMovements] = useState<InventoryMovement[]>([])
@@ -64,6 +68,13 @@ export default function InventoryPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [tab, setTab] = useState('existencias')
   const version = useDataVersion()
+
+  // Si el rol no puede ver la pestaña activa, se vuelve a la primera permitida.
+  useEffect(() => {
+    if (TAB_ITEMS.length > 0 && !TAB_ITEMS.some((item) => item.id === tab)) {
+      setTab(TAB_ITEMS[0].id)
+    }
+  }, [TAB_ITEMS, tab])
 
   useEffect(() => {
     let cancelled = false

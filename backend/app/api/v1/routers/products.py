@@ -23,7 +23,7 @@ from app.services import product_import_service, product_service, storage_servic
 
 router = APIRouter(tags=['products'])
 
-read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista', 'AlmacÃ©n')
+read_roles = ('Admin', 'Gerente', 'Vendedor', 'Analista', 'Almacén')
 admin_only = require_role('Admin')
 
 
